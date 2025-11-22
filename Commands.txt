@@ -12,7 +12,7 @@ python process_bdd100k_to_yolo_dataset.py
 
 
 
-
+cd /
 git clone https://github.com/m3mahdy/computer_vision_yolo
 cd computer_vision_yolo
 pip install -r requirements.txt
