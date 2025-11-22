@@ -23,6 +23,7 @@ hyperparameter_tuning/wandb/**
 hyperparameter_tuning/runs/**
 
 yolo_test/wandb/**
+yolo_test/wandb/
 yolo_test/runs/**
 
 
