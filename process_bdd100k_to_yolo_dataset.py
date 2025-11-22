@@ -1655,6 +1655,116 @@ def check_dataset_complete(yolo_dataset_root, expected_splits=['train', 'val', '
     return True
 
 
+def analyze_data_integrity(tmp_images_dir, tmp_labels_dir):
+    """
+    Analyze data integrity by finding mismatches between images and labels.
+    This runs on the original extracted TMP dataset before YOLO conversion.
+    
+    Returns:
+        Tuple of (images_without_labels, labels_without_images, integrity_passed)
+    """
+    print("\n" + "="*70)
+    print("DATA INTEGRITY ANALYSIS - ORIGINAL TMP DATASET")
+    print("="*70)
+    print("Checking for mismatches between images and labels...")
+    
+    images_without_labels = []
+    labels_without_images = []
+    
+    # Check each split
+    for split in ['train', 'val', 'test']:
+        images_dir = tmp_images_dir / '100k' / split
+        labels_dir = tmp_labels_dir / '100k' / split
+        
+        if not images_dir.exists() or not labels_dir.exists():
+            print(f"⚠️  {split} directories not found, skipping...")
+            continue
+        
+        print(f"\nAnalyzing {split.upper()} split...")
+        
+        # Get all image files
+        image_files = {}
+        for ext in ['.jpg', '.png', '.jpeg']:
+            for img_path in images_dir.glob(f"*{ext}"):
+                basename = img_path.stem
+                image_files[basename] = img_path
+        
+        # Get all label files (JSON format before conversion)
+        label_files = {}
+        for label_path in labels_dir.glob("*.json"):
+            basename = label_path.stem
+            label_files[basename] = label_path
+        
+        # Find images without labels
+        for basename, img_path in image_files.items():
+            if basename not in label_files:
+                images_without_labels.append({
+                    'basename': basename,
+                    'path': img_path,
+                    'split': split
+                })
+        
+        # Find labels without images
+        for basename, label_path in label_files.items():
+            if basename not in image_files:
+                labels_without_images.append({
+                    'basename': basename,
+                    'path': label_path,
+                    'split': split
+                })
+        
+        print(f"  Images: {len(image_files):,}")
+        print(f"  Labels: {len(label_files):,}")
+        print(f"  Images without labels: {len([x for x in images_without_labels if x['split'] == split])}")
+        print(f"  Labels without images: {len([x for x in labels_without_images if x['split'] == split])}")
+    
+    # Summary
+    print("\n" + "="*70)
+    print("INTEGRITY ANALYSIS SUMMARY")
+    print("="*70)
+    print(f"Total images without labels: {len(images_without_labels):,}")
+    print(f"Total labels without images: {len(labels_without_images):,}")
+    
+    # Display breakdown by split
+    if images_without_labels:
+        print("\nImages without labels by split:")
+        for split in ['train', 'val', 'test']:
+            count = len([x for x in images_without_labels if x['split'] == split])
+            if count > 0:
+                print(f"  {split}: {count:,}")
+        
+        # Show first few examples
+        print("\nFirst 10 images without labels:")
+        for idx, sample in enumerate(images_without_labels[:10]):
+            print(f"  {idx+1}. {sample['basename']} (Split: {sample['split']})")
+    
+    if labels_without_images:
+        print("\nLabels without images by split:")
+        for split in ['train', 'val', 'test']:
+            count = len([x for x in labels_without_images if x['split'] == split])
+            if count > 0:
+                print(f"  {split}: {count:,}")
+        
+        # Show first few examples
+        print("\nFirst 10 labels without images:")
+        for idx, sample in enumerate(labels_without_images[:10]):
+            print(f"  {idx+1}. {sample['basename']} (Split: {sample['split']})")
+    
+    integrity_passed = len(images_without_labels) == 0 and len(labels_without_images) == 0
+    
+    if integrity_passed:
+        print("\n✅ INTEGRITY CHECK PASSED: All images have corresponding labels and vice versa")
+    else:
+        print("\n⚠️  INTEGRITY ISSUES FOUND - See details above")
+        print("   These mismatches will be handled during YOLO conversion:")
+        print("   - Images without labels will get empty label files")
+        print("   - Labels without images will be skipped")
+    
+    print("="*70)
+    
+    return images_without_labels, labels_without_images, integrity_passed
+
+
 def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cleanup=False, force_reanalysis=False):
     """Extract BDD100K dataset and create YOLO-compatible structure with representative samples."""
     print("=" * 70)
@@ -1705,6 +1815,22 @@ def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cl
             print(f"✓ Labels already extracted: {tmp_labels_dir}")
         else:
             print(f"⚠️  Warning: Labels zip not found: {labels_zip}")
+    
+    # STEP 1.5: DATA INTEGRITY CHECK (MANDATORY - CANNOT BE SKIPPED)
+    print("\n" + "="*70)
+    print("STEP 1.5: DATA INTEGRITY CHECK")
+    print("="*70)
+    print("Analyzing original TMP dataset before YOLO conversion...")
+    print("Checking for mismatches between images and labels (JSON format)")
+    
+    # Run integrity analysis on TMP dataset (original JSON labels)
+    imgs_no_labels, labels_no_imgs, integrity_ok = analyze_data_integrity(
+        tmp_images_dir,
+        tmp_labels_dir
+    )
+    
+    # Note: We continue processing regardless of integrity issues
+    # The YOLO conversion will handle mismatches appropriately
     
     # Step 2 & 3: Create YOLO dataset and process splits (skip if complete, unless forced)
     dataset_complete = check_dataset_complete(yolo_dataset_root)
