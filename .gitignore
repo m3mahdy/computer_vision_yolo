@@ -19,9 +19,9 @@ old/**
 tmp/**
 
 
-hyperparameter_tuning/wandb/**
-hyperparameter_tuning/wandb/
-# hyperparameter_tuning/runs/**
+tune_train/wandb/**
+tune_train/wandb/
+# tune_train/runs/**
 
 yolo_test/wandb/**
 yolo_test/wandb/
