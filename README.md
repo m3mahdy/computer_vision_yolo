@@ -2,6 +2,17 @@
 
 End-to-end pipeline for training and evaluating YOLO models on the BDD100K autonomous driving dataset with hyperparameter optimization, training, and comprehensive testing.
 
+
+## Colab Quick start
+
+```bash
+cd /
+git clone https://github.com/m3mahdy/computer_vision_yolo
+cd computer_vision_yolo
+pip install -r requirements.txt
+python process_limited_dataset.py
+```
+
 ## 🚀 Quick Start
 
 ```bash
@@ -13,10 +24,10 @@ source yolo_project/bin/activate  # Windows: yolo_project\Scripts\activate
 pip install -r requirements.txt
 
 # 2. Prepare dataset (automatic download and processing)
-python3 process_bdd100k_to_yolo_dataset.py
+python process_bdd100k_to_yolo_dataset.py
 
 # OR use limited dataset for quick testing
-python3 process_limited_dataset.py
+python process_limited_dataset.py
 
 # 3. Run hyperparameter tuning
 cd hyperparameter_tuning

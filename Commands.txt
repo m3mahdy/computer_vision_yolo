@@ -9,3 +9,12 @@ rm -r bdd100k_tmp_labels
 
 
 python process_bdd100k_to_yolo_dataset.py
+
+
+
+
+git clone https://github.com/m3mahdy/computer_vision_yolo
+cd computer_vision_yolo
+pip install -r requirements.txt
+python process_limited_dataset.py
+
