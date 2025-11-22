@@ -1543,14 +1543,16 @@ Examples:
     print("COMPRESSING LIMITED DATASET")
     print("="*70)
     
-    compressed_file = base_dir / 'bdd100k_yolo_limited.zip'
+    zipped_dir = base_dir / 'bdd100k_yolo_limited_zipped'
+    zipped_dir.mkdir(parents=True, exist_ok=True)
+    compressed_file = zipped_dir / 'bdd100k_yolo_limited.zip'
     
     # Remove existing compressed file if present
     if compressed_file.exists():
         print(f"Removing existing compressed file: {compressed_file.name}")
         compressed_file.unlink()
     
-    print(f"Compressing {limited_dataset_root.name} to {compressed_file.name}...")
+    print(f"Compressing {limited_dataset_root.name} to {compressed_file}...")
     print(f"This may take a few minutes...")
     
     with zipfile.ZipFile(compressed_file, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zipf:
