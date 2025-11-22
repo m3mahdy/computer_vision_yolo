@@ -2,6 +2,9 @@ source yolo_project/bin/activate
 
 rm -r bdd100k_yolo
 rm -r bdd100k_yolo_limited
+rm -r bdd100k_yolo_limited_zipped
+rm -r bdd100k_tmp_images
+rm -r bdd100k_tmp_labels
 
 
 

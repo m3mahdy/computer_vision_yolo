@@ -17,6 +17,16 @@ This project implements an end-to-end pipeline for training and evaluating YOLO 
 ```
 computer_vision_yolo/
 ├── bdd_100k_source/              # Raw dataset downloads (zip files)
+├── bdd100k_tmp_images/           # Temporary extracted images (original format)
+│   └── 100k/
+│       ├── train/
+│       ├── val/
+│       └── test/
+├── bdd100k_tmp_labels/           # Temporary extracted labels (JSON format)
+│   └── 100k/
+│       ├── train/
+│       ├── val/
+│       └── test/
 ├── bdd100k_yolo/                 # Full YOLO dataset (~100k images)
 │   ├── images/
 │   │   ├── train/
@@ -36,6 +46,8 @@ computer_vision_yolo/
 │   ├── labels/
 │   ├── representative_json/
 │   └── data.yaml
+├── bdd100k_yolo_limited_zipped/  # Compressed limited dataset storage
+│   └── bdd100k_yolo_limited.zip
 ├── models/                       # YOLO model weights
 │   └── {model_name}/
 │       ├── {model_name}.pt              # Base model
@@ -102,22 +114,38 @@ This single command will:
 1. **Check for dataset files** in `bdd_100k_source/`
    - If missing, prompts to download automatically using `gdown` (faster Google Drive mirror)
    - Original BDD100K URLs available for manual download: http://bdd-data.berkeley.edu/
-2. **Extract and convert** images and labels to YOLO format
-3. **Select representative samples** with diverse attributes (weather, scene, time of day)
-4. **Save original JSON files** for representative samples with metadata
-5. **Create full dataset** (~100k images): `bdd100k_yolo/`
-6. **Create limited dataset** (representative samples): `bdd100k_yolo_limited/`
+2. **Extract** images and labels to temporary directories
+3. **Data Integrity Check** (Step 1.5 - Mandatory)
+   - Analyzes original extracted files before YOLO conversion
+   - Finds images without labels and labels without images
+   - Reports statistics by split (train/val/test)
+   - Lists problematic files for review
+   - Continues processing with warnings (non-blocking)
+4. **Convert** to YOLO format from validated source files
+5. **Select representative samples** with diverse attributes (weather, scene, time of day)
+6. **Save original JSON files** for representative samples with metadata
+7. **Create full dataset** (~100k images): `bdd100k_yolo/`
+8. **Create limited dataset** (representative samples): `bdd100k_yolo_limited/`
    - Automatically includes all representative samples selected from full dataset
    - Comprehensive coverage with diverse attributes (weather, scene, time)
    - Perfect for quick testing, visualization, and notebook experimentation
    - Same metadata files as full dataset for consistent analysis
-7. **Compress limited dataset** to `bdd100k_yolo_limited.zip` (~500MB-1GB)
+9. **Compress limited dataset** to `bdd100k_yolo_limited_zipped/bdd100k_yolo_limited.zip` (~500MB-1GB)
    - Easy distribution and quick setup
    - No need to process full 100K dataset for experiments
    - Ideal for quick starts and testing
-8. **Keep temporary files** by default for reference and debugging
+10. **Keep temporary files** by default for reference and debugging
 
 **Key Features:**
+- **Data Integrity Check** (Step 1.5 - Mandatory):
+  - Runs immediately after extraction, before YOLO conversion
+  - Analyzes original TMP dataset files (JSON labels)
+  - Detects images without corresponding labels
+  - Detects labels without corresponding images
+  - Reports detailed statistics by split (train/val/test)
+  - Shows first 10 examples of each issue type
+  - Non-blocking: Reports issues but continues processing
+  - Cannot be skipped - ensures data quality awareness
 - **Comprehensive Representative Sampling** with 4-step coverage:
   1. **Attribute Combinations**: 10 samples per (weather × scene × time) combination
   2. **Class Coverage**: Minimum 10 samples per object class
@@ -150,15 +178,22 @@ python3 process_bdd100k_to_yolo_dataset.py --cleanup
 **If you want to start quickly without processing the full 100K dataset**, use the compressed limited dataset:
 
 ```bash
-# Extract the limited dataset (~2.3K representative samples)
-python unzip_limited_dataset.py
+# Download and extract the limited dataset (~2.3K representative samples)
+python process_limited_dataset.py
 ```
+
+**This script automatically:**
+- Checks for `bdd100k_yolo_limited_zipped/bdd100k_yolo_limited.zip`
+- Downloads from Google Drive if zip file is missing (file ID: `1ISNZ07CZtuuzMMU4wxAVI5YW_XI9at7z`)
+- Installs `gdown` automatically if not available
+- Extracts to `bdd100k_yolo_limited/` directory
 
 This provides:
 - ✅ **Representative samples** (~2,300 images) covering all classes and attributes
 - ✅ **Quick experiments** - Train, tune, and test in minutes instead of hours
 - ✅ **Low disk space** - ~2-3GB uncompressed vs ~6GB+ for full dataset
 - ✅ **Same structure** - Drop-in replacement for `bdd100k_yolo` in notebooks
+- ✅ **Automatic download** - No manual download needed, fully automated setup
 - ✅ **Perfect for**:
   - Learning YOLO training workflows
   - Hyperparameter tuning (faster iterations)
@@ -796,11 +831,29 @@ USED_DATA_SPLIT = "test"   # Use test split
 
 ## 🛠️ Utility Scripts
 
-### Dataset Preparation
+### Full Dataset Preparation
 ```bash
 python3 process_bdd100k_to_yolo_dataset.py
 ```
-Unified script that handles download, extraction, conversion, and dataset creation.
+Unified script that handles:
+- Download check and optional automatic download
+- Extraction of images and labels
+- **Data integrity check** (Step 1.5 - mandatory)
+- Conversion to YOLO format
+- Representative sample selection
+- Full and limited dataset creation
+- Compression of limited dataset
+
+### Limited Dataset Setup
+```bash
+python process_limited_dataset.py
+```
+Quick setup script that:
+- Checks for compressed limited dataset
+- Downloads from Google Drive if missing
+- Auto-installs gdown if needed
+- Extracts ready-to-use limited dataset
+- Perfect for quick starts and experiments
 
 ### Git Automation
 ```bash
@@ -809,6 +862,16 @@ python git_commit_push.py
 Automatically adds, commits, and pushes changes to Git.
 
 ## 🐛 Troubleshooting
+
+**Data integrity warnings during processing**
+- **Issue**: Script reports images without labels or labels without images
+- **What it means**: Original BDD100K dataset has some mismatches
+- **Impact**: 
+  - Images without labels will get empty label files (no objects detected)
+  - Labels without images will be skipped
+- **Solution**: This is normal and expected - the script continues processing
+- **Review**: Check the console output for the list of problematic files
+- **Note**: Step 1.5 (Data Integrity Check) is mandatory and cannot be skipped
 
 **Representative samples not showing attributes**
 - **Issue**: Exploration notebook doesn't display weather/scene/time metadata
