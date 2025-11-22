@@ -20,11 +20,17 @@ tmp/**
 
 
 hyperparameter_tuning/wandb/**
-hyperparameter_tuning/runs/**
+hyperparameter_tuning/wandb/
+# hyperparameter_tuning/runs/**
 
 yolo_test/wandb/**
 yolo_test/wandb/
-yolo_test/runs/**
+# yolo_test/runs/**
+
+
+training/wandb/**
+training/wandb/
+# training/runs/**
 
 
 __pychache__/

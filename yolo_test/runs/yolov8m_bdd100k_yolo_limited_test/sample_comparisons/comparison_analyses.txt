@@ -1,0 +1,118 @@
+YOLO VALIDATION - COMPARISON ANALYSES
+================================================================================
+Model: yolov8m
+Dataset: bdd100k_yolo_limited - test split
+Generated: 2025-11-22 22:52:22
+================================================================================
+
+Comparison #1: d51d9ee8-2497520b.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 10 detections vs 24 ground truth (14 missed objects)
+📊 Detected classes: train(1), bicycle(3), car(3), traffic sign(3)
+🎯 Confidence: avg=0.68, min=0.29, max=0.92
+🌍 Context: clear weather, city street, daytime
+
+================================================================================
+
+Comparison #2: dd1f80d1-c22cb281.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 6 detections vs 13 ground truth (7 missed objects)
+📊 Detected classes: car(4), bicycle(2)
+🎯 Confidence: avg=0.53, min=0.25, max=0.74
+🌍 Context: overcast weather, undefined, dawn/dusk
+
+================================================================================
+
+Comparison #3: e170bd7d-ddb9edb3.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 9 detections vs 23 ground truth (14 missed objects)
+📊 Detected classes: car(7), bicycle(2)
+🎯 Confidence: avg=0.58, min=0.28, max=0.85
+🌍 Context: partly cloudy weather, highway, dawn/dusk
+
+================================================================================
+
+Comparison #4: ce27b85b-159674ec.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 6 detections vs 7 ground truth (1 missed objects)
+📊 Detected classes: car(6)
+🎯 Confidence: avg=0.69, min=0.57, max=0.87
+🌍 Context: undefined weather, undefined, daytime
+
+================================================================================
+
+Comparison #5: fa93f87f-c4c00d33.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 11 detections vs 14 ground truth (3 missed objects)
+📊 Detected classes: car(5), bicycle(2), pedestrian(1), truck(1), train(1), traffic sign(1)
+🎯 Confidence: avg=0.59, min=0.34, max=0.88
+🌍 Context: clear weather, highway, daytime
+
+================================================================================
+
+Comparison #6: d42bc3fb-09878c9e.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 22 detections vs 54 ground truth (32 missed objects)
+📊 Detected classes: train(1), traffic sign(9), car(11), bicycle(1)
+🎯 Confidence: avg=0.57, min=0.28, max=0.91
+🌍 Context: snowy weather, highway, daytime
+💡 Adverse weather may affect detection performance
+
+================================================================================
+
+Comparison #7: e3140fae-8280d39f.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 14 detections vs 26 ground truth (12 missed objects)
+📊 Detected classes: car(5), train(1), bicycle(2), pedestrian(2), traffic sign(4)
+🎯 Confidence: avg=0.68, min=0.33, max=0.94
+🌍 Context: undefined weather, residential, daytime
+
+================================================================================
+
+Comparison #8: e8b336b2-51a03e94.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 15 detections vs 32 ground truth (17 missed objects)
+📊 Detected classes: car(12), bicycle(2), traffic sign(1)
+🎯 Confidence: avg=0.64, min=0.31, max=0.86
+🌍 Context: clear weather, highway, daytime
+
+================================================================================
+
+Comparison #9: dd5e0167-e1c5591e.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 4 detections vs 9 ground truth (5 missed objects)
+📊 Detected classes: car(3), class_11(1)
+🎯 Confidence: avg=0.86, min=0.62, max=0.95
+🌍 Context: snowy weather, parking lot, daytime
+💡 Adverse weather may affect detection performance
+
+================================================================================
+
+Comparison #10: f91b06bf-2eb0f808.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 1 detections vs 12 ground truth (11 missed objects)
+📊 Detected classes: bicycle(1)
+🎯 Confidence: avg=0.82, min=0.82, max=0.82
+🌍 Context: snowy weather, residential, night
+💡 Lower detection in night conditions - typical challenge for vision models
+
+================================================================================
+
+Comparison #11: d1a51558-7b53d012.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 10 detections vs 17 ground truth (7 missed objects)
+📊 Detected classes: car(9), pedestrian(1)
+🎯 Confidence: avg=0.60, min=0.31, max=0.90
+🌍 Context: undefined weather, parking lot, daytime
+
+================================================================================
+
+Comparison #12: fb8bfa32-94c21881.jpg
+--------------------------------------------------------------------------------
+⚠️ Under-detection: 6 detections vs 15 ground truth (9 missed objects)
+📊 Detected classes: car(4), bicycle(1), pedestrian(1)
+🎯 Confidence: avg=0.59, min=0.26, max=0.82
+🌍 Context: foggy weather, residential, daytime
+
+================================================================================
+
