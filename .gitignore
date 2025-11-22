@@ -20,7 +20,10 @@ tmp/**
 
 
 hyperparameter_tuning/wandb/**
-quick_test/wandb/**
+hyperparameter_tuning/runs/**
+
+yolo_test/wandb/**
+yolo_test/runs/**
 
 
 __pychache__/
