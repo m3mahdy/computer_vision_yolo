@@ -1,0 +1,74 @@
+{
+  "model_name": "yolo11n",
+  "finetuned_model": "yolo11n_finetuned-20251121.pt",
+  "base_model": "yolo11n.pt",
+  "training_date": "2025-11-21T04:17:48.026897",
+  "dataset": "bdd100k_tmp_images_limited",
+  "hyperparameters": {
+    "lr0": 0.0001329291894316216,
+    "lrf": 0.09556428757689246,
+    "momentum": 0.9317589095260529,
+    "weight_decay": 0.00015751320499779721,
+    "hsv_h": 0.015601864044243652,
+    "hsv_s": 0.1403950683025824,
+    "hsv_v": 0.05227525095137952,
+    "degrees": 38.97792655987208,
+    "translate": 0.3005575058716044,
+    "scale": 0.637265320016441,
+    "shear": 0.20584494295802447,
+    "flipud": 0.48495492608099716,
+    "fliplr": 0.41622132040021087,
+    "mosaic": 0.21233911067827616,
+    "mixup": 0.09091248360355031,
+    "box": 5.917022549267169,
+    "cls": 0.5129695700716764,
+    "dfl": 1.524756431632238,
+    "warmup_epochs": 3,
+    "warmup_momentum": 0.6310531130891188,
+    "warmup_bias_lr": 0.1262520499972521,
+    "epochs": 100,
+    "batch": 16,
+    "imgsz": 640,
+    "patience": 20,
+    "save": true,
+    "plots": true,
+    "verbose": true,
+    "project": "training",
+    "name": "yolo11n",
+    "exist_ok": true
+  },
+  "validation_metrics": {
+    "mAP@0.5": 0.05016655753461627,
+    "mAP@0.5:0.95": 0.02907735212697283,
+    "precision": 0.05027328979547636,
+    "recall": 0.0747671894328875,
+    "fitness": 0.02907735212697283
+  },
+  "class_metrics": {
+    "pedestrian": {
+      "AP@0.5": 0.0,
+      "AP@0.5:0.95": 0.0
+    },
+    "rider": {
+      "AP@0.5": 0.2532637686533803,
+      "AP@0.5:0.95": 0.13647532776802834
+    },
+    "car": {
+      "AP@0.5": 0.01926364863206968,
+      "AP@0.5:0.95": 0.015410918905655744
+    },
+    "truck": {
+      "AP@0.5": 0.028471927922247627,
+      "AP@0.5:0.95": 0.022577866088152862
+    },
+    "bus": {
+      "AP@0.5": 0.0,
+      "AP@0.5:0.95": 0.0
+    },
+    "train": {
+      "AP@0.5": 0.0,
+      "AP@0.5:0.95": 0.0
+    }
+  },
+  "training_results_dir": "/Users/mahdy/projects/computer_vision_yolo/training/runs/yolo11n_training_20251121_041144/train"
+}

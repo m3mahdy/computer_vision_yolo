@@ -1,0 +1,38 @@
+# Core dependencies
+numpy>=1.26.0
+opencv-python>=4.8.0
+pillow>=10.0.0
+
+# Data processing
+pandas>=2.1.0
+tqdm>=4.66.0
+
+# YOLO models (YOLOv8-v11 supported)
+ultralytics>=8.3.0
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Visualization and plotting
+matplotlib>=3.8.0
+scipy>=1.11.0
+seaborn>=0.13.0
+PyYAML>=6.0.0
+
+# Metrics and evaluation
+scikit-learn>=1.3.0
+
+# Utilities
+requests>=2.31.0
+
+# PDF generation
+reportlab>=4.0.0
+pypdf>=5.0.0
+
+# Weights & Biases support
+wandb>=0.16.0
+nbformat>=5.9.0
+
+# Hyperparameter optimization
+optuna>=3.5.0
+plotly>=5.18.0
+kaleido>=0.2.1

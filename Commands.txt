@@ -1,0 +1,8 @@
+source yolo_project/bin/activate
+
+rm -r bdd100k_yolo
+rm -r bdd100k_yolo_limited
+
+
+
+python process_bdd100k_to_yolo_dataset.py

@@ -1,0 +1,50 @@
+
+✓ Weights & Biases initialized: bdd100k_tmp_images_limited_test
+  Project: yolo-bdd100k-validation
+  Run: bdd100k_tmp_images_limited_test
+
+Running YOLO validation...
+Ultralytics 8.3.229 🚀 Python-3.12.3 torch-2.9.1 CPU (Apple M3)
+YOLOv9s summary (fused): 197 layers, 7,198,048 parameters, 0 gradients, 26.9 GFLOPs
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 122.5±29.8 MB/s, size: 31.2 KB)
+[K[34m[1mval: [0mScanning /Users/mahdy/projects/computer_vision_yolo/tmp/yolov9s/yolo_validation_dataset/labels/test... 100 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 100/100 2.1Kit/s 0.0s
+[34m[1mval: [0mNew cache created: /Users/mahdy/projects/computer_vision_yolo/tmp/yolov9s/yolo_validation_dataset/labels/test.cache
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 7/7 4.0s/it 27.8s5.1ss
+                   all        100       1707      0.285      0.096      0.103     0.0582
+               bicycle          8         17          0          0          0          0
+                   car         98       1030      0.654      0.538      0.586      0.336
+            motorcycle         31         62          0          0          0          0
+              airplane         20         31          0          0          0          0
+                  boat         59        277          1          0          0          0
+         traffic light         80        290     0.0586     0.0379     0.0321     0.0133
+Speed: 0.5ms preprocess, 264.4ms inference, 0.0ms loss, 0.9ms postprocess per image
+Results saved to [1m/Users/mahdy/projects/computer_vision_yolo/quick_test/runs/yolov9s_bdd100k_tmp_images_limited_test/yolo_validation[0m
+
+✓ Confusion matrix extracted successfully
+  Shape: (81, 81)
+  Diagonal sum (correct): 437.0
+
+================================================================================
+OFFICIAL YOLO VALIDATION RESULTS
+================================================================================
+Precision (mean): 0.2853
+Recall (mean):    0.0960
+mAP@0.5:          0.1030
+mAP@0.5:0.95:     0.0582
+Fitness:          0.0582
+
+⚡ Performance Metrics:
+  Total Time: 47.38s
+  Average Inference Time: 473.83ms per image
+  FPS (Frames Per Second): 2.11
+================================================================================
+
+✓ Metrics logged to Weights & Biases
+  Dashboard: https://wandb.ai/yolo-bdd100k-validation/bdd100k_tmp_images_limited_test
+
+✓ YOLO validation results saved to: /Users/mahdy/projects/computer_vision_yolo/quick_test/runs/yolov9s_bdd100k_tmp_images_limited_test/yolo_validation_metrics.json
+✓ YOLO validation plots saved to: /Users/mahdy/projects/computer_vision_yolo/quick_test/runs/yolov9s_bdd100k_tmp_images_limited_test/yolo_validation
+✓ Confusion matrix extracted and will be visualized in next cell
+  Diagonal sum (correct predictions): 437.0
+  Total predictions: 1929.0
+[34m[1mwandb[0m: [32m[41mERROR[0m The nbformat package was not found. It is required to save notebook history.
