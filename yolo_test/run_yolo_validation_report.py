@@ -1,0 +1,874 @@
+import os
+import json
+import time
+import argparse
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, Tuple, Any, List
+
+import cv2
+import numpy as np
+import torch
+import yaml
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.patches import Rectangle
+
+from ultralytics import YOLO
+import wandb
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer,
+    Image,
+    PageBreak,
+)
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from PIL import Image as PILImage
+
+
+def setup_environment(use_wandb: bool) -> str:
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"✓ Device: {device}")
+    if device == "cuda":
+        print(f"  GPU: {torch.cuda.get_device_name(0)}")
+    if use_wandb:
+        print("✓ W&B logging enabled")
+    else:
+        print("✓ W&B logging disabled")
+    return device
+
+
+def load_data_config(data_yaml_path: Path, yolo_dataset_root: Path) -> Dict[str, Any]:
+    if not data_yaml_path.exists():
+        raise FileNotFoundError(
+            f"Dataset not found: {data_yaml_path}\n\n"
+            f"Please run the dataset preparation script first:\n"
+            f"  python3 process_bdd100k_to_yolo_dataset.py\n"
+        )
+
+    with open(data_yaml_path, "r") as f:
+        data_config = yaml.safe_load(f)
+
+    data_config["path"] = str(yolo_dataset_root)
+
+    with open(data_yaml_path, "w") as f:
+        yaml.dump(data_config, f, default_flow_style=False, sort_keys=False)
+
+    return data_config
+
+
+def generate_class_colors(class_names: Dict[int, str]) -> Dict[int, Tuple[int, int, int]]:
+    rng = np.random.default_rng(42)
+    colors_map: Dict[int, Tuple[int, int, int]] = {}
+    for class_id in class_names.keys():
+        color = tuple(int(channel) for channel in rng.integers(40, 255, size=3))
+        colors_map[class_id] = color
+    return colors_map
+
+
+def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float]]:
+    model_path = models_dir / f"{model_name}.pt"
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model weights not found at {model_path}")
+
+    model = YOLO(str(model_path))
+    info_values = model.info()
+    keys = ["layers", "params", "size(MB)", "FLOPs(G)"]
+    model_info: Dict[str, float] = {}
+    for key, value in zip(keys, info_values):
+        model_info[key] = value
+
+    print("\n📊 Model Information:")
+    print(f"  Model: {model_name}")
+    print(f"  Classes in model: {len(model.names)}")
+    print(f"  Task: {model.task}")
+    print(f"  Parameters: {model_info.get('params', 0) / 1e6:.1f}M")
+    print(f"  Model Size: {model_info.get('size(MB)', 0):.1f} MB")
+    print(f"  FLOPs (640x640): {model_info.get('FLOPs(G)', 0):.2f} GFLOPs")
+
+    return model, model_info
+
+
+def load_dataset(used_dataset_root: Path, used_split: str, data_config: Dict[str, Any]) -> Dict[str, Any]:
+    images_dir = used_dataset_root / "images" / used_split
+    labels_dir = used_dataset_root / "labels" / used_split
+
+    image_files = sorted(list(images_dir.glob("*.jpg")) + list(images_dir.glob("*.png")))
+    label_files = sorted(
+        [labels_dir / f"{img.stem}.txt" for img in image_files if (labels_dir / f"{img.stem}.txt").exists()]
+    )
+    valid_images = [img for img in image_files if (labels_dir / f"{img.stem}.txt").exists()]
+
+    print("✓ Dataset loaded")
+    print(f"  Total images: {len(image_files)}")
+    print(f"  Images with labels: {len(valid_images)}")
+    print(f"  Label files: {len(label_files)}")
+
+    metadata_dir = used_dataset_root / "representative_json"
+    performance_file = metadata_dir / f"{used_split}_performance_analysis.json"
+
+    if performance_file.exists():
+        with open(performance_file, "r") as f:
+            performance_data = json.load(f)
+        print(f"\n✓ Performance metadata loaded: {performance_file.name}")
+        print(f"  Images with attributes: {performance_data['total_images']}")
+        image_attributes = {img["basename"]: img for img in performance_data["images"]}
+    else:
+        print(f"\n⚠️ Performance metadata not found: {performance_file}")
+        performance_data = None
+        image_attributes = {}
+
+    num_classes = data_config["nc"]
+    class_names = {i: name for i, name in enumerate(data_config["names"])}
+    class_name_to_id = {name: i for i, name in enumerate(data_config["names"])}
+
+    return {
+        "images_dir": images_dir,
+        "labels_dir": labels_dir,
+        "image_files": image_files,
+        "valid_images": valid_images,
+        "metadata_dir": metadata_dir,
+        "performance_data": performance_data,
+        "image_attributes": image_attributes,
+        "num_classes": num_classes,
+        "class_names": class_names,
+        "class_name_to_id": class_name_to_id,
+    }
+
+
+def run_yolo_validation(
+    model: YOLO,
+    data_yaml_path: Path,
+    used_split: str,
+    device: str,
+    iou_threshold: float,
+    test_run_dir: Path,
+) -> Tuple[Any, float]:
+    print("\nRunning YOLO validation...")
+    start_time = time.time()
+    results = model.val(
+        data=data_yaml_path,
+        split=used_split,
+        device=device,
+        save_json=False,
+        save_txt=False,
+        conf=0.001,
+        iou=iou_threshold,
+        verbose=True,
+        plots=True,
+        project=str(test_run_dir),
+        name="yolo_validation",
+    )
+    end_time = time.time()
+    total_time = end_time - start_time
+    print(f"\n✓ YOLO validation completed in {total_time:.2f} seconds")
+    return results, total_time
+
+
+def extract_core_metrics(
+    validation_results: Any,
+    images_dir: Path,
+    num_classes: int,
+    class_names: Dict[int, str],
+    model_info: Dict[str, float],
+    total_time: float,
+) -> Dict[str, Any]:
+    num_images = len(list(images_dir.glob("*.jpg"))) + len(list(images_dir.glob("*.png")))
+    avg_inference_time = total_time / num_images if num_images > 0 else 0.0
+    fps = 1.0 / avg_inference_time if avg_inference_time > 0 else 0.0
+
+    yolo_metrics = {
+        "precision": float(validation_results.box.mp),
+        "recall": float(validation_results.box.mr),
+        "map50": float(validation_results.box.map50),
+        "map50_95": float(validation_results.box.map),
+        "fitness": float(validation_results.fitness),
+    }
+
+    yolo_class_metrics: Dict[str, Dict[str, float]] = {}
+    class_tp: Dict[int, int] = {}
+    class_fp: Dict[int, int] = {}
+    class_fn: Dict[int, int] = {}
+
+    if hasattr(validation_results.box, "ap_class_index") and len(validation_results.box.ap_class_index) > 0:
+        for i, class_idx in enumerate(validation_results.box.ap_class_index):
+            idx = int(class_idx)
+            name = class_names.get(idx, f"class_{idx}")
+            precision = float(validation_results.box.p[i]) if i < len(validation_results.box.p) else 0.0
+            recall = float(validation_results.box.r[i]) if i < len(validation_results.box.r) else 0.0
+            ap50 = float(validation_results.box.ap50[i]) if i < len(validation_results.box.ap50) else 0.0
+            ap50_95 = float(validation_results.box.ap[i]) if i < len(validation_results.box.ap) else 0.0
+            yolo_class_metrics[name] = {
+                "precision": precision,
+                "recall": recall,
+                "ap50": ap50,
+                "ap50_95": ap50_95,
+            }
+            class_tp[idx] = 0
+            class_fp[idx] = 0
+            class_fn[idx] = 0
+
+    confusion_matrix = (
+        validation_results.confusion_matrix.matrix
+        if hasattr(validation_results, "confusion_matrix")
+        else np.zeros((num_classes, num_classes), dtype=int)
+    )
+
+    for i in range(num_classes):
+        tp_val = 0
+        fp_val = 0
+        fn_val = 0
+        if i < confusion_matrix.shape[0] and i < confusion_matrix.shape[1]:
+            tp_val = int(confusion_matrix[i, i])
+        if i < confusion_matrix.shape[1]:
+            fp_val = int(confusion_matrix[:, i].sum() - confusion_matrix[i, i])
+        if i < confusion_matrix.shape[0]:
+            fn_val = int(confusion_matrix[i, :].sum() - confusion_matrix[i, i])
+        class_tp[i] = tp_val
+        class_fp[i] = fp_val
+        class_fn[i] = fn_val
+
+    print("\n" + "=" * 80)
+    print("OFFICIAL YOLO VALIDATION RESULTS")
+    print("=" * 80)
+    print(f"Precision (mean): {yolo_metrics['precision']:.4f}")
+    print(f"Recall (mean):    {yolo_metrics['recall']:.4f}")
+    print(f"mAP@0.5:          {yolo_metrics['map50']:.4f}")
+    print(f"mAP@0.5:0.95:     {yolo_metrics['map50_95']:.4f}")
+    print(f"Fitness:          {yolo_metrics['fitness']:.4f}")
+    print("\n⚡ Performance Metrics:")
+    print(f"  Total Time: {total_time:.2f}s")
+    print(f"  Average Inference Time: {avg_inference_time * 1000:.2f}ms per image")
+    print(f"  FPS (Frames Per Second): {fps:.2f}")
+    print("=" * 80)
+
+    metrics = {
+        "num_images": num_images,
+        "avg_inference_time": avg_inference_time,
+        "fps": fps,
+        "yolo_metrics": yolo_metrics,
+        "yolo_class_metrics": yolo_class_metrics,
+        "class_tp": class_tp,
+        "class_fp": class_fp,
+        "class_fn": class_fn,
+        "confusion_matrix": confusion_matrix,
+        "model_params": float(model_info.get("params", 0)),
+        "model_size_mb": float(model_info.get("size(MB)", 0.0)),
+        "flops_gflops": float(model_info.get("FLOPs(G)", 0.0)),
+    }
+    return metrics
+
+
+def build_per_class_dataframe(
+    num_classes: int,
+    class_names: Dict[int, str],
+    class_tp: Dict[int, int],
+    class_fp: Dict[int, int],
+    class_fn: Dict[int, int],
+    yolo_class_metrics: Dict[str, Dict[str, float]],
+) -> Tuple[pd.DataFrame, float, float, float, int, int, int]:
+    metrics_data: List[Dict[str, Any]] = []
+    for class_id in sorted(class_names.keys()):
+        tp_val = class_tp.get(class_id, 0)
+        fp_val = class_fp.get(class_id, 0)
+        fn_val = class_fn.get(class_id, 0)
+        precision = tp_val / (tp_val + fp_val) if (tp_val + fp_val) > 0 else 0.0
+        recall = tp_val / (tp_val + fn_val) if (tp_val + fn_val) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        map50 = yolo_class_metrics.get(class_names[class_id], {}).get("ap50", 0.0)
+        metrics_data.append(
+            {
+                "Class": class_names[class_id],
+                "TP": tp_val,
+                "FP": fp_val,
+                "FN": fn_val,
+                "Precision": precision,
+                "Recall": recall,
+                "F1-Score": f1,
+                "mAP@0.5": map50,
+            }
+        )
+
+    df_metrics = pd.DataFrame(metrics_data)
+
+    total_tp = sum(class_tp.values())
+    total_fp = sum(class_fp.values())
+    total_fn = sum(class_fn.values())
+
+    overall_precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
+    overall_recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
+    overall_f1 = (
+        2 * overall_precision * overall_recall / (overall_precision + overall_recall)
+        if (overall_precision + overall_recall) > 0
+        else 0.0
+    )
+
+    return df_metrics, overall_precision, overall_recall, overall_f1, total_tp, total_fp, total_fn
+
+
+def plot_core_and_map_metrics(
+    df_metrics: pd.DataFrame,
+    total_tp: int,
+    total_fp: int,
+    total_fn: int,
+    overall_precision: float,
+    overall_recall: float,
+    overall_f1: float,
+    yolo_metrics: Dict[str, float],
+    test_run_dir: Path,
+) -> Tuple[Path, Path]:
+    sns.set_style("whitegrid")
+
+    fig1, axes1 = plt.subplots(2, 2, figsize=(18, 12))
+    ax_precision, ax_recall, ax_f1, ax_counts = axes1.flatten()
+
+    precision_sorted = df_metrics.sort_values("Precision")
+    ax_precision.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
+    ax_precision.set_title("Precision by Class", fontweight="bold", fontsize=16)
+
+    recall_sorted = df_metrics.sort_values("Recall")
+    ax_recall.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
+    ax_recall.set_title("Recall by Class", fontweight="bold", fontsize=16)
+
+    f1_sorted = df_metrics.sort_values("F1-Score")
+    ax_f1.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
+    ax_f1.set_title("F1-Score by Class", fontweight="bold", fontsize=16)
+
+    ax_counts.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
+    ax_counts.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=16)
+
+    plt.tight_layout()
+    metrics_fig_path = test_run_dir / "core_metrics_charts.png"
+    plt.savefig(metrics_fig_path, dpi=150, bbox_inches="tight")
+    plt.close(fig1)
+
+    fig2, axes2 = plt.subplots(1, 2, figsize=(18, 6))
+    ax_map, ax_overall = axes2.flatten()
+
+    map_sorted = df_metrics.sort_values("mAP@0.5")
+    ax_map.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
+    ax_map.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=16)
+
+    overall_plot_values = {
+        "Precision": overall_precision,
+        "Recall": overall_recall,
+        "F1-Score": overall_f1,
+        "mAP@0.5": yolo_metrics["map50"],
+        "mAP@0.5:0.95": yolo_metrics["map50_95"],
+    }
+    ax_overall.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
+    ax_overall.set_ylim(0, 1)
+    ax_overall.set_title("Overall Metrics", fontweight="bold", fontsize=16)
+
+    plt.tight_layout()
+    map_fig_path = test_run_dir / "map_metrics_charts.png"
+    plt.savefig(map_fig_path, dpi=150, bbox_inches="tight")
+    plt.close(fig2)
+
+    return metrics_fig_path, map_fig_path
+
+
+def plot_confusion_matrix(
+    confusion_matrix: np.ndarray,
+    num_classes: int,
+    class_names: Dict[int, str],
+    model_name: str,
+    test_run_dir: Path,
+) -> Path:
+    fig, ax = plt.subplots(figsize=(10, 8))
+    for i in range(num_classes):
+        for j in range(num_classes):
+            value = confusion_matrix[i, j]
+            if value == 0:
+                cell_color = "white"
+            elif i == j:
+                cell_color = "#00A676"
+            else:
+                cell_color = "#D7263D"
+            rect = Rectangle((j - 0.5, i - 0.5), 1, 1, facecolor=cell_color, edgecolor="black", linewidth=1.5)
+            ax.add_patch(rect)
+            if value > 0:
+                text_color = "white" if i == j else "#F7F7F7"
+                ax.text(j, i, str(value), ha="center", va="center", color=text_color, fontsize=9, fontweight="bold")
+
+    class_labels = [class_names[i] for i in range(num_classes)]
+    ax.set_xticks(np.arange(num_classes))
+    ax.set_yticks(np.arange(num_classes))
+    ax.set_xticklabels(class_labels, fontsize=8, fontweight="bold", rotation=45, ha="right")
+    ax.set_yticklabels(class_labels, fontsize=8, fontweight="bold")
+    ax.set_xlabel("Predicted Class", fontweight="bold", fontsize=11)
+    ax.set_ylabel("True Class", fontweight="bold", fontsize=11)
+    ax.set_title(f"Confusion Matrix ({model_name} validation)", fontweight="bold", fontsize=13)
+    plt.tight_layout()
+
+    confusion_matrix_path = test_run_dir / "confusion_matrix.png"
+    plt.savefig(confusion_matrix_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return confusion_matrix_path
+
+
+def generate_pdf_and_json_report(
+    model_name: str,
+    run_name: str,
+    wb_run_name: str,
+    used_dataset: str,
+    used_split: str,
+    iou_threshold: float,
+    test_run_dir: Path,
+    model_info: Dict[str, float],
+    metrics: Dict[str, Any],
+    df_metrics: pd.DataFrame,
+    confusion_matrix: np.ndarray,
+    class_names: Dict[int, str],
+) -> None:
+    pdf_report_path = test_run_dir / "report.pdf"
+    json_report_path = test_run_dir / "metrics_data.json"
+
+    doc = SimpleDocTemplate(
+        str(pdf_report_path),
+        pagesize=A4,
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=30,
+    )
+
+    story: List[Any] = []
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "CustomTitle",
+        parent=styles["Heading1"],
+        fontSize=24,
+        textColor=colors.HexColor("#2c3e50"),
+        spaceAfter=30,
+        alignment=TA_CENTER,
+    )
+    heading_style = ParagraphStyle(
+        "CustomHeading",
+        parent=styles["Heading2"],
+        fontSize=16,
+        textColor=colors.HexColor("#34495e"),
+        spaceAfter=12,
+        spaceBefore=20,
+    )
+
+    story.append(Paragraph("YOLO Validation Report", title_style))
+    story.append(Spacer(1, 12))
+
+    info_data = [
+        ["Model:", model_name],
+        ["Model Size:", f"{model_info.get('size(MB)', 0.0):.1f} MB"],
+        ["Parameters:", f"{model_info.get('params', 0) / 1e6:.1f}M"],
+        ["FLOPs (640x640):", f"{model_info.get('FLOPs(G)', 0.0):.2f} GFLOPs"],
+        ["Run Name:", run_name],
+        ["W&B Run Name:", wb_run_name],
+        ["Timestamp:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+        ["Dataset:", f"{used_dataset} - {used_split} split"],
+        ["Images Processed:", str(metrics["num_images"])],
+        ["IoU Threshold:", str(iou_threshold)],
+    ]
+
+    info_table = Table(info_data, colWidths=[2.2 * inch, 3.8 * inch])
+    info_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ecf0f1")),
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 1, colors.white),
+            ]
+        )
+    )
+    story.append(info_table)
+    story.append(Spacer(1, 20))
+
+    story.append(Paragraph("Inference Performance", heading_style))
+    perf_data = [
+        ["Metric", "Value"],
+        ["Total Execution Time", f"{metrics['total_time']:.2f}s"],
+        ["Average Inference Time", f"{metrics['avg_inference_time'] * 1000:.2f}ms per image"],
+        ["FPS (Frames Per Second)", f"{metrics['fps']:.2f}"],
+    ]
+    perf_table = Table(perf_data, colWidths=[3 * inch, 3 * inch])
+    perf_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#27ae60")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 12),
+                ("FONTSIZE", (0, 1), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#d5f4e6")),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
+    story.append(perf_table)
+    story.append(Spacer(1, 20))
+
+    story.append(Paragraph("Overall Accuracy Metrics", heading_style))
+    acc = metrics["overall"]
+    yolo_m = metrics["yolo_metrics"]
+    acc_data = [
+        ["Metric", "Value"],
+        ["Precision", f"{acc['precision']:.4f}"],
+        ["Recall", f"{acc['recall']:.4f}"],
+        ["F1-Score", f"{acc['f1']:.4f}"],
+        ["mAP@0.5", f"{yolo_m['map50']:.4f}"],
+        ["mAP@0.5:0.95", f"{yolo_m['map50_95']:.4f}"],
+        ["True Positives", str(acc["tp"])],
+        ["False Positives", str(acc["fp"])],
+        ["False Negatives", str(acc["fn"])],
+    ]
+    acc_table = Table(acc_data, colWidths=[3 * inch, 3 * inch])
+    acc_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 12),
+                ("FONTSIZE", (0, 1), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
+    story.append(acc_table)
+
+    story.append(PageBreak())
+    story.append(Paragraph("Performance Visualizations", heading_style))
+
+    core_metrics_path = test_run_dir / "core_metrics_charts.png"
+    if core_metrics_path.exists():
+        with PILImage.open(core_metrics_path) as img:
+            w, h = img.size
+            ratio = h / w
+            pdf_w = 7 * inch
+            pdf_h = pdf_w * ratio
+            story.append(Image(str(core_metrics_path), width=pdf_w, height=pdf_h))
+
+    map_metrics_path = test_run_dir / "map_metrics_charts.png"
+    if map_metrics_path.exists():
+        with PILImage.open(map_metrics_path) as img:
+            w, h = img.size
+            ratio = h / w
+            pdf_w = 7 * inch
+            pdf_h = pdf_w * ratio
+            story.append(Image(str(map_metrics_path), width=pdf_w, height=pdf_h))
+
+    story.append(PageBreak())
+    story.append(Paragraph("Per-Class Performance", heading_style))
+
+    table_data = [["Class", "TP", "FP", "FN", "Precision", "Recall", "F1-Score", "mAP@0.5"]]
+    yolo_class_metrics = metrics["yolo_class_metrics"]
+    for _, row in df_metrics.iterrows():
+        class_name = row["Class"]
+        map50_val = yolo_class_metrics.get(class_name, {}).get("ap50", 0.0)
+        table_data.append(
+            [
+                str(row["Class"]),
+                str(row["TP"]),
+                str(row["FP"]),
+                str(row["FN"]),
+                f"{row['Precision']:.4f}",
+                f"{row['Recall']:.4f}",
+                f"{row['F1-Score']:.4f}",
+                f"{map50_val:.4f}",
+            ]
+        )
+
+    per_class_table = Table(
+        table_data,
+        colWidths=[1.0 * inch, 0.5 * inch, 0.5 * inch, 0.5 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch],
+    )
+    per_class_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 8),
+                ("FONTSIZE", (0, 1), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
+    story.append(per_class_table)
+
+    story.append(PageBreak())
+    story.append(Paragraph("Confusion Matrix", heading_style))
+    story.append(Paragraph(f"Correct Predictions (Diagonal Sum): {int(np.trace(confusion_matrix))}", styles["Normal"]))
+    story.append(Paragraph(f"Total Matched Predictions: {int(confusion_matrix.sum())}", styles["Normal"]))
+
+    confusion_matrix_img_path = test_run_dir / "confusion_matrix.png"
+    if confusion_matrix_img_path.exists():
+        with PILImage.open(confusion_matrix_img_path) as img:
+            w, h = img.size
+            ratio = h / w
+            pdf_w = 6.5 * inch
+            pdf_h = pdf_w * ratio
+            story.append(Image(str(confusion_matrix_img_path), width=pdf_w, height=pdf_h))
+
+    story.append(Spacer(1, 12))
+    story.append(Paragraph("Additional validation plots available in: yolo_validation folder", styles["Normal"]))
+
+    story.append(Spacer(1, 30))
+    story.append(
+        Paragraph(
+            "Generated by YOLO Quick Test Script",
+            ParagraphStyle("Footer", parent=styles["Normal"], alignment=TA_CENTER, textColor=colors.grey),
+        )
+    )
+
+    doc.build(story)
+
+    comparison_data = {
+        "metadata": {
+            "model_name": model_name,
+            "run_name": run_name,
+            "wb_run_name": wb_run_name,
+            "timestamp": datetime.now().isoformat(),
+            "dataset": used_dataset,
+            "data_split": used_split,
+            "images_processed": int(metrics["num_images"]),
+            "iou_threshold": float(iou_threshold),
+            "num_classes": len(class_names),
+        },
+        "model_info": {
+            "parameters": int(metrics["model_params"]),
+            "model_size_mb": float(metrics["model_size_mb"]),
+            "flops_gflops": float(metrics["flops_gflops"]),
+        },
+        "performance": {
+            "total_time_seconds": float(metrics["total_time"]),
+            "avg_inference_time_ms": float(metrics["avg_inference_time"] * 1000.0),
+            "fps": float(metrics["fps"]),
+            "images_processed": int(metrics["num_images"]),
+        },
+        "custom_metrics": {
+            "overall": {
+                "precision": float(metrics["overall"]["precision"]),
+                "recall": float(metrics["overall"]["recall"]),
+                "f1_score": float(metrics["overall"]["f1"]),
+                "true_positives": int(metrics["overall"]["tp"]),
+                "false_positives": int(metrics["overall"]["fp"]),
+                "false_negatives": int(metrics["overall"]["fn"]),
+            },
+            "per_class": {},
+        },
+        "yolo_official_metrics": {
+            "overall": metrics["yolo_metrics"],
+            "per_class": metrics["yolo_class_metrics"],
+        },
+        "confusion_matrix": {
+            "matrix": metrics["confusion_matrix"].tolist(),
+            "diagonal_sum": int(np.trace(metrics["confusion_matrix"])),
+            "total_predictions": int(metrics["confusion_matrix"].sum()),
+        },
+        "class_names": class_names,
+    }
+
+    for _, row in df_metrics.iterrows():
+        class_name = row["Class"]
+        comparison_data["custom_metrics"]["per_class"][class_name] = {
+            "true_positives": int(row["TP"]),
+            "false_positives": int(row["FP"]),
+            "false_negatives": int(row["FN"]),
+            "precision": float(row["Precision"]),
+            "recall": float(row["Recall"]),
+            "f1_score": float(row["F1-Score"]),
+        }
+
+    with open(json_report_path, "w") as f:
+        json.dump(comparison_data, f, indent=2)
+
+    print("=" * 80)
+    print("✓ COMPREHENSIVE REPORT GENERATED (script)")
+    print("=" * 80)
+    print(f"PDF Report: {pdf_report_path}")
+    print(f"JSON Metrics: {json_report_path}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run YOLO validation and generate report")
+    parser.add_argument("--model-name", type=str, default="yolov8n", help="YOLO model name (e.g., yolov8n, yolov8s)")
+    parser.add_argument(
+        "--dataset-name",
+        type=str,
+        default="bdd100k_yolo_limited",
+        help="Dataset folder name under base directory",
+    )
+    parser.add_argument("--split", type=str, default="test", help="Dataset split: train, val, or test")
+    parser.add_argument("--iou", type=float, default=0.5, help="IoU threshold for validation")
+    parser.add_argument(
+        "--base-dir",
+        type=str,
+        default=None,
+        help="Base project directory (defaults to parent of current working dir)",
+    )
+    args = parser.parse_args()
+
+    base_dir = Path(args.base_dir).resolve() if args.base_dir else Path.cwd().parent
+    used_dataset = args.dataset_name
+    used_split = args.split
+    model_name = args.model_name
+    iou_threshold = args.iou
+
+    use_wandb = True
+
+    device = setup_environment(use_wandb=use_wandb)
+
+    yolo_dataset_root = base_dir / used_dataset
+    data_yaml_path = yolo_dataset_root / "data.yaml"
+
+    data_config = load_data_config(data_yaml_path=data_yaml_path, yolo_dataset_root=yolo_dataset_root)
+
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"{model_name}_testing_{run_timestamp}"
+    runs_dir = base_dir / "yolo_test" / "runs"
+    test_run_dir = runs_dir / run_name
+    test_run_dir.mkdir(parents=True, exist_ok=True)
+
+    wb_project = f"yolo-{used_dataset}-testing"
+    wb_run_name = f"{model_name}_{used_dataset}_{used_split}_{run_timestamp}"
+
+    if use_wandb:
+        try:
+            wandb.init(
+                project=wb_project,
+                name=wb_run_name,
+                config={
+                    "model": model_name,
+                    "dataset": used_dataset,
+                    "split": used_split,
+                    "iou_threshold": iou_threshold,
+                },
+            )
+            print(f"\n✓ Weights & Biases initialized: {wb_run_name}")
+        except Exception as wandb_error:
+            print(f"\n⚠️  W&B initialization error: {wandb_error}")
+            print("  Continuing without W&B tracking...")
+            use_wandb = False
+
+    dataset_info = load_dataset(used_dataset_root=yolo_dataset_root, used_split=used_split, data_config=data_config)
+
+    models_dir = base_dir / "models" / model_name
+    models_dir.mkdir(parents=True, exist_ok=True)
+    model, model_info = load_model(model_name=model_name, models_dir=models_dir)
+
+    validation_results, total_time = run_yolo_validation(
+        model=model,
+        data_yaml_path=data_yaml_path,
+        used_split=used_split,
+        device=device,
+        iou_threshold=iou_threshold,
+        test_run_dir=test_run_dir,
+    )
+
+    metrics = extract_core_metrics(
+        validation_results=validation_results,
+        images_dir=dataset_info["images_dir"],
+        num_classes=dataset_info["num_classes"],
+        class_names=dataset_info["class_names"],
+        model_info=model_info,
+        total_time=total_time,
+    )
+
+    (
+        df_metrics,
+        overall_precision,
+        overall_recall,
+        overall_f1,
+        total_tp,
+        total_fp,
+        total_fn,
+    ) = build_per_class_dataframe(
+        num_classes=dataset_info["num_classes"],
+        class_names=dataset_info["class_names"],
+        class_tp=metrics["class_tp"],
+        class_fp=metrics["class_fp"],
+        class_fn=metrics["class_fn"],
+        yolo_class_metrics=metrics["yolo_class_metrics"],
+    )
+
+    metrics["overall"] = {
+        "precision": overall_precision,
+        "recall": overall_recall,
+        "f1": overall_f1,
+        "tp": total_tp,
+        "fp": total_fp,
+        "fn": total_fn,
+    }
+    metrics["total_time"] = total_time
+
+    metrics_fig_path, map_fig_path = plot_core_and_map_metrics(
+        df_metrics=df_metrics,
+        total_tp=total_tp,
+        total_fp=total_fp,
+        total_fn=total_fn,
+        overall_precision=overall_precision,
+        overall_recall=overall_recall,
+        overall_f1=overall_f1,
+        yolo_metrics=metrics["yolo_metrics"],
+        test_run_dir=test_run_dir,
+    )
+
+    confusion_matrix_path = plot_confusion_matrix(
+        confusion_matrix=metrics["confusion_matrix"],
+        num_classes=dataset_info["num_classes"],
+        class_names=dataset_info["class_names"],
+        model_name=model_name,
+        test_run_dir=test_run_dir,
+    )
+
+    generate_pdf_and_json_report(
+        model_name=model_name,
+        run_name=run_name,
+        wb_run_name=wb_run_name,
+        used_dataset=used_dataset,
+        used_split=used_split,
+        iou_threshold=iou_threshold,
+        test_run_dir=test_run_dir,
+        model_info=model_info,
+        metrics=metrics,
+        df_metrics=df_metrics,
+        confusion_matrix=metrics["confusion_matrix"],
+        class_names=dataset_info["class_names"],
+    )
+
+    if use_wandb:
+        try:
+            wandb.finish()
+            print("\n✓ Weights & Biases run completed successfully")
+        except Exception as finish_error:
+            print(f"\n⚠️  Error finishing W&B run: {finish_error}")
+
+
+if __name__ == "__main__":
+    from pathlib import Path
+
+    main()
