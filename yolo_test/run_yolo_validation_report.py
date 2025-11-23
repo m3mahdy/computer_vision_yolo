@@ -75,6 +75,70 @@ def generate_class_colors(class_names: Dict[int, str]) -> Dict[int, Tuple[int, i
     return colors_map
 
 
+def visualize_predictions(
+    model: YOLO,
+    image_paths: List[Path],
+    class_names: Dict[int, str],
+    conf_threshold: float = 0.25,
+    figsize: Tuple[int, int] = (20, 10),
+) -> plt.Figure:
+    """
+    Visualize predictions on sample images.
+    
+    Args:
+        model: Loaded YOLO model
+        image_paths: List of image paths to visualize
+        class_names: Dictionary mapping class IDs to names
+        conf_threshold: Confidence threshold for predictions
+        figsize: Figure size
+        
+    Returns:
+        Matplotlib figure with predictions
+    """
+    num_images = len(image_paths)
+    cols = min(3, num_images)
+    rows = (num_images + cols - 1) // cols
+    
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    if num_images == 1:
+        axes = np.array([axes])
+    axes = axes.flatten() if num_images > 1 else axes
+    
+    colors = generate_class_colors(class_names)
+    
+    for idx, img_path in enumerate(image_paths):
+        img = cv2.imread(str(img_path))
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
+        results = model.predict(img_path, conf=conf_threshold, verbose=False)
+        
+        for result in results:
+            boxes = result.boxes
+            for box in boxes:
+                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                conf = box.conf[0].cpu().numpy()
+                cls = int(box.cls[0].cpu().numpy())
+                
+                color = colors.get(cls, (255, 0, 0))
+                cv2.rectangle(img_rgb, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+                
+                label = f"{class_names.get(cls, f'class_{cls}')}: {conf:.2f}"
+                cv2.putText(img_rgb, label, (int(x1), int(y1) - 10),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+        ax = axes[idx] if num_images > 1 else axes
+        ax.imshow(img_rgb)
+        ax.set_title(f"{img_path.name}", fontsize=10)
+        ax.axis('off')
+    
+    for idx in range(num_images, len(axes) if isinstance(axes, np.ndarray) else 1):
+        if num_images > 1:
+            axes[idx].axis('off')
+    
+    plt.tight_layout()
+    return fig
+
+
 def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float]]:
     model_path = models_dir / f"{model_name}.pt"
     if not model_path.exists():
@@ -713,32 +777,37 @@ def generate_pdf_and_json_report(
     print(f"JSON Metrics: {json_report_path}")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Run YOLO validation and generate report")
-    parser.add_argument("--model-name", type=str, default="yolov8n", help="YOLO model name (e.g., yolov8n, yolov8s)")
-    parser.add_argument(
-        "--dataset-name",
-        type=str,
-        default="bdd100k_yolo_limited",
-        help="Dataset folder name under base directory",
-    )
-    parser.add_argument("--split", type=str, default="test", help="Dataset split: train, val, or test")
-    parser.add_argument("--iou", type=float, default=0.5, help="IoU threshold for validation")
-    parser.add_argument(
-        "--base-dir",
-        type=str,
-        default=None,
-        help="Base project directory (defaults to parent of current working dir)",
-    )
-    args = parser.parse_args()
-
-    base_dir = Path(args.base_dir).resolve() if args.base_dir else Path.cwd().parent
-    used_dataset = args.dataset_name
-    used_split = args.split
-    model_name = args.model_name
-    iou_threshold = args.iou
-
-    use_wandb = True
+def run_validation_pipeline(
+    model_name: str,
+    dataset_name: str = "bdd100k_yolo_limited",
+    split: str = "test",
+    iou_threshold: float = 0.5,
+    base_dir: Path | None = None,
+    use_wandb: bool = False,
+    save_reports: bool = True,
+) -> Dict[str, Any]:
+    """
+    Run YOLO validation pipeline and return results directly.
+    
+    Args:
+        model_name: YOLO model name (e.g., yolov8n, yolov8s)
+        dataset_name: Dataset folder name under base directory
+        split: Dataset split (train, val, or test)
+        iou_threshold: IoU threshold for validation
+        base_dir: Base project directory
+        use_wandb: Whether to use W&B logging
+        save_reports: Whether to save PDF and JSON reports
+        
+    Returns:
+        Dictionary containing all metrics, figures, and paths
+    """
+    if base_dir is None:
+        base_dir = Path.cwd().parent
+    else:
+        base_dir = Path(base_dir).resolve()
+    
+    used_dataset = dataset_name
+    used_split = split
 
     device = setup_environment(use_wandb=use_wandb)
 
@@ -845,20 +914,21 @@ def main() -> None:
         test_run_dir=test_run_dir,
     )
 
-    generate_pdf_and_json_report(
-        model_name=model_name,
-        run_name=run_name,
-        wb_run_name=wb_run_name,
-        used_dataset=used_dataset,
-        used_split=used_split,
-        iou_threshold=iou_threshold,
-        test_run_dir=test_run_dir,
-        model_info=model_info,
-        metrics=metrics,
-        df_metrics=df_metrics,
-        confusion_matrix=metrics["confusion_matrix"],
-        class_names=dataset_info["class_names"],
-    )
+    if save_reports:
+        generate_pdf_and_json_report(
+            model_name=model_name,
+            run_name=run_name,
+            wb_run_name=wb_run_name,
+            used_dataset=used_dataset,
+            used_split=used_split,
+            iou_threshold=iou_threshold,
+            test_run_dir=test_run_dir,
+            model_info=model_info,
+            metrics=metrics,
+            df_metrics=df_metrics,
+            confusion_matrix=metrics["confusion_matrix"],
+            class_names=dataset_info["class_names"],
+        )
 
     if use_wandb:
         try:
@@ -867,8 +937,54 @@ def main() -> None:
         except Exception as finish_error:
             print(f"\n⚠️  Error finishing W&B run: {finish_error}")
 
+    # Return comprehensive results
+    return {
+        "model_name": model_name,
+        "run_name": run_name,
+        "run_dir": test_run_dir,
+        "model_info": model_info,
+        "dataset_info": dataset_info,
+        "validation_results": validation_results,
+        "metrics": metrics,
+        "df_metrics": df_metrics,
+        "figures": {
+            "core_metrics": metrics_fig_path,
+            "map_metrics": map_fig_path,
+            "confusion_matrix": confusion_matrix_path,
+        },
+        "yolo_validation_dir": test_run_dir / "yolo_validation",
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run YOLO validation and generate report")
+    parser.add_argument("--model-name", type=str, default="yolov8n", help="YOLO model name (e.g., yolov8n, yolov8s)")
+    parser.add_argument(
+        "--dataset-name",
+        type=str,
+        default="bdd100k_yolo_limited",
+        help="Dataset folder name under base directory",
+    )
+    parser.add_argument("--split", type=str, default="test", help="Dataset split: train, val, or test")
+    parser.add_argument("--iou", type=float, default=0.5, help="IoU threshold for validation")
+    parser.add_argument(
+        "--base-dir",
+        type=str,
+        default=None,
+        help="Base project directory (defaults to parent of current working dir)",
+    )
+    args = parser.parse_args()
+
+    run_validation_pipeline(
+        model_name=args.model_name,
+        dataset_name=args.dataset_name,
+        split=args.split,
+        iou_threshold=args.iou,
+        base_dir=Path(args.base_dir) if args.base_dir else None,
+        use_wandb=True,
+        save_reports=True,
+    )
+
 
 if __name__ == "__main__":
-    from pathlib import Path
-
     main()
