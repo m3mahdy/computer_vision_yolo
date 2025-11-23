@@ -50,6 +50,25 @@ def get_current_branch():
     return result.stdout.strip()
 
 
+def configure_git():
+    """Configure git user identity and credentials."""
+    print('\n📝 Configuring Git...')
+    
+    # Set user name
+    run_command(['git', 'config', '--global', 'user.name', 'Mohammed Mahdy'], check=False)
+    print('✓ User name set: Mohammed Mahdy')
+    
+    # Set user email
+    run_command(['git', 'config', '--global', 'user.email', 'm3edris@gmail.com'], check=False)
+    print('✓ User email set: m3edris@gmail.com')
+    
+    # Set credential helper (cache for 1 hour)
+    run_command(['git', 'config', '--global', 'credential.helper', 'cache --timeout=3600'], check=False)
+    print('✓ Credential helper configured')
+    
+    print()
+
+
 def main():
     print('=' * 80)
     print('GIT COMMIT AND PUSH')
@@ -60,6 +79,9 @@ def main():
     if result.returncode != 0:
         print('❌ Not a git repository')
         sys.exit(1)
+    
+    # Configure git identity
+    configure_git()
     
     # Get current branch
     branch = get_current_branch()
