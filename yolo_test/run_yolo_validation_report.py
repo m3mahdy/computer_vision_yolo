@@ -883,7 +883,7 @@ def generate_pdf_and_json_report(
         spaceBefore=20,
     )
 
-    story.append(Paragraph("YOLO Validation Report", title_style))
+    story.append(Paragraph("YOLO Model Testing Report", title_style))
     story.append(Spacer(1, 12))
 
     info_data = [
@@ -943,7 +943,7 @@ def generate_pdf_and_json_report(
     )
     story.append(perf_table)
     story.append(Spacer(1, 20))
-
+        
     story.append(Paragraph("Overall Accuracy Metrics", heading_style))
     acc = metrics["overall"]
     yolo_m = metrics["yolo_metrics"]
@@ -976,6 +976,22 @@ def generate_pdf_and_json_report(
         )
     )
     story.append(acc_table)
+    
+    story.append(PageBreak())
+    story.append(Paragraph("Confusion Matrix", heading_style))
+
+    confusion_matrix_img_path = test_run_dir / "confusion_matrix.png"
+    if confusion_matrix_img_path.exists():
+        with PILImage.open(confusion_matrix_img_path) as img:
+            w, h = img.size
+            ratio = h / w
+            pdf_w = 6.5 * inch
+            pdf_h = pdf_w * ratio
+            story.append(Image(str(confusion_matrix_img_path), width=pdf_w, height=pdf_h))
+
+    story.append(Paragraph(f"Correct Predictions (Diagonal Sum): {int(np.trace(confusion_matrix))}", styles["Normal"]))
+    story.append(Paragraph(f"Total Matched Predictions: {int(confusion_matrix.sum())}", styles["Normal"]))
+
 
     story.append(PageBreak())
     story.append(Paragraph("Performance Visualizations", heading_style))
@@ -1047,20 +1063,6 @@ def generate_pdf_and_json_report(
         )
     )
     story.append(per_class_table)
-
-    story.append(PageBreak())
-    story.append(Paragraph("Confusion Matrix", heading_style))
-    story.append(Paragraph(f"Correct Predictions (Diagonal Sum): {int(np.trace(confusion_matrix))}", styles["Normal"]))
-    story.append(Paragraph(f"Total Matched Predictions: {int(confusion_matrix.sum())}", styles["Normal"]))
-
-    confusion_matrix_img_path = test_run_dir / "confusion_matrix.png"
-    if confusion_matrix_img_path.exists():
-        with PILImage.open(confusion_matrix_img_path) as img:
-            w, h = img.size
-            ratio = h / w
-            pdf_w = 6.5 * inch
-            pdf_h = pdf_w * ratio
-            story.append(Image(str(confusion_matrix_img_path), width=pdf_w, height=pdf_h))
 
     story.append(Spacer(1, 12))
 
