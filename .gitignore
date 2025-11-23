@@ -25,7 +25,7 @@ tune_train/wandb/
 
 yolo_test/wandb/**
 yolo_test/wandb/
-# yolo_test/runs/**
+yolo_test/runs/**
 
 
 training/wandb/**

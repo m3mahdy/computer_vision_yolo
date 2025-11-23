@@ -143,6 +143,9 @@ def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float
     model_path = models_dir / f"{model_name}.pt"
     if not model_path.exists():
         raise FileNotFoundError(f"Model weights not found at {model_path}")
+    
+    model_size_mb = model_path.stat().st_size / (1024 * 1024)
+    
 
     model = YOLO(str(model_path))
     info_values = model.info()
@@ -150,6 +153,9 @@ def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float
     model_info: Dict[str, float] = {}
     for key, value in zip(keys, info_values):
         model_info[key] = value
+    
+    model_info["size(MB)"] = model_size_mb
+
 
     print("\n📊 Model Information:")
     print(f"  Model: {model_name}")
@@ -158,6 +164,7 @@ def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float
     print(f"  Parameters: {model_info.get('params', 0) / 1e6:.1f}M")
     print(f"  Model Size: {model_info.get('size(MB)', 0):.1f} MB")
     print(f"  FLOPs (640x640): {model_info.get('FLOPs(G)', 0):.2f} GFLOPs")
+    print(f"  Model Size: {model_info['size(MB)']:.1f} MB")
 
     return model, model_info
 
@@ -311,7 +318,7 @@ def extract_core_metrics(
     print(f"Fitness:          {yolo_metrics['fitness']:.4f}")
     print("\n⚡ Performance Metrics:")
     print(f"  Total Time: {total_time:.2f}s")
-    print(f"  Average Inference Time: {avg_inference_time * 1000:.2f}ms per image")
+    print(f"  Average Inference Time: {avg_inference_time * 1000:.2f} ms per image")
     print(f"  FPS (Frames Per Second): {fps:.2f}")
     print("=" * 80)
 
@@ -325,9 +332,6 @@ def extract_core_metrics(
         "class_fp": class_fp,
         "class_fn": class_fn,
         "confusion_matrix": confusion_matrix,
-        "model_params": float(model_info.get("params", 0)),
-        "model_size_mb": float(model_info.get("size(MB)", 0.0)),
-        "flops_gflops": float(model_info.get("FLOPs(G)", 0.0)),
     }
     return metrics
 
@@ -493,6 +497,7 @@ def generate_pdf_and_json_report(
     df_metrics: pd.DataFrame,
     confusion_matrix: np.ndarray,
     class_names: Dict[int, str],
+    total_time: float,
 ) -> None:
     pdf_report_path = test_run_dir / "report.pdf"
     json_report_path = test_run_dir / "metrics_data.json"
@@ -531,7 +536,7 @@ def generate_pdf_and_json_report(
     info_data = [
         ["Model:", model_name],
         ["Model Size:", f"{model_info.get('size(MB)', 0.0):.1f} MB"],
-        ["Parameters:", f"{model_info.get('params', 0) / 1e6:.1f}M"],
+        ["Parameters:", f"{model_info.get('params', 0) / 1e6:.1f} M"],
         ["FLOPs (640x640):", f"{model_info.get('FLOPs(G)', 0.0):.2f} GFLOPs"],
         ["Run Name:", run_name],
         ["W&B Run Name:", wb_run_name],
@@ -562,8 +567,8 @@ def generate_pdf_and_json_report(
     story.append(Paragraph("Inference Performance", heading_style))
     perf_data = [
         ["Metric", "Value"],
-        ["Total Execution Time", f"{metrics['total_time']:.2f}s"],
-        ["Average Inference Time", f"{metrics['avg_inference_time'] * 1000:.2f}ms per image"],
+        ["Total Execution Time", f"{total_time:.2f}s"],
+        ["Average Inference Time", f"{metrics['avg_inference_time'] * 1000:.2f} ms per image"],
         ["FPS (Frames Per Second)", f"{metrics['fps']:.2f}"],
     ]
     perf_table = Table(perf_data, colWidths=[3 * inch, 3 * inch])
@@ -723,12 +728,12 @@ def generate_pdf_and_json_report(
             "num_classes": len(class_names),
         },
         "model_info": {
-            "parameters": int(metrics["model_params"]),
-            "model_size_mb": float(metrics["model_size_mb"]),
-            "flops_gflops": float(metrics["flops_gflops"]),
+            "parameters": int(model_info.get("params", 0)),
+            "model_size_mb": float(model_info.get("size(MB)", 0.0)),
+            "flops_gflops": float(model_info.get("FLOPs(G)", 0.0)),
         },
         "performance": {
-            "total_time_seconds": float(metrics["total_time"]),
+            "total_time_seconds": float(total_time),
             "avg_inference_time_ms": float(metrics["avg_inference_time"] * 1000.0),
             "fps": float(metrics["fps"]),
             "images_processed": int(metrics["num_images"]),
@@ -892,7 +897,6 @@ def run_validation_pipeline(
         "fp": total_fp,
         "fn": total_fn,
     }
-    metrics["total_time"] = total_time
 
     metrics_fig_path, map_fig_path = plot_core_and_map_metrics(
         df_metrics=df_metrics,
@@ -928,6 +932,7 @@ def run_validation_pipeline(
             df_metrics=df_metrics,
             confusion_matrix=metrics["confusion_matrix"],
             class_names=dataset_info["class_names"],
+            total_time=total_time,
         )
 
     if use_wandb:
@@ -943,6 +948,7 @@ def run_validation_pipeline(
         "run_name": run_name,
         "run_dir": test_run_dir,
         "model_info": model_info,
+        "total_time": total_time,
         "dataset_info": dataset_info,
         "validation_results": validation_results,
         "metrics": metrics,
