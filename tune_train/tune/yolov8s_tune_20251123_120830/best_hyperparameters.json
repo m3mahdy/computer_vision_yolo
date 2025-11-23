@@ -1,0 +1,40 @@
+{
+  "model": "yolov8s",
+  "dataset": "/computer_vision_yolo/bdd100k_yolo_limited",
+  "best_trial": 1,
+  "best_map50": 0.1791359318289984,
+  "total_trials": 3,
+  "hyperparameters": {
+    "optimizer": "Adam",
+    "lr0": 0.0009818424786316663,
+    "lrf": 0.07892559721137374,
+    "momentum": 0.6704130109703594,
+    "weight_decay": 2.121186674900785e-05,
+    "warmup_epochs": 5,
+    "warmup_momentum": 0.496486991370382,
+    "warmup_bias_lr": 0.06839745262440819,
+    "hsv_h": 0.02332312538428734,
+    "hsv_s": 0.714931323558963,
+    "hsv_v": 0.7886305096580319,
+    "degrees": 9.466246407472783,
+    "translate": 0.19388018003441979,
+    "scale": 0.43942447301953397,
+    "shear": 8.781676988044795,
+    "perspective": 0.0005126731647362955,
+    "flipud": 0.5758314775136668,
+    "fliplr": 0.6932438811593902,
+    "mosaic": 0.7589952970217438,
+    "mixup": 0.5681151493578777,
+    "copy_paste": 0.13457013172198706,
+    "box": 6.562519603181782,
+    "cls": 2.3730729995956112,
+    "dfl": 2.550119713244313
+  },
+  "optimization_config": {
+    "n_trials": 3,
+    "epochs_per_trial": 2,
+    "batch_size": 32,
+    "image_size": 640
+  },
+  "timestamp": "2025-11-23T12:13:31.518586"
+}
