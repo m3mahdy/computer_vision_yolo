@@ -394,38 +394,72 @@ def plot_core_and_map_metrics(
     yolo_metrics: Dict[str, float],
     test_run_dir: Path,
 ) -> Tuple[Path, Path]:
+    """Generate core metrics and mAP visualizations with enhanced formatting."""
     sns.set_style("whitegrid")
 
+    # Figure 1: Core Metrics (Precision, Recall, F1-Score, Detection Outcomes)
     fig1, axes1 = plt.subplots(2, 2, figsize=(18, 12))
     ax_precision, ax_recall, ax_f1, ax_counts = axes1.flatten()
 
+    # Precision by class
     precision_sorted = df_metrics.sort_values("Precision")
     ax_precision.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
     ax_precision.set_title("Precision by Class", fontweight="bold", fontsize=16)
+    ax_precision.set_xlabel("Precision", fontweight="bold", fontsize=12)
+    ax_precision.set_xlim(0, 1)
+    ax_precision.grid(axis="x", alpha=0.3)
 
+    # Recall by class
     recall_sorted = df_metrics.sort_values("Recall")
     ax_recall.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
     ax_recall.set_title("Recall by Class", fontweight="bold", fontsize=16)
+    ax_recall.set_xlabel("Recall", fontweight="bold", fontsize=12)
+    ax_recall.set_xlim(0, 1)
+    ax_recall.grid(axis="x", alpha=0.3)
 
+    # F1-Score by class
     f1_sorted = df_metrics.sort_values("F1-Score")
     ax_f1.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
     ax_f1.set_title("F1-Score by Class", fontweight="bold", fontsize=16)
+    ax_f1.set_xlabel("F1-Score", fontweight="bold", fontsize=12)
+    ax_f1.set_xlim(0, 1)
+    ax_f1.grid(axis="x", alpha=0.3)
 
-    ax_counts.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
+    # Detection outcomes bar chart
+    bars = ax_counts.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
     ax_counts.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=16)
+    ax_counts.set_ylabel("Count", fontweight="bold", fontsize=12)
+    ax_counts.grid(axis="y", alpha=0.3)
+    
+    # Add value labels on bars
+    for bar in bars:
+        height = bar.get_height()
+        ax_counts.text(
+            bar.get_x() + bar.get_width() / 2, height + max(total_tp, total_fp, total_fn) * 0.01,
+            f"{int(height)}",
+            ha="center",
+            fontweight="bold",
+            fontsize=11
+        )
 
     plt.tight_layout()
     metrics_fig_path = test_run_dir / "core_metrics_charts.png"
     plt.savefig(metrics_fig_path, dpi=150, bbox_inches="tight")
     plt.close(fig1)
 
+    # Figure 2: mAP Metrics
     fig2, axes2 = plt.subplots(1, 2, figsize=(18, 6))
     ax_map, ax_overall = axes2.flatten()
 
+    # mAP@0.5 by class
     map_sorted = df_metrics.sort_values("mAP@0.5")
     ax_map.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
     ax_map.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=16)
+    ax_map.set_xlabel("mAP@0.5", fontweight="bold", fontsize=12)
+    ax_map.set_xlim(0, 1)
+    ax_map.grid(axis="x", alpha=0.3)
 
+    # Overall metrics bar chart
     overall_plot_values = {
         "Precision": overall_precision,
         "Recall": overall_recall,
@@ -433,9 +467,21 @@ def plot_core_and_map_metrics(
         "mAP@0.5": yolo_metrics["map50"],
         "mAP@0.5:0.95": yolo_metrics["map50_95"],
     }
-    ax_overall.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
+    bars = ax_overall.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
     ax_overall.set_ylim(0, 1)
     ax_overall.set_title("Overall Metrics", fontweight="bold", fontsize=16)
+    ax_overall.set_ylabel("Score", fontweight="bold", fontsize=12)
+    ax_overall.grid(axis="y", alpha=0.3)
+    
+    # Add value labels on bars
+    for idx, (bar, value) in enumerate(zip(bars, overall_plot_values.values())):
+        ax_overall.text(
+            idx, value + 0.02,
+            f"{value:.3f}",
+            ha="center",
+            fontweight="bold",
+            fontsize=11
+        )
 
     plt.tight_layout()
     map_fig_path = test_run_dir / "map_metrics_charts.png"
@@ -452,30 +498,64 @@ def plot_confusion_matrix(
     model_name: str,
     test_run_dir: Path,
 ) -> Path:
-    fig, ax = plt.subplots(figsize=(10, 8))
+    """
+    Generate confusion matrix visualization.
+    
+    Matrix interpretation:
+    - Rows (i): True class
+    - Columns (j): Predicted class
+    - confusion_matrix[i, j]: Count of true class i predicted as class j
+    - Diagonal (i==j): Correct predictions (green)
+    - Off-diagonal: Misclassifications (red)
+    """
+    fig, ax = plt.subplots(figsize=(12, 10))
+    
+    # Draw each cell with color coding
     for i in range(num_classes):
         for j in range(num_classes):
             value = confusion_matrix[i, j]
             if value == 0:
                 cell_color = "white"
             elif i == j:
-                cell_color = "#00A676"
+                cell_color = "#00A676"  # Correct predictions
             else:
-                cell_color = "#D7263D"
-            rect = Rectangle((j - 0.5, i - 0.5), 1, 1, facecolor=cell_color, edgecolor="black", linewidth=1.5)
+                cell_color = "#D7263D"  # Misclassifications
+            
+            rect = Rectangle(
+                (j - 0.5, i - 0.5), 1, 1,
+                facecolor=cell_color,
+                edgecolor="black",
+                linewidth=1.5
+            )
             ax.add_patch(rect)
+            
+            # Add value text
             if value > 0:
                 text_color = "white" if i == j else "#F7F7F7"
-                ax.text(j, i, str(value), ha="center", va="center", color=text_color, fontsize=9, fontweight="bold")
+                ax.text(
+                    j, i, str(int(value)),
+                    ha="center", va="center",
+                    color=text_color,
+                    fontsize=11,
+                    fontweight="bold"
+                )
 
+    # Set axis properties
+    ax.set_xlim(-0.5, num_classes - 0.5)
+    ax.set_ylim(num_classes - 0.5, -0.5)
+    ax.set_aspect("equal")
+
+    # Set labels with increased font sizes
     class_labels = [class_names[i] for i in range(num_classes)]
     ax.set_xticks(np.arange(num_classes))
     ax.set_yticks(np.arange(num_classes))
-    ax.set_xticklabels(class_labels, fontsize=8, fontweight="bold", rotation=45, ha="right")
-    ax.set_yticklabels(class_labels, fontsize=8, fontweight="bold")
-    ax.set_xlabel("Predicted Class", fontweight="bold", fontsize=11)
-    ax.set_ylabel("True Class", fontweight="bold", fontsize=11)
-    ax.set_title(f"Confusion Matrix ({model_name} validation)", fontweight="bold", fontsize=13)
+    ax.set_xticklabels(class_labels, fontsize=10, fontweight="bold", rotation=45, ha="right")
+    ax.set_yticklabels(class_labels, fontsize=10, fontweight="bold")
+    ax.set_xlabel("Predicted Class", fontweight="bold", fontsize=14)
+    ax.set_ylabel("True Class", fontweight="bold", fontsize=14)
+    ax.set_title(f"Confusion Matrix ({model_name} validation)", fontweight="bold", fontsize=16)
+    ax.grid(False)
+    
     plt.tight_layout()
 
     confusion_matrix_path = test_run_dir / "confusion_matrix.png"
