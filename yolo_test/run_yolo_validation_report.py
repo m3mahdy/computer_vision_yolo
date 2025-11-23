@@ -15,6 +15,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.patches import Rectangle
 
+import shutil
+import time
+import glob
+
 from ultralytics import YOLO
 import wandb
 
@@ -91,52 +95,6 @@ def build_attribute_text(attributes: Dict[str, Any]) -> str:
     time_of_day = attributes.get("timeofday", "unknown")
 
     return f"Attributes: weather={weather}, scene={scene}, time={time_of_day}"
-
-
-def add_attributes_text(img_rgb: np.ndarray, attributes: Dict[str, Any]) -> np.ndarray:
-    """Overlay weather/scene/time attributes at the bottom of the image.
-    
-    Args:
-        img_rgb: Input RGB image
-        attributes: Dictionary containing attribute information
-        
-    Returns:
-        RGB image with overlaid attribute text
-    """
-    if not attributes:
-        return img_rgb
-    
-    img_with_text = img_rgb.copy()
-    h, w = img_with_text.shape[:2]
-    
-    # Create text overlay
-    weather = attributes.get('weather', 'unknown')
-    scene = attributes.get('scene', 'unknown')
-    timeofday = attributes.get('timeofday', 'unknown')
-    attr_text = f"Weather: {weather} | Scene: {scene} | Time: {timeofday}"
-    
-    # Convert to BGR for OpenCV
-    img_bgr = cv2.cvtColor(img_with_text, cv2.COLOR_RGB2BGR)
-    
-    # Add semi-transparent background for text
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.6
-    thickness = 2
-    (text_w, text_h), baseline = cv2.getTextSize(attr_text, font, font_scale, thickness)
-    
-    # Position at bottom of image
-    text_x = 10
-    text_y = h - 15
-    
-    # Draw background rectangle
-    overlay = img_bgr.copy()
-    cv2.rectangle(overlay, (0, h - text_h - baseline - 20), (w, h), (0, 0, 0), -1)
-    cv2.addWeighted(overlay, 0.6, img_bgr, 0.4, 0, img_bgr)
-    
-    # Draw text
-    cv2.putText(img_bgr, attr_text, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
-    
-    return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
 
 def draw_ground_truth(
@@ -225,11 +183,15 @@ def generate_sample_comparisons(
     num_samples: int = 6,
     device: str = "cpu",
     image_attributes: Dict[str, Any] | None = None,
-) -> List[Path]:
+) -> List[Dict[str, Any]]:
     """Generate high-resolution comparison images.
 
-    Attribute values are drawn on the images at the bottom with semi-transparent
-    background for better visibility of environmental context.
+    Returns a list of dictionaries containing:
+    - comparison_image_path: Path to the generated comparison image
+    - original_image_path: Path to the original source image
+    - attributes: Dictionary with weather, scene, timeofday
+    - gt_count: Number of ground truth objects
+    - pred_count: Number of predicted objects
     """
     import random
     import cv2
@@ -252,7 +214,7 @@ def generate_sample_comparisons(
     )
     print(f"\nGenerating {len(sample_images)} high-resolution comparison figures with attributes...")
 
-    comparison_paths: List[Path] = []
+    comparison_data: List[Dict[str, Any]] = []
 
     for idx, img_path in enumerate(tqdm(sample_images, desc="Generating comparisons"), 1):
         label_path = labels_dir / f"{img_path.stem}.txt"
@@ -275,6 +237,8 @@ def generate_sample_comparisons(
             fontweight="bold",
             fontsize=16,
         )
+        
+        ax1.axis('off')
 
         ax2.imshow(pred_img)
         ax2.set_title(
@@ -283,7 +247,8 @@ def generate_sample_comparisons(
             fontsize=16,
         )
 
-
+        ax2.axis('off')
+        
         # fig.suptitle(
         #     f"Comparison #{idx}: {img_path.name}",
         #     fontsize=18,
@@ -295,12 +260,29 @@ def generate_sample_comparisons(
         plt.savefig(comparison_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
 
-        comparison_paths.append(comparison_path)
+        # Extract attributes from metadata if available
+        attributes = {}
+        if image_attributes:
+            img_basename = img_path.stem
+            img_meta = image_attributes.get(img_basename, {})
+            attributes = {
+                "weather": img_meta.get("weather", "unknown"),
+                "scene": img_meta.get("scene", "unknown"),
+                "timeofday": img_meta.get("timeofday", "unknown"),
+            }
 
-    print(f"\u2713 Generated {len(comparison_paths)} comparison images")
+        comparison_data.append({
+            "comparison_image_path": comparison_path,
+            "original_image_path": img_path,
+            "attributes": attributes,
+            "gt_count": gt_count,
+            "pred_count": pred_count,
+        })
+
+    print(f"\u2713 Generated {len(comparison_data)} comparison images")
     print(f"  Saved to: {comparisons_dir}")
 
-    return comparison_paths
+    return comparison_data
 
 
 def visualize_predictions(
@@ -368,11 +350,67 @@ def visualize_predictions(
 
 
 def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float]]:
-    model_path = models_dir / f"{model_name}.pt"
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model weights not found at {model_path}")
     
-    model_size_mb = model_path.stat().st_size / (1024 * 1024)
+    
+    model_path = models_dir / f"{model_name}.pt"
+    
+    
+    if not model_path.exists():
+        print(f'Model not found at {model_path}')
+        print(f'Downloading {model_name} ...')
+        
+        try:
+            # Download model - it will be cached by ultralytics
+            MODEL_NAME_n = model_name 
+            if model_name.startswith('yolov11') or model_name.startswith('yolov12'):
+                MODEL_NAME_n = model_name + '.pt'
+            model = YOLO(MODEL_NAME_n)
+            
+            # Create models directory
+            models_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Save model to our directory using export/save
+            try:
+                # Try to save using the model's save method
+                if hasattr(model, 'save'):
+                    model.save(str(model_path))
+                    print(f'✓ Model downloaded and saved to {model_path}')
+                    print(f'  Size: {model_path.stat().st_size / (1024*1024):.1f} MB')
+                else:
+                    # Fallback: copy from cache
+                    cache_patterns = [
+                        str(Path.home() / '.cache' / 'ultralytics' / '**' / f'{model_name}.pt'),
+                        str(Path.home() / '.config' / 'Ultralytics' / '**' / f'{model_name}.pt'),
+                    ]
+                    
+                    model_found = False
+                    for pattern in cache_patterns:
+                        cache_paths = glob.glob(pattern, recursive=True)
+                        if cache_paths:
+                            shutil.copy(cache_paths[0], model_path)
+                            print(f'✓ Model downloaded and saved to {model_path}')
+                            print(f'  Size: {model_path.stat().st_size / (1024*1024):.1f} MB')
+                            model_found = True
+                            break
+                    
+                    if not model_found:
+                        print(f'✓ Model loaded from ultralytics cache')
+                        print(f'  Note: Model is in cache, not copied to {model_path}')
+                        print(f'  This is normal and the model will work correctly')
+            except Exception as save_error:
+                print(f'⚠️  Could not save model to custom location: {save_error}')
+                print(f'✓ Model loaded successfully from ultralytics cache')
+                
+        except Exception as e:
+            print(f'\n❌ Error downloading model: {e}')
+            raise
+    else:
+        print("test")
+        model = YOLO(str(model_path))
+        print(f'✓ Model loaded from {model_path}')
+
+    
+    
     
 
     model = YOLO(str(model_path))
@@ -381,7 +419,9 @@ def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float
     model_info: Dict[str, float] = {}
     for key, value in zip(keys, info_values):
         model_info[key] = value
-    
+        
+        
+    model_size_mb = model_path.stat().st_size / (1024 * 1024)
     model_info["size(MB)"] = model_size_mb
 
 
@@ -488,15 +528,16 @@ def extract_core_metrics(
 
     # Prefer execution time reported by YOLO when available to avoid
     # re-calculating timing from external code.
-    if hasattr(validation_results, "speed") and isinstance(validation_results.speed, dict):
-        avg_inference_time = float(validation_results.speed.get("inference", 0.0)) / 1000.0
-        print("=============XX==================")
-        print(f"Using YOLO-reported inference time: {avg_inference_time * 1000:.2f} ms per image")
-        print("=============XX==================")
-    else:
-        avg_inference_time = total_time / num_images if num_images > 0 else 0.0
 
-    fps = 1.0 / avg_inference_time if avg_inference_time > 0 else 0.0
+    
+    preprocess = float(validation_results.speed.get("preprocess", 0.0)) 
+    inference = float(validation_results.speed.get("inference", 0.0)) 
+    loss = float(validation_results.speed.get("loss", 0.0)) 
+    postprocess = float(validation_results.speed.get("postprocess", 0.0)) 
+
+    avg_inference_time = inference+postprocess+preprocess
+    
+    fps = 1.0 / avg_inference_time
 
     yolo_metrics = {
         "precision": float(validation_results.box.mp),
@@ -849,7 +890,7 @@ def generate_pdf_and_json_report(
     confusion_matrix: np.ndarray,
     class_names: Dict[int, str],
     total_time: float,
-    comparison_image_paths: List[Path] | None = None,
+    comparison_data: List[Dict[str, Any]] | None = None,
 ) -> None:
     pdf_report_path = test_run_dir / "report.pdf"
     json_report_path = test_run_dir / "metrics_data.json"
@@ -895,6 +936,7 @@ def generate_pdf_and_json_report(
         ["Timestamp:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
         ["Dataset:", f"{used_dataset} - {used_split} split"],
         ["Images Processed:", str(metrics["num_images"])],
+         ["Total Execution Time", f"{total_time:.2f}s"],
         ["IoU Threshold:", str(iou_threshold)],
     ]
 
@@ -919,8 +961,7 @@ def generate_pdf_and_json_report(
     story.append(Paragraph("Inference Performance", heading_style))
     perf_data = [
         ["Metric", "Value"],
-        ["Total Execution Time", f"{total_time:.2f}s"],
-        ["Average Inference Time", f"{metrics['avg_inference_time'] * 1000:.2f} ms per image"],
+        ["Average Inference Time", f"{metrics['avg_inference_time']:.2f} ms per image"],
         ["FPS (Frames Per Second)", f"{metrics['fps']:.2f}"],
     ]
     perf_table = Table(perf_data, colWidths=[3 * inch, 3 * inch])
@@ -941,6 +982,8 @@ def generate_pdf_and_json_report(
         )
     )
     story.append(perf_table)
+    note="Note: Inference time includes preprocessing, model inference, and postprocessing."
+    story.append(Paragraph(note, styles["Normal"]))
     story.append(Spacer(1, 20))
         
     story.append(Paragraph("Overall Accuracy Metrics", heading_style))
@@ -1065,34 +1108,51 @@ def generate_pdf_and_json_report(
 
     story.append(Spacer(1, 12))
 
-    # Add sample comparisons section with text directly under each image
-    if comparison_image_paths:
+    # Add sample comparisons section with detailed attributes and full-width images
+    if comparison_data:
         story.append(PageBreak())
         story.append(Paragraph("Sample Predictions: Ground Truth vs Model", heading_style))
         story.append(Spacer(1, 12))
 
-        for comp_path in comparison_image_paths:
+        for idx, comp_info in enumerate(comparison_data, 1):
+            comp_path = comp_info["comparison_image_path"]
             if not comp_path.exists():
                 continue
+            
+            # Add detailed caption with attributes
+            original_img = comp_info["original_image_path"]
+            attributes = comp_info["attributes"]
+            gt_count = comp_info["gt_count"]
+            pred_count = comp_info["pred_count"]
 
-            # Add comparison image
+            caption_parts = [f"<b>Sample #{idx}: {original_img.name}</b>"]
+            caption_parts.append(f"Ground Truth Objects: {gt_count} | Predicted Objects: {pred_count}")
+
+            if attributes:
+                weather = attributes.get("weather", "unknown")
+                scene = attributes.get("scene", "unknown")
+                timeofday = attributes.get("timeofday", "unknown")
+                caption_parts.append(f"Weather: {weather} | Scene: {scene} | Time of Day: {timeofday}")
+
+            caption_text = "<br/>".join(caption_parts)
+            story.append(Spacer(1, 6))
+            story.append(Paragraph(caption_text, styles["Normal"]))
+            story.append(Spacer(1, 12))
+
+            # Add comparison image with full page width
             pil_img = PILImage.open(comp_path)
-            img_width, img_height = pil_img.size
-            aspect = img_width / img_height if img_height > 0 else 1.0
+            img_width_px, img_height_px = pil_img.size
+            aspect = img_width_px / img_height_px if img_height_px > 0 else 1.0
 
-            max_width = 6.5 * inch
+            # Use full available page width (A4 width minus margins)
+            max_width = A4[0] - 60  # Full page width minus left and right margins (30 each)
             img_width = max_width
             img_height = img_width / aspect
 
             img_flow = Image(str(comp_path), width=img_width, height=img_height)
             story.append(img_flow)
 
-            # Add descriptive text below the image (placeholder here – can be
-            # extended to include attributes when desired).
-            caption_text = f"Comparison image: {comp_path.name}"
-            story.append(Spacer(1, 4))
-            story.append(Paragraph(caption_text, styles["Normal"]))
-            story.append(Spacer(1, 12))
+
 
     story.append(Spacer(1, 30))
     story.append(
@@ -1311,7 +1371,7 @@ def run_validation_pipeline(
     print("\n" + "=" * 80)
     print("GENERATING SAMPLE COMPARISONS")
     print("=" * 80)
-    comparison_image_paths = generate_sample_comparisons(
+    comparison_data = generate_sample_comparisons(
         model=model,
         valid_images=dataset_info["valid_images"],
         labels_dir=dataset_info["labels_dir"],
@@ -1337,7 +1397,7 @@ def run_validation_pipeline(
             confusion_matrix=metrics["confusion_matrix"],
             class_names=dataset_info["class_names"],
             total_time=total_time,
-            comparison_image_paths=comparison_image_paths,
+            comparison_data=comparison_data,
         )
 
     if use_wandb:
@@ -1362,7 +1422,7 @@ def run_validation_pipeline(
             **figure_paths,
             "confusion_matrix": confusion_matrix_path,
         },
-        "comparison_images": comparison_image_paths,
+        "comparison_data": comparison_data,
         "yolo_validation_dir": test_run_dir / "yolo_validation",
     }
 
