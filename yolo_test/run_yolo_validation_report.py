@@ -275,7 +275,6 @@ def generate_sample_comparisons(
             fontweight="bold",
             fontsize=16,
         )
-        ax1.axis("off")
 
         ax2.imshow(pred_img)
         ax2.set_title(
@@ -283,13 +282,13 @@ def generate_sample_comparisons(
             fontweight="bold",
             fontsize=16,
         )
-        ax2.axis("off")
 
-        fig.suptitle(
-            f"Comparison #{idx}: {img_path.name}",
-            fontsize=18,
-            fontweight="bold",
-        )
+
+        # fig.suptitle(
+        #     f"Comparison #{idx}: {img_path.name}",
+        #     fontsize=18,
+        #     fontweight="bold",
+        # )
         plt.tight_layout()
 
         comparison_path = comparisons_dir / f"comparison_{idx:02d}.png"
