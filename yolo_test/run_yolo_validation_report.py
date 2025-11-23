@@ -494,6 +494,7 @@ def run_yolo_validation(
     device: str,
     iou_threshold: float,
     test_run_dir: Path,
+    batch_size: int = 16,
 ) -> Tuple[Any, float]:
     print("\nRunning YOLO validation...")
     start_time = time.time()
@@ -509,6 +510,7 @@ def run_yolo_validation(
         plots=True,
         project=str(test_run_dir),
         name="yolo_validation",
+        batch=batch_size,
     )
     end_time = time.time()
     total_time = end_time - start_time
@@ -537,7 +539,7 @@ def extract_core_metrics(
 
     avg_inference_time = inference+postprocess+preprocess
     
-    fps = 1.0 / avg_inference_time
+    fps = 1000.0 / avg_inference_time
 
     yolo_metrics = {
         "precision": float(validation_results.box.mp),
@@ -1239,6 +1241,7 @@ def run_validation_pipeline(
     base_dir: Path | None = None,
     use_wandb: bool = False,
     save_reports: bool = True,
+    batch_size: int = 16,
 ) -> Dict[str, Any]:
     """
     Run YOLO validation pipeline and return results directly.
@@ -1289,6 +1292,7 @@ def run_validation_pipeline(
                     "dataset": used_dataset,
                     "split": used_split,
                     "iou_threshold": iou_threshold,
+                    "batch_size": batch_size,
                 },
             )
             print(f"\n✓ Weights & Biases initialized: {wb_run_name}")
@@ -1310,6 +1314,7 @@ def run_validation_pipeline(
         device=device,
         iou_threshold=iou_threshold,
         test_run_dir=test_run_dir,
+        batch_size=batch_size,
     )
 
     metrics = extract_core_metrics(
