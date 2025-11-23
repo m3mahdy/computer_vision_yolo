@@ -75,6 +75,149 @@ def generate_class_colors(class_names: Dict[int, str]) -> Dict[int, Tuple[int, i
     return colors_map
 
 
+def draw_ground_truth(
+    img_path: Path,
+    label_path: Path,
+    class_names: Dict[int, str],
+    colors: Dict[int, Tuple[int, int, int]],
+) -> Tuple[np.ndarray, int]:
+    """Draw ground-truth boxes using deterministic colors."""
+    import cv2
+    
+    img_bgr = cv2.imread(str(img_path))
+    if img_bgr is None:
+        raise FileNotFoundError(f"Image not found: {img_path}")
+    h, w = img_bgr.shape[:2]
+    object_count = 0
+
+    if label_path.exists():
+        with open(label_path, "r") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 5:
+                    object_count += 1
+                    class_id = int(parts[0])
+                    x_center, y_center, width, height = map(float, parts[1:5])
+                    x1 = int((x_center - width / 2) * w)
+                    y1 = int((y_center - height / 2) * h)
+                    x2 = int((x_center + width / 2) * w)
+                    y2 = int((y_center + height / 2) * h)
+                    color = tuple(int(c) for c in colors.get(class_id, (255, 255, 255)))
+                    cv2.rectangle(img_bgr, (x1, y1), (x2, y2), color, 3)
+                    label = class_names.get(class_id, f"class_{class_id}")
+                    (label_w, label_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                    cv2.rectangle(
+                        img_bgr,
+                        (x1, max(0, y1 - label_h - baseline - 6)),
+                        (x1 + label_w + 8, y1),
+                        color,
+                        -1,
+                    )
+                    text_color = (0, 0, 0) if sum(color) > 500 else (255, 255, 255)
+                    cv2.putText(img_bgr, label, (x1 + 4, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.7, text_color, 2)
+
+    return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB), object_count
+
+
+def draw_predictions_with_consistent_colors(
+    result: Any,
+    colors: Dict[int, Tuple[int, int, int]],
+    class_names: Dict[int, str],
+) -> np.ndarray:
+    """Draw model predictions using same palette as ground truth."""
+    import cv2
+    
+    img_bgr = result.orig_img.copy()
+    if img_bgr.ndim == 2:
+        img_bgr = cv2.cvtColor(img_bgr, cv2.COLOR_GRAY2BGR)
+
+    for box in result.boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+        conf = float(box.conf[0])
+        class_id = int(box.cls[0])
+        color = tuple(int(c) for c in colors.get(class_id, (255, 255, 255)))
+        cv2.rectangle(img_bgr, (x1, y1), (x2, y2), color, 3)
+        label = f"{class_names.get(class_id, f'class_{class_id}')} {conf:.2f}"
+        (label_w, label_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+        cv2.rectangle(
+            img_bgr,
+            (x1, max(0, y1 - label_h - baseline - 6)),
+            (x1 + label_w + 8, y1),
+            color,
+            -1,
+        )
+        text_color = (0, 0, 0) if sum(color) > 500 else (255, 255, 255)
+        cv2.putText(img_bgr, label, (x1 + 4, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.7, text_color, 2)
+
+    return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+
+def generate_sample_comparisons(
+    model: YOLO,
+    valid_images: List[Path],
+    labels_dir: Path,
+    class_names: Dict[int, str],
+    test_run_dir: Path,
+    num_samples: int = 6,
+    device: str = "cpu",
+) -> List[Path]:
+    """Generate sample comparison images (ground truth vs predictions)."""
+    import random
+    import cv2
+    from tqdm import tqdm
+    
+    comparisons_dir = test_run_dir / "sample_comparisons"
+    comparisons_dir.mkdir(parents=True, exist_ok=True)
+    
+    colors = generate_class_colors(class_names)
+    num_comparisons = min(num_samples, len(valid_images))
+    
+    if num_comparisons == 0:
+        print("\u26a0\ufe0f  No labeled images available for comparison generation.")
+        return []
+    
+    sample_images = random.sample(valid_images, num_comparisons) if len(valid_images) > num_comparisons else valid_images
+    print(f"\nGenerating {len(sample_images)} comparison figures...")
+    
+    comparison_paths = []
+    
+    for idx, img_path in enumerate(tqdm(sample_images, desc="Generating comparisons"), 1):
+        label_path = labels_dir / f"{img_path.stem}.txt"
+        
+        # Run inference
+        result = model(str(img_path), verbose=False, device=device)[0]
+        
+        # Draw ground truth and predictions
+        gt_img, gt_count = draw_ground_truth(img_path, label_path, class_names, colors)
+        pred_img = draw_predictions_with_consistent_colors(result, colors, class_names)
+        pred_count = len(result.boxes)
+        
+        # Create side-by-side comparison
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+        
+        ax1.imshow(gt_img)
+        ax1.set_title(f"Ground Truth ({gt_count} objects)", fontweight="bold", fontsize=14)
+        ax1.axis("off")
+        
+        ax2.imshow(pred_img)
+        ax2.set_title(f"Prediction ({pred_count} objects)", fontweight="bold", fontsize=14)
+        ax2.axis("off")
+        
+        fig.suptitle(f"Comparison #{idx}: {img_path.name}", fontsize=16, fontweight="bold")
+        plt.tight_layout()
+        
+        comparison_path = comparisons_dir / f"comparison_{idx:02d}.png"
+        plt.savefig(comparison_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        
+        comparison_paths.append(comparison_path)
+    
+    print(f"\u2713 Generated {len(comparison_paths)} comparison images")
+    print(f"  Saved to: {comparisons_dir}")
+    
+    return comparison_paths
+
+
 def visualize_predictions(
     model: YOLO,
     image_paths: List[Path],
@@ -404,32 +547,36 @@ def plot_core_and_map_metrics(
     # Precision by class
     precision_sorted = df_metrics.sort_values("Precision")
     ax_precision.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
-    ax_precision.set_title("Precision by Class", fontweight="bold", fontsize=16)
-    ax_precision.set_xlabel("Precision", fontweight="bold", fontsize=12)
+    ax_precision.set_title("Precision by Class", fontweight="bold", fontsize=18)
+    ax_precision.set_xlabel("Precision", fontweight="bold", fontsize=14)
     ax_precision.set_xlim(0, 1)
     ax_precision.grid(axis="x", alpha=0.3)
+    ax_precision.tick_params(axis='both', labelsize=14)
 
     # Recall by class
     recall_sorted = df_metrics.sort_values("Recall")
     ax_recall.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
-    ax_recall.set_title("Recall by Class", fontweight="bold", fontsize=16)
-    ax_recall.set_xlabel("Recall", fontweight="bold", fontsize=12)
+    ax_recall.set_title("Recall by Class", fontweight="bold", fontsize=18)
+    ax_recall.set_xlabel("Recall", fontweight="bold", fontsize=14)
     ax_recall.set_xlim(0, 1)
     ax_recall.grid(axis="x", alpha=0.3)
+    ax_recall.tick_params(axis='both', labelsize=14)
 
     # F1-Score by class
     f1_sorted = df_metrics.sort_values("F1-Score")
     ax_f1.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
-    ax_f1.set_title("F1-Score by Class", fontweight="bold", fontsize=16)
-    ax_f1.set_xlabel("F1-Score", fontweight="bold", fontsize=12)
+    ax_f1.set_title("F1-Score by Class", fontweight="bold", fontsize=18)
+    ax_f1.set_xlabel("F1-Score", fontweight="bold", fontsize=14)
     ax_f1.set_xlim(0, 1)
     ax_f1.grid(axis="x", alpha=0.3)
+    ax_f1.tick_params(axis='both', labelsize=14)
 
     # Detection outcomes bar chart
     bars = ax_counts.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
-    ax_counts.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=16)
-    ax_counts.set_ylabel("Count", fontweight="bold", fontsize=12)
+    ax_counts.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=18)
+    ax_counts.set_ylabel("Count", fontweight="bold", fontsize=14)
     ax_counts.grid(axis="y", alpha=0.3)
+    ax_counts.tick_params(axis='both', labelsize=14)
     
     # Add value labels on bars
     for bar in bars:
@@ -439,7 +586,7 @@ def plot_core_and_map_metrics(
             f"{int(height)}",
             ha="center",
             fontweight="bold",
-            fontsize=11
+            fontsize=14
         )
 
     plt.tight_layout()
@@ -454,10 +601,11 @@ def plot_core_and_map_metrics(
     # mAP@0.5 by class
     map_sorted = df_metrics.sort_values("mAP@0.5")
     ax_map.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
-    ax_map.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=16)
-    ax_map.set_xlabel("mAP@0.5", fontweight="bold", fontsize=12)
+    ax_map.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=18)
+    ax_map.set_xlabel("mAP@0.5", fontweight="bold", fontsize=14)
     ax_map.set_xlim(0, 1)
     ax_map.grid(axis="x", alpha=0.3)
+    ax_map.tick_params(axis='both', labelsize=14)
 
     # Overall metrics bar chart
     overall_plot_values = {
@@ -469,9 +617,10 @@ def plot_core_and_map_metrics(
     }
     bars = ax_overall.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
     ax_overall.set_ylim(0, 1)
-    ax_overall.set_title("Overall Metrics", fontweight="bold", fontsize=16)
-    ax_overall.set_ylabel("Score", fontweight="bold", fontsize=12)
+    ax_overall.set_title("Overall Metrics", fontweight="bold", fontsize=18)
+    ax_overall.set_ylabel("Score", fontweight="bold", fontsize=14)
     ax_overall.grid(axis="y", alpha=0.3)
+    ax_overall.tick_params(axis='both', labelsize=14)
     
     # Add value labels on bars
     for idx, (bar, value) in enumerate(zip(bars, overall_plot_values.values())):
@@ -480,7 +629,7 @@ def plot_core_and_map_metrics(
             f"{value:.3f}",
             ha="center",
             fontweight="bold",
-            fontsize=11
+            fontsize=14
         )
 
     plt.tight_layout()
@@ -578,6 +727,7 @@ def generate_pdf_and_json_report(
     confusion_matrix: np.ndarray,
     class_names: Dict[int, str],
     total_time: float,
+    comparison_image_paths: List[Path] | None = None,
 ) -> None:
     pdf_report_path = test_run_dir / "report.pdf"
     json_report_path = test_run_dir / "metrics_data.json"
@@ -784,6 +934,42 @@ def generate_pdf_and_json_report(
 
     story.append(Spacer(1, 12))
     story.append(Paragraph("Additional validation plots available in: yolo_validation folder", styles["Normal"]))
+
+    # Add sample comparisons section
+    if comparison_image_paths:
+        story.append(PageBreak())
+        story.append(Paragraph("Sample Predictions: Ground Truth vs Model", heading_style))
+        story.append(Spacer(1, 12))
+        
+        for idx, comp_path in enumerate(comparison_image_paths, 1):
+            if comp_path.exists():
+                try:
+                    # Get image dimensions to fit on page
+                    pil_img = PILImage.open(comp_path)
+                    img_width, img_height = pil_img.size
+                    
+                    # Scale to fit page width (A4 width minus margins)
+                    max_width = 7.5 * inch
+                    max_height = 5 * inch
+                    aspect = img_width / img_height
+                    
+                    if img_width > max_width:
+                        img_width = max_width
+                        img_height = max_width / aspect
+                    
+                    if img_height > max_height:
+                        img_height = max_height
+                        img_width = max_height * aspect
+                    
+                    img = Image(str(comp_path), width=img_width, height=img_height)
+                    story.append(img)
+                    story.append(Spacer(1, 12))
+                    
+                    # Add page break after every 2 comparisons to avoid crowding
+                    if idx % 2 == 0 and idx < len(comparison_image_paths):
+                        story.append(PageBreak())
+                except Exception as e:
+                    print(f"⚠️  Could not add comparison image {comp_path.name}: {e}")
 
     story.append(Spacer(1, 30))
     story.append(
@@ -998,6 +1184,20 @@ def run_validation_pipeline(
         test_run_dir=test_run_dir,
     )
 
+    # Generate sample comparison images
+    print("\n" + "=" * 80)
+    print("GENERATING SAMPLE COMPARISONS")
+    print("=" * 80)
+    comparison_image_paths = generate_sample_comparisons(
+        model=model,
+        valid_images=dataset_info["valid_images"],
+        labels_dir=dataset_info["labels_dir"],
+        class_names=dataset_info["class_names"],
+        test_run_dir=test_run_dir,
+        num_samples=6,
+        device=device,
+    )
+
     if save_reports:
         generate_pdf_and_json_report(
             model_name=model_name,
@@ -1013,6 +1213,7 @@ def run_validation_pipeline(
             confusion_matrix=metrics["confusion_matrix"],
             class_names=dataset_info["class_names"],
             total_time=total_time,
+            comparison_image_paths=comparison_image_paths,
         )
 
     if use_wandb:
@@ -1038,6 +1239,7 @@ def run_validation_pipeline(
             "map_metrics": map_fig_path,
             "confusion_matrix": confusion_matrix_path,
         },
+        "comparison_images": comparison_image_paths,
         "yolo_validation_dir": test_run_dir / "yolo_validation",
     }
 
