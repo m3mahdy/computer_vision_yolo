@@ -75,6 +75,70 @@ def generate_class_colors(class_names: Dict[int, str]) -> Dict[int, Tuple[int, i
     return colors_map
 
 
+def build_attribute_text(attributes: Dict[str, Any]) -> str:
+    """Build a one-line attribute summary like in the notebook.
+
+    Expected keys in attributes JSON (from representative metadata):
+    - weather
+    - scene
+    - timeofday
+    """
+    if not attributes:
+        return "Attributes: N/A"
+
+    weather = attributes.get("weather", "unknown")
+    scene = attributes.get("scene", "unknown")
+    time_of_day = attributes.get("timeofday", "unknown")
+
+    return f"Attributes: weather={weather}, scene={scene}, time={time_of_day}"
+
+
+def add_attributes_text(img_rgb: np.ndarray, attributes: Dict[str, Any]) -> np.ndarray:
+    """Overlay weather/scene/time attributes at the bottom of the image.
+    
+    Args:
+        img_rgb: Input RGB image
+        attributes: Dictionary containing attribute information
+        
+    Returns:
+        RGB image with overlaid attribute text
+    """
+    if not attributes:
+        return img_rgb
+    
+    img_with_text = img_rgb.copy()
+    h, w = img_with_text.shape[:2]
+    
+    # Create text overlay
+    weather = attributes.get('weather', 'unknown')
+    scene = attributes.get('scene', 'unknown')
+    timeofday = attributes.get('timeofday', 'unknown')
+    attr_text = f"Weather: {weather} | Scene: {scene} | Time: {timeofday}"
+    
+    # Convert to BGR for OpenCV
+    img_bgr = cv2.cvtColor(img_with_text, cv2.COLOR_RGB2BGR)
+    
+    # Add semi-transparent background for text
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    thickness = 2
+    (text_w, text_h), baseline = cv2.getTextSize(attr_text, font, font_scale, thickness)
+    
+    # Position at bottom of image
+    text_x = 10
+    text_y = h - 15
+    
+    # Draw background rectangle
+    overlay = img_bgr.copy()
+    cv2.rectangle(overlay, (0, h - text_h - baseline - 20), (w, h), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.6, img_bgr, 0.4, 0, img_bgr)
+    
+    # Draw text
+    cv2.putText(img_bgr, attr_text, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+    
+    return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+
 def draw_ground_truth(
     img_path: Path,
     label_path: Path,
@@ -160,61 +224,83 @@ def generate_sample_comparisons(
     test_run_dir: Path,
     num_samples: int = 6,
     device: str = "cpu",
+    image_attributes: Dict[str, Any] | None = None,
 ) -> List[Path]:
-    """Generate sample comparison images (ground truth vs predictions)."""
+    """Generate high-resolution comparison images.
+
+    Attribute values are drawn on the images at the bottom with semi-transparent
+    background for better visibility of environmental context.
+    """
     import random
     import cv2
     from tqdm import tqdm
-    
+
     comparisons_dir = test_run_dir / "sample_comparisons"
     comparisons_dir.mkdir(parents=True, exist_ok=True)
-    
+
     colors = generate_class_colors(class_names)
     num_comparisons = min(num_samples, len(valid_images))
-    
+
     if num_comparisons == 0:
         print("\u26a0\ufe0f  No labeled images available for comparison generation.")
         return []
-    
-    sample_images = random.sample(valid_images, num_comparisons) if len(valid_images) > num_comparisons else valid_images
-    print(f"\nGenerating {len(sample_images)} comparison figures...")
-    
-    comparison_paths = []
-    
+
+    sample_images = (
+        random.sample(valid_images, num_comparisons)
+        if len(valid_images) > num_comparisons
+        else valid_images
+    )
+    print(f"\nGenerating {len(sample_images)} high-resolution comparison figures with attributes...")
+
+    comparison_paths: List[Path] = []
+
     for idx, img_path in enumerate(tqdm(sample_images, desc="Generating comparisons"), 1):
         label_path = labels_dir / f"{img_path.stem}.txt"
-        
+
         # Run inference
         result = model(str(img_path), verbose=False, device=device)[0]
-        
+
         # Draw ground truth and predictions
         gt_img, gt_count = draw_ground_truth(img_path, label_path, class_names, colors)
         pred_img = draw_predictions_with_consistent_colors(result, colors, class_names)
+
         pred_count = len(result.boxes)
-        
-        # Create side-by-side comparison
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-        
+
+        # Create side-by-side comparison with higher resolution
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(28, 14), dpi=300)
+
         ax1.imshow(gt_img)
-        ax1.set_title(f"Ground Truth ({gt_count} objects)", fontweight="bold", fontsize=14)
+        ax1.set_title(
+            f"Ground Truth ({gt_count} objects)",
+            fontweight="bold",
+            fontsize=16,
+        )
         ax1.axis("off")
-        
+
         ax2.imshow(pred_img)
-        ax2.set_title(f"Prediction ({pred_count} objects)", fontweight="bold", fontsize=14)
+        ax2.set_title(
+            f"Prediction ({pred_count} objects)",
+            fontweight="bold",
+            fontsize=16,
+        )
         ax2.axis("off")
-        
-        fig.suptitle(f"Comparison #{idx}: {img_path.name}", fontsize=16, fontweight="bold")
+
+        fig.suptitle(
+            f"Comparison #{idx}: {img_path.name}",
+            fontsize=18,
+            fontweight="bold",
+        )
         plt.tight_layout()
-        
+
         comparison_path = comparisons_dir / f"comparison_{idx:02d}.png"
-        plt.savefig(comparison_path, dpi=150, bbox_inches="tight")
+        plt.savefig(comparison_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
-        
+
         comparison_paths.append(comparison_path)
-    
+
     print(f"\u2713 Generated {len(comparison_paths)} comparison images")
     print(f"  Saved to: {comparisons_dir}")
-    
+
     return comparison_paths
 
 
@@ -335,6 +421,9 @@ def load_dataset(used_dataset_root: Path, used_split: str, data_config: Dict[str
             performance_data = json.load(f)
         print(f"\n✓ Performance metadata loaded: {performance_file.name}")
         print(f"  Images with attributes: {performance_data['total_images']}")
+
+        # Map using basename so we can look up attributes by image stem
+        # (e.g., image file d0518d52-0188b977.jpg -> basename key "d0518d52-0188b977").
         image_attributes = {img["basename"]: img for img in performance_data["images"]}
     else:
         print(f"\n⚠️ Performance metadata not found: {performance_file}")
@@ -397,7 +486,17 @@ def extract_core_metrics(
     total_time: float,
 ) -> Dict[str, Any]:
     num_images = len(list(images_dir.glob("*.jpg"))) + len(list(images_dir.glob("*.png")))
-    avg_inference_time = total_time / num_images if num_images > 0 else 0.0
+
+    # Prefer execution time reported by YOLO when available to avoid
+    # re-calculating timing from external code.
+    if hasattr(validation_results, "speed") and isinstance(validation_results.speed, dict):
+        avg_inference_time = float(validation_results.speed.get("inference", 0.0)) / 1000.0
+        print("=============XX==================")
+        print(f"Using YOLO-reported inference time: {avg_inference_time * 1000:.2f} ms per image")
+        print("=============XX==================")
+    else:
+        avg_inference_time = total_time / num_images if num_images > 0 else 0.0
+
     fps = 1.0 / avg_inference_time if avg_inference_time > 0 else 0.0
 
     yolo_metrics = {
@@ -431,11 +530,15 @@ def extract_core_metrics(
             class_fp[idx] = 0
             class_fn[idx] = 0
 
-    confusion_matrix = (
-        validation_results.confusion_matrix.matrix
-        if hasattr(validation_results, "confusion_matrix")
-        else np.zeros((num_classes, num_classes), dtype=int)
-    )
+    # Build confusion-matrix-derived TP/FP/FN using the YOLO confusion matrix
+    # when available, but store both the original matrix and aggregated counts
+    # so that downstream visualizations use this script's definition.
+    if hasattr(validation_results, "confusion_matrix") and hasattr(validation_results.confusion_matrix, "matrix"):
+        confusion_matrix_raw = validation_results.confusion_matrix.matrix
+    else:
+        confusion_matrix_raw = np.zeros((num_classes, num_classes), dtype=int)
+
+    confusion_matrix = np.array(confusion_matrix_raw, copy=True)
 
     for i in range(num_classes):
         tp_val = 0
@@ -536,76 +639,93 @@ def plot_core_and_map_metrics(
     overall_f1: float,
     yolo_metrics: Dict[str, float],
     test_run_dir: Path,
-) -> Tuple[Path, Path]:
-    """Generate core metrics and mAP visualizations with enhanced formatting."""
+) -> Dict[str, Path]:
+    """Generate individual core and mAP visualizations for maximum clarity.
+
+    Returns a dict of figure names to image paths so the PDF builder can
+    insert each diagram on its own, one by one.
+    """
     sns.set_style("whitegrid")
 
-    # Figure 1: Core Metrics (Precision, Recall, F1-Score, Detection Outcomes)
-    fig1, axes1 = plt.subplots(2, 2, figsize=(18, 12))
-    ax_precision, ax_recall, ax_f1, ax_counts = axes1.flatten()
+    fig_paths: Dict[str, Path] = {}
 
     # Precision by class
     precision_sorted = df_metrics.sort_values("Precision")
-    ax_precision.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
-    ax_precision.set_title("Precision by Class", fontweight="bold", fontsize=18)
-    ax_precision.set_xlabel("Precision", fontweight="bold", fontsize=14)
-    ax_precision.set_xlim(0, 1)
-    ax_precision.grid(axis="x", alpha=0.3)
-    ax_precision.tick_params(axis='both', labelsize=14)
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
+    ax.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
+    ax.set_title("Precision by Class", fontweight="bold", fontsize=22)
+    ax.set_xlabel("Precision", fontweight="bold", fontsize=18)
+    ax.set_xlim(0, 1)
+    ax.grid(axis="x", alpha=0.3)
+    ax.tick_params(axis="both", labelsize=14)
+    plt.tight_layout()
+    fig_paths["precision_by_class"] = test_run_dir / "precision_by_class.png"
+    plt.savefig(fig_paths["precision_by_class"], dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
     # Recall by class
     recall_sorted = df_metrics.sort_values("Recall")
-    ax_recall.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
-    ax_recall.set_title("Recall by Class", fontweight="bold", fontsize=18)
-    ax_recall.set_xlabel("Recall", fontweight="bold", fontsize=14)
-    ax_recall.set_xlim(0, 1)
-    ax_recall.grid(axis="x", alpha=0.3)
-    ax_recall.tick_params(axis='both', labelsize=14)
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
+    ax.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
+    ax.set_title("Recall by Class", fontweight="bold", fontsize=22)
+    ax.set_xlabel("Recall", fontweight="bold", fontsize=18)
+    ax.set_xlim(0, 1)
+    ax.grid(axis="x", alpha=0.3)
+    ax.tick_params(axis="both", labelsize=14)
+    plt.tight_layout()
+    fig_paths["recall_by_class"] = test_run_dir / "recall_by_class.png"
+    plt.savefig(fig_paths["recall_by_class"], dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
     # F1-Score by class
     f1_sorted = df_metrics.sort_values("F1-Score")
-    ax_f1.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
-    ax_f1.set_title("F1-Score by Class", fontweight="bold", fontsize=18)
-    ax_f1.set_xlabel("F1-Score", fontweight="bold", fontsize=14)
-    ax_f1.set_xlim(0, 1)
-    ax_f1.grid(axis="x", alpha=0.3)
-    ax_f1.tick_params(axis='both', labelsize=14)
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
+    ax.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
+    ax.set_title("F1-Score by Class", fontweight="bold", fontsize=22)
+    ax.set_xlabel("F1-Score", fontweight="bold", fontsize=18)
+    ax.set_xlim(0, 1)
+    ax.grid(axis="x", alpha=0.3)
+    ax.tick_params(axis="both", labelsize=14)
+    plt.tight_layout()
+    fig_paths["f1_by_class"] = test_run_dir / "f1_by_class.png"
+    plt.savefig(fig_paths["f1_by_class"], dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
-    # Detection outcomes bar chart
-    bars = ax_counts.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
-    ax_counts.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=18)
-    ax_counts.set_ylabel("Count", fontweight="bold", fontsize=14)
-    ax_counts.grid(axis="y", alpha=0.3)
-    ax_counts.tick_params(axis='both', labelsize=14)
-    
-    # Add value labels on bars
+    # Overall detection outcomes
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
+    bars = ax.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
+    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=22)
+    ax.set_ylabel("Count", fontweight="bold", fontsize=18)
+    ax.grid(axis="y", alpha=0.3)
+    ax.tick_params(axis="both", labelsize=14)
     for bar in bars:
         height = bar.get_height()
-        ax_counts.text(
-            bar.get_x() + bar.get_width() / 2, height + max(total_tp, total_fp, total_fn) * 0.01,
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            height + max(total_tp, total_fp, total_fn) * 0.01,
             f"{int(height)}",
             ha="center",
             fontweight="bold",
-            fontsize=14
+            fontsize=14,
         )
-
     plt.tight_layout()
-    metrics_fig_path = test_run_dir / "core_metrics_charts.png"
-    plt.savefig(metrics_fig_path, dpi=150, bbox_inches="tight")
-    plt.close(fig1)
-
-    # Figure 2: mAP Metrics
-    fig2, axes2 = plt.subplots(1, 2, figsize=(18, 6))
-    ax_map, ax_overall = axes2.flatten()
+    fig_paths["detection_outcomes"] = test_run_dir / "detection_outcomes.png"
+    plt.savefig(fig_paths["detection_outcomes"], dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
     # mAP@0.5 by class
     map_sorted = df_metrics.sort_values("mAP@0.5")
-    ax_map.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
-    ax_map.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=18)
-    ax_map.set_xlabel("mAP@0.5", fontweight="bold", fontsize=14)
-    ax_map.set_xlim(0, 1)
-    ax_map.grid(axis="x", alpha=0.3)
-    ax_map.tick_params(axis='both', labelsize=14)
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
+    ax.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
+    ax.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=22)
+    ax.set_xlabel("mAP@0.5", fontweight="bold", fontsize=18)
+    ax.set_xlim(0, 1)
+    ax.grid(axis="x", alpha=0.3)
+    ax.tick_params(axis="both", labelsize=14)
+    plt.tight_layout()
+    fig_paths["map50_by_class"] = test_run_dir / "map50_by_class.png"
+    plt.savefig(fig_paths["map50_by_class"], dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
     # Overall metrics bar chart
     overall_plot_values = {
@@ -615,29 +735,28 @@ def plot_core_and_map_metrics(
         "mAP@0.5": yolo_metrics["map50"],
         "mAP@0.5:0.95": yolo_metrics["map50_95"],
     }
-    bars = ax_overall.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
-    ax_overall.set_ylim(0, 1)
-    ax_overall.set_title("Overall Metrics", fontweight="bold", fontsize=18)
-    ax_overall.set_ylabel("Score", fontweight="bold", fontsize=14)
-    ax_overall.grid(axis="y", alpha=0.3)
-    ax_overall.tick_params(axis='both', labelsize=14)
-    
-    # Add value labels on bars
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
+    bars = ax.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
+    ax.set_ylim(0, 1)
+    ax.set_title("Overall Metrics", fontweight="bold", fontsize=22)
+    ax.set_ylabel("Score", fontweight="bold", fontsize=18)
+    ax.grid(axis="y", alpha=0.3)
+    ax.tick_params(axis="both", labelsize=14)
     for idx, (bar, value) in enumerate(zip(bars, overall_plot_values.values())):
-        ax_overall.text(
-            idx, value + 0.02,
+        ax.text(
+            idx,
+            value + 0.02,
             f"{value:.3f}",
             ha="center",
             fontweight="bold",
-            fontsize=14
+            fontsize=14,
         )
-
     plt.tight_layout()
-    map_fig_path = test_run_dir / "map_metrics_charts.png"
-    plt.savefig(map_fig_path, dpi=150, bbox_inches="tight")
-    plt.close(fig2)
+    fig_paths["overall_metrics"] = test_run_dir / "overall_metrics.png"
+    plt.savefig(fig_paths["overall_metrics"], dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
-    return metrics_fig_path, map_fig_path
+    return fig_paths
 
 
 def plot_confusion_matrix(
@@ -647,71 +766,75 @@ def plot_confusion_matrix(
     model_name: str,
     test_run_dir: Path,
 ) -> Path:
+    """Plot confusion matrix using the exact style from yolo_test notebook.
+
+    Rows (i): true classes
+    Columns (j): predicted classes
+    confusion_matrix[i, j]: count of true class i predicted as class j
     """
-    Generate confusion matrix visualization.
-    
-    Matrix interpretation:
-    - Rows (i): True class
-    - Columns (j): Predicted class
-    - confusion_matrix[i, j]: Count of true class i predicted as class j
-    - Diagonal (i==j): Correct predictions (green)
-    - Off-diagonal: Misclassifications (red)
-    """
-    fig, ax = plt.subplots(figsize=(12, 10))
-    
-    # Draw each cell with color coding
+    sns.set_style("white")
+
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
+
+    # Draw each cell manually with solid colors
     for i in range(num_classes):
         for j in range(num_classes):
             value = confusion_matrix[i, j]
+            
+            # Determine cell color
             if value == 0:
-                cell_color = "white"
+                # White for empty cells
+                cell_color = 'white'
             elif i == j:
-                cell_color = "#00A676"  # Correct predictions
+                cell_color = '#00A676'  # Correct predictions (green)
             else:
-                cell_color = "#D7263D"  # Misclassifications
+                cell_color = '#D7263D'  # Misclassifications (red)
             
             rect = Rectangle(
                 (j - 0.5, i - 0.5), 1, 1,
                 facecolor=cell_color,
-                edgecolor="black",
+                edgecolor='black',
                 linewidth=1.5
             )
             ax.add_patch(rect)
             
-            # Add value text
+            # Add text annotations with smaller font
             if value > 0:
-                text_color = "white" if i == j else "#F7F7F7"
+                text_color = 'white' if i == j else '#F7F7F7'
                 ax.text(
                     j, i, str(int(value)),
-                    ha="center", va="center",
+                    ha='center', va='center',
                     color=text_color,
-                    fontsize=11,
-                    fontweight="bold"
+                    fontsize=9,
+                    fontweight='bold'
                 )
 
-    # Set axis properties
+    # Set axis limits and properties
     ax.set_xlim(-0.5, num_classes - 0.5)
     ax.set_ylim(num_classes - 0.5, -0.5)
-    ax.set_aspect("equal")
+    ax.set_aspect('equal')
 
-    # Set labels with increased font sizes
+    # Set ticks and labels with smaller font
     class_labels = [class_names[i] for i in range(num_classes)]
     ax.set_xticks(np.arange(num_classes))
     ax.set_yticks(np.arange(num_classes))
-    ax.set_xticklabels(class_labels, fontsize=10, fontweight="bold", rotation=45, ha="right")
-    ax.set_yticklabels(class_labels, fontsize=10, fontweight="bold")
-    ax.set_xlabel("Predicted Class", fontweight="bold", fontsize=14)
-    ax.set_ylabel("True Class", fontweight="bold", fontsize=14)
-    ax.set_title(f"Confusion Matrix ({model_name} validation)", fontweight="bold", fontsize=16)
+    ax.set_xticklabels(class_labels, fontsize=8, fontweight='bold', rotation=45, ha='right')
+    ax.set_yticklabels(class_labels, fontsize=8, fontweight='bold')
+    ax.set_xlabel('Predicted Class', fontweight='bold', fontsize=11)
+    ax.set_ylabel('True Class', fontweight='bold', fontsize=11)
+    ax.set_title(f'Confusion Matrix ({model_name} validation)', fontweight='bold', fontsize=13)
     ax.grid(False)
-    
+
+    # Center the confusion matrix in the figure
     plt.tight_layout()
 
     confusion_matrix_path = test_run_dir / "confusion_matrix.png"
-    plt.savefig(confusion_matrix_path, dpi=150, bbox_inches="tight")
+    plt.savefig(confusion_matrix_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
+    
+    print("(Green = Correct Predictions, Red = Incorrect Predictions, White = No Predictions)")
+    
     return confusion_matrix_path
-
 
 def generate_pdf_and_json_report(
     model_name: str,
@@ -857,23 +980,30 @@ def generate_pdf_and_json_report(
     story.append(PageBreak())
     story.append(Paragraph("Performance Visualizations", heading_style))
 
-    core_metrics_path = test_run_dir / "core_metrics_charts.png"
-    if core_metrics_path.exists():
-        with PILImage.open(core_metrics_path) as img:
-            w, h = img.size
-            ratio = h / w
-            pdf_w = 7 * inch
-            pdf_h = pdf_w * ratio
-            story.append(Image(str(core_metrics_path), width=pdf_w, height=pdf_h))
+    # Add diagrams in pairs per page (two per page) for better layout
+    core_and_map_figures = [
+        "precision_by_class",
+        "recall_by_class",
+        "f1_by_class",
+        "detection_outcomes",
+        "map50_by_class",
+        "overall_metrics",
+    ]
 
-    map_metrics_path = test_run_dir / "map_metrics_charts.png"
-    if map_metrics_path.exists():
-        with PILImage.open(map_metrics_path) as img:
-            w, h = img.size
-            ratio = h / w
-            pdf_w = 7 * inch
-            pdf_h = pdf_w * ratio
-            story.append(Image(str(map_metrics_path), width=pdf_w, height=pdf_h))
+    for idx, fig_key in enumerate(core_and_map_figures, 1):
+        fig_path = test_run_dir / f"{fig_key}.png"
+        if fig_path.exists():
+            with PILImage.open(fig_path) as img:
+                w, h = img.size
+                ratio = h / w
+                pdf_w = 5.0 * inch
+                pdf_h = pdf_w * ratio
+                story.append(Image(str(fig_path), width=pdf_w, height=pdf_h))
+                story.append(Spacer(1, 8))
+
+        # After every two figures, move to a new page (except after the last)
+        if idx % 2 == 0 and idx < len(core_and_map_figures):
+            story.append(PageBreak())
 
     story.append(PageBreak())
     story.append(Paragraph("Per-Class Performance", heading_style))
@@ -933,43 +1063,35 @@ def generate_pdf_and_json_report(
             story.append(Image(str(confusion_matrix_img_path), width=pdf_w, height=pdf_h))
 
     story.append(Spacer(1, 12))
-    story.append(Paragraph("Additional validation plots available in: yolo_validation folder", styles["Normal"]))
 
-    # Add sample comparisons section
+    # Add sample comparisons section with text directly under each image
     if comparison_image_paths:
         story.append(PageBreak())
         story.append(Paragraph("Sample Predictions: Ground Truth vs Model", heading_style))
         story.append(Spacer(1, 12))
-        
-        for idx, comp_path in enumerate(comparison_image_paths, 1):
-            if comp_path.exists():
-                try:
-                    # Get image dimensions to fit on page
-                    pil_img = PILImage.open(comp_path)
-                    img_width, img_height = pil_img.size
-                    
-                    # Scale to fit page width (A4 width minus margins)
-                    max_width = 7.5 * inch
-                    max_height = 5 * inch
-                    aspect = img_width / img_height
-                    
-                    if img_width > max_width:
-                        img_width = max_width
-                        img_height = max_width / aspect
-                    
-                    if img_height > max_height:
-                        img_height = max_height
-                        img_width = max_height * aspect
-                    
-                    img = Image(str(comp_path), width=img_width, height=img_height)
-                    story.append(img)
-                    story.append(Spacer(1, 12))
-                    
-                    # Add page break after every 2 comparisons to avoid crowding
-                    if idx % 2 == 0 and idx < len(comparison_image_paths):
-                        story.append(PageBreak())
-                except Exception as e:
-                    print(f"⚠️  Could not add comparison image {comp_path.name}: {e}")
+
+        for comp_path in comparison_image_paths:
+            if not comp_path.exists():
+                continue
+
+            # Add comparison image
+            pil_img = PILImage.open(comp_path)
+            img_width, img_height = pil_img.size
+            aspect = img_width / img_height if img_height > 0 else 1.0
+
+            max_width = 6.5 * inch
+            img_width = max_width
+            img_height = img_width / aspect
+
+            img_flow = Image(str(comp_path), width=img_width, height=img_height)
+            story.append(img_flow)
+
+            # Add descriptive text below the image (placeholder here – can be
+            # extended to include attributes when desired).
+            caption_text = f"Comparison image: {comp_path.name}"
+            story.append(Spacer(1, 4))
+            story.append(Paragraph(caption_text, styles["Normal"]))
+            story.append(Spacer(1, 12))
 
     story.append(Spacer(1, 30))
     story.append(
@@ -1164,7 +1286,7 @@ def run_validation_pipeline(
         "fn": total_fn,
     }
 
-    metrics_fig_path, map_fig_path = plot_core_and_map_metrics(
+    figure_paths = plot_core_and_map_metrics(
         df_metrics=df_metrics,
         total_tp=total_tp,
         total_fp=total_fp,
@@ -1196,6 +1318,7 @@ def run_validation_pipeline(
         test_run_dir=test_run_dir,
         num_samples=6,
         device=device,
+        image_attributes=dataset_info.get("image_attributes"),
     )
 
     if save_reports:
@@ -1235,8 +1358,7 @@ def run_validation_pipeline(
         "metrics": metrics,
         "df_metrics": df_metrics,
         "figures": {
-            "core_metrics": metrics_fig_path,
-            "map_metrics": map_fig_path,
+            **figure_paths,
             "confusion_matrix": confusion_matrix_path,
         },
         "comparison_images": comparison_image_paths,
