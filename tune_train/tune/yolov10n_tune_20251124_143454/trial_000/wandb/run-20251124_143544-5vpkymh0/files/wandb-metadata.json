@@ -1,0 +1,36 @@
+{
+  "os": "Linux-6.6.105+-x86_64-with-glibc2.35",
+  "python": "CPython 3.12.12",
+  "startedAt": "2025-11-24T14:35:44.132978Z",
+  "program": "yolo_v8_tuning_training.ipynb",
+  "codePath": "yolo_v8_tuning_training.ipynb",
+  "email": "m3edris@gmail.com",
+  "root": "/computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000",
+  "host": "e45ea6fd2b71",
+  "executable": "/usr/bin/python3",
+  "colab": "https://colab.research.google.com/notebook#fileId=https://github.com/m3mahdy/computer_vision_yolo/blob/main/tune_train/yolo_v8_tuning_training.ipynb",
+  "cpu_count": 1,
+  "cpu_count_logical": 2,
+  "gpu": "Tesla T4",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "120942624768",
+      "used": "43412549632"
+    }
+  },
+  "memory": {
+    "total": "13605851136"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Tesla T4",
+      "memoryTotal": "16106127360",
+      "cudaCores": 2560,
+      "architecture": "Turing",
+      "uuid": "GPU-b1dd15af-aea8-a3b9-f66f-364e15125b09"
+    }
+  ],
+  "cudaVersion": "12.4",
+  "writerId": "qm5chb1sq497qu5iftdpbuwob127x841"
+}

@@ -1,0 +1,127 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            945h0r7ts9g7dm4d09p0rpfg4dm9vhy2:
+                codePath: yolo_v8_tuning_training.ipynb
+                colab: https://colab.research.google.com/notebook#fileId=https://github.com/m3mahdy/computer_vision_yolo/blob/main/tune_train/yolo_v8_tuning_training.ipynb
+                cpu_count: 1
+                cpu_count_logical: 2
+                cudaVersion: "12.4"
+                disk:
+                    /:
+                        total: "120942624768"
+                        used: "43483701248"
+                email: m3edris@gmail.com
+                executable: /usr/bin/python3
+                gpu: Tesla T4
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Turing
+                      cudaCores: 2560
+                      memoryTotal: "16106127360"
+                      name: Tesla T4
+                      uuid: GPU-b1dd15af-aea8-a3b9-f66f-364e15125b09
+                host: e45ea6fd2b71
+                memory:
+                    total: "13605851136"
+                os: Linux-6.6.105+-x86_64-with-glibc2.35
+                program: yolo_v8_tuning_training.ipynb
+                python: CPython 3.12.12
+                root: /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_002
+                startedAt: "2025-11-24T14:39:17.565664Z"
+                writerId: 945h0r7ts9g7dm4d09p0rpfg4dm9vhy2
+        m: []
+        python_version: 3.12.12
+        t:
+            "1":
+                - 1
+                - 5
+                - 35
+                - 41
+                - 49
+                - 53
+                - 80
+                - 105
+            "2":
+                - 1
+                - 5
+                - 35
+                - 41
+                - 49
+                - 53
+                - 80
+                - 105
+            "3":
+                - 2
+                - 13
+                - 16
+            "4": 3.12.12
+            "5": 0.23.0
+            "8":
+                - 1
+                - 12
+            "10":
+                - 20
+            "12": 0.23.0
+            "13": linux-x86_64
+batch:
+    value: 64
+box:
+    value: 8.901136146093187
+cache:
+    value: true
+close_mosaic:
+    value: 10
+cls:
+    value: 1.1245625677499498
+device:
+    value: cuda
+dfl:
+    value: 0.9038638027832644
+epochs:
+    value: 2
+hsv_h:
+    value: 0.05936760696663411
+hsv_s:
+    value: 0.6149319551628336
+hsv_v:
+    value: 0.5419016287003684
+imgsz:
+    value: 640
+lr0:
+    value: 0.0006675693250997204
+lrf:
+    value: 0.20016946012720685
+mixup:
+    value: 0.1313644666054551
+momentum:
+    value: 0.9087667587009569
+mosaic:
+    value: 0.5085254851167494
+optimizer:
+    value: Adam
+patience:
+    value: 20
+plots:
+    value: true
+save:
+    value: true
+scale:
+    value: 0.84756778644993
+translate:
+    value: 0.013380461302827856
+val:
+    value: true
+verbose:
+    value: true
+warmup_bias_lr:
+    value: 0.09614291203483502
+warmup_epochs:
+    value: 3
+warmup_momentum:
+    value: 0.8681210993814015
+weight_decay:
+    value: 3.107150282598407e-05
+workers:
+    value: 8

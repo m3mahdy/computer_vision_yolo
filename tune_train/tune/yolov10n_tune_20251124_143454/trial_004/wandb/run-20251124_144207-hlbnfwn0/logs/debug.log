@@ -1,0 +1,26 @@
+2025-11-24 14:42:07,530 INFO    MainThread:3355 [wandb_init.py:setup_run_log_directory():713] Logging user logs to /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_004/wandb/run-20251124_144207-hlbnfwn0/logs/debug.log
+2025-11-24 14:42:07,531 INFO    MainThread:3355 [wandb_init.py:setup_run_log_directory():714] Logging internal logs to /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_004/wandb/run-20251124_144207-hlbnfwn0/logs/debug-internal.log
+2025-11-24 14:42:07,531 INFO    MainThread:3355 [wandb_init.py:monkeypatch_ipython():632] configuring jupyter hooks <wandb.sdk.wandb_init._WandbInit object at 0x7bc63ca79610>
+2025-11-24 14:42:07,531 INFO    MainThread:3355 [wandb_init.py:init():840] calling init triggers
+2025-11-24 14:42:07,531 INFO    MainThread:3355 [wandb_init.py:init():845] wandb.init called with sweep_config: {}
+config: {'optimizer': 'Adam', 'lr0': 0.0020744284653995706, 'lrf': 0.11287713143501954, 'momentum': 0.8685852176760903, 'weight_decay': 0.00010094377952377089, 'warmup_epochs': 3, 'warmup_momentum': 0.5890418554419901, 'warmup_bias_lr': 0.07810484888161186, 'hsv_h': 0.0720370628774468, 'hsv_s': 0.6842948633963384, 'hsv_v': 0.7564390595178256, 'scale': 0.7985317885511489, 'translate': 0.054878229360876045, 'mosaic': 0.5434672040667519, 'mixup': 0.11637518504059235, 'box': 5.921772081247226, 'cls': 0.6647956588012092, 'dfl': 0.9035129187295441, 'epochs': 2, 'batch': 64, 'imgsz': 640, 'device': 'cuda', 'val': True, 'patience': 20, 'save': True, 'plots': True, 'cache': True, 'workers': 8, 'close_mosaic': 10, 'verbose': True, '_wandb': {}}
+2025-11-24 14:42:07,531 INFO    MainThread:3355 [wandb_init.py:init():888] starting backend
+2025-11-24 14:42:07,531 INFO    MainThread:3355 [wandb_init.py:init():891] sending inform_init request
+2025-11-24 14:42:07,535 INFO    MainThread:3355 [wandb_init.py:init():899] backend started and connected
+2025-11-24 14:42:07,557 INFO    MainThread:3355 [wandb_run.py:_label_probe_notebook():1323] probe notebook
+2025-11-24 14:42:08,214 INFO    MainThread:3355 [wandb_init.py:init():969] updated telemetry
+2025-11-24 14:42:08,215 INFO    MainThread:3355 [wandb_init.py:init():993] communicating run to backend with 90.0 second timeout
+2025-11-24 14:42:08,695 INFO    MainThread:3355 [wandb_init.py:init():1040] starting run threads in backend
+2025-11-24 14:42:09,220 INFO    MainThread:3355 [wandb_run.py:_console_start():2504] atexit reg
+2025-11-24 14:42:09,222 INFO    MainThread:3355 [wandb_run.py:_redirect():2352] redirect: wrap_raw
+2025-11-24 14:42:09,222 INFO    MainThread:3355 [wandb_run.py:_redirect():2421] Wrapping output streams.
+2025-11-24 14:42:09,222 INFO    MainThread:3355 [wandb_run.py:_redirect():2444] Redirects installed.
+2025-11-24 14:42:09,224 INFO    MainThread:3355 [wandb_init.py:init():1080] run started, returning control to user process
+2025-11-24 14:43:30,037 INFO    MainThread:3355 [wandb_run.py:_finish():2270] finishing run m3mahdy-king-saud-university/yolo-bdd100k_yolo_limited-tuning/hlbnfwn0
+2025-11-24 14:43:30,039 INFO    MainThread:3355 [jupyter.py:save_history():435] not saving jupyter history
+2025-11-24 14:43:30,039 INFO    MainThread:3355 [jupyter.py:save_ipynb():359] not saving jupyter notebook
+2025-11-24 14:43:30,039 INFO    MainThread:3355 [wandb_init.py:_jupyter_teardown():617] cleaning up jupyter logic
+2025-11-24 14:43:30,039 INFO    MainThread:3355 [wandb_run.py:_atexit_cleanup():2469] got exitcode: 0
+2025-11-24 14:43:30,039 INFO    MainThread:3355 [wandb_run.py:_restore():2451] restore
+2025-11-24 14:43:30,039 INFO    MainThread:3355 [wandb_run.py:_restore():2457] restore done
+2025-11-24 14:43:31,821 INFO    MainThread:3355 [wandb_run.py:_footer_sync_info():3853] logging synced files

@@ -1,0 +1,109 @@
+
+================================================================================
+TRIAL 0/5
+================================================================================
+Optimizer: Adam
+Learning Rate: lr0=0.001040, lrf=0.1624
+Momentum: 0.8687, Weight Decay: 0.000013
+Warmup: epochs=3, momentum=0.77, bias_lr=0.07
+Augmentation: hsv_h=0.002, hsv_s=0.788, hsv_v=0.733, translate=0.036, scale=0.827, mosaic=0.59, mixup=0.06
+Loss Weights: box=7.15, cls=1.15, dfl=0.94
+================================================================================
+Ultralytics 8.3.231 🚀 Python-3.12.12 torch-2.9.0+cu126 CUDA:0 (Tesla T4, 15095MiB)
+[34m[1mengine/trainer: [0magnostic_nms=False, amp=True, augment=False, auto_augment=randaugment, batch=64, bgr=0.0, box=7.148538589793427, cache=True, cfg=None, classes=None, close_mosaic=10, cls=1.1479175279631737, compile=False, conf=None, copy_paste=0.0, copy_paste_mode=flip, cos_lr=False, cutmix=0.0, data=/computer_vision_yolo/tmp/yolov10n/data.yaml, degrees=0.0, deterministic=True, device=0, dfl=0.9368437102970628, dnn=False, dropout=0.0, dynamic=False, embed=None, epochs=2, erasing=0.4, exist_ok=True, fliplr=0.5, flipud=0.0, format=torchscript, fraction=1.0, freeze=None, half=False, hsv_h=0.0020584494295802446, hsv_s=0.7879639408647978, hsv_v=0.7329770563201687, imgsz=640, int8=False, iou=0.7, keras=False, kobj=1.0, line_width=None, lr0=0.0010401663679887319, lrf=0.1624074561769746, mask_ratio=4, max_det=300, mixup=0.06084844859190755, mode=train, model=/computer_vision_yolo/models/yolov10n/yolov10n.pt, momentum=0.8687193424403443, mosaic=0.5917022549267169, multi_scale=False, name=yolov10n_trial_000, nbs=64, nms=False, opset=None, optimize=False, optimizer=Adam, overlap_mask=True, patience=20, perspective=0.0, plots=True, pose=12.0, pretrained=True, profile=False, project=/computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000, rect=False, resume=False, retina_masks=False, save=True, save_conf=False, save_crop=False, save_dir=/computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/yolov10n_trial_000, save_frames=False, save_json=False, save_period=-1, save_txt=False, scale=0.8274034664069656, seed=0, shear=0.0, show=False, show_boxes=True, show_conf=True, show_labels=True, simplify=True, single_cls=False, source=None, split=val, stream_buffer=False, task=detect, time=None, tracker=botsort.yaml, translate=0.03636499344142013, val=True, verbose=True, vid_stride=1, visualize=False, warmup_bias_lr=0.07080725777960455, warmup_epochs=3, warmup_momentum=0.770501755284444, weight_decay=1.3066739238053272e-05, workers=8, workspace=None
+[KDownloading https://ultralytics.com/assets/Arial.ttf to '/root/.config/Ultralytics/Arial.ttf': 100% ━━━━━━━━━━━━ 755.1KB 7.6MB/s 0.1s
+Overriding model.yaml nc=80 with nc=10
+
+                   from  n    params  module                                       arguments
+  0                  -1  1       464  ultralytics.nn.modules.conv.Conv             [3, 16, 3, 2]
+  1                  -1  1      4672  ultralytics.nn.modules.conv.Conv             [16, 32, 3, 2]
+  2                  -1  1      7360  ultralytics.nn.modules.block.C2f             [32, 32, 1, True]
+  3                  -1  1     18560  ultralytics.nn.modules.conv.Conv             [32, 64, 3, 2]
+  4                  -1  2     49664  ultralytics.nn.modules.block.C2f             [64, 64, 2, True]
+  5                  -1  1      9856  ultralytics.nn.modules.block.SCDown          [64, 128, 3, 2]
+  6                  -1  2    197632  ultralytics.nn.modules.block.C2f             [128, 128, 2, True]
+  7                  -1  1     36096  ultralytics.nn.modules.block.SCDown          [128, 256, 3, 2]
+  8                  -1  1    460288  ultralytics.nn.modules.block.C2f             [256, 256, 1, True]
+  9                  -1  1    164608  ultralytics.nn.modules.block.SPPF            [256, 256, 5]
+ 10                  -1  1    249728  ultralytics.nn.modules.block.PSA             [256, 256]
+ 11                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']
+ 12             [-1, 6]  1         0  ultralytics.nn.modules.conv.Concat           [1]
+ 13                  -1  1    148224  ultralytics.nn.modules.block.C2f             [384, 128, 1]
+ 14                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']
+ 15             [-1, 4]  1         0  ultralytics.nn.modules.conv.Concat           [1]
+ 16                  -1  1     37248  ultralytics.nn.modules.block.C2f             [192, 64, 1]
+ 17                  -1  1     36992  ultralytics.nn.modules.conv.Conv             [64, 64, 3, 2]
+ 18            [-1, 13]  1         0  ultralytics.nn.modules.conv.Concat           [1]
+ 19                  -1  1    123648  ultralytics.nn.modules.block.C2f             [192, 128, 1]
+ 20                  -1  1     18048  ultralytics.nn.modules.block.SCDown          [128, 128, 3, 2]
+ 21            [-1, 10]  1         0  ultralytics.nn.modules.conv.Concat           [1]
+ 22                  -1  1    282624  ultralytics.nn.modules.block.C2fCIB          [384, 256, 1, True, True]
+ 23        [16, 19, 22]  1    865228  ultralytics.nn.modules.head.v10Detect        [10, [64, 128, 256]]
+YOLOv10n summary: 223 layers, 2,710,940 parameters, 2,710,924 gradients, 8.4 GFLOPs
+
+Transferred 493/595 items from pretrained weights
+Freezing layer 'model.23.dfl.conv.weight'
+[34m[1mAMP: [0mrunning Automatic Mixed Precision (AMP) checks...
+[KDownloading https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt to 'yolo11n.pt': 100% ━━━━━━━━━━━━ 5.4MB 273.9MB/s 0.0s
+[34m[1mAMP: [0mchecks passed ✅
+[34m[1mtrain: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 1409.6±623.5 MB/s, size: 63.9 KB)
+[K[34m[1mtrain: [0mScanning /computer_vision_yolo/bdd100k_yolo_limited/labels/train... 945 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 945/945 1.8Kit/s 0.5s0.0ss
+[34m[1mtrain: [0mNew cache created: /computer_vision_yolo/bdd100k_yolo_limited/labels/train.cache
+WARNING ⚠️ cache='ram' may produce non-deterministic training results. Consider cache='disk' as a deterministic alternative if your disk space allows.
+[K[34m[1mtrain: [0mCaching images (0.6GB RAM): 100% ━━━━━━━━━━━━ 945/945 192.9it/s 4.9s0.1s
+[34m[1malbumentations: [0mBlur(p=0.01, blur_limit=(3, 7)), MedianBlur(p=0.01, blur_limit=(3, 7)), ToGray(p=0.01, method='weighted_average', num_output_channels=3), CLAHE(p=0.01, clip_limit=(1.0, 4.0), tile_grid_size=(8, 8))
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 490.3±120.6 MB/s, size: 49.4 KB)
+[K[34m[1mval: [0mScanning /computer_vision_yolo/bdd100k_yolo_limited/labels/val... 611 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 611/611 1.1Kit/s 0.6s<0.1s
+[34m[1mval: [0mNew cache created: /computer_vision_yolo/bdd100k_yolo_limited/labels/val.cache
+WARNING ⚠️ cache='ram' may produce non-deterministic training results. Consider cache='disk' as a deterministic alternative if your disk space allows.
+[K[34m[1mval: [0mCaching images (0.4GB RAM): 100% ━━━━━━━━━━━━ 611/611 85.0it/s 7.2s0.1ss
+Plotting labels to /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/yolov10n_trial_000/labels.jpg...
+[34m[1moptimizer:[0m Adam(lr=0.0010401663679887319, momentum=0.8687193424403443) with parameter groups 95 weight(decay=0.0), 108 weight(decay=1.3066739238053272e-05), 107 bias(decay=0.0)
+Image sizes 640 train, 640 val
+Using 2 dataloader workers
+Logging results to [1m/computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/yolov10n_trial_000[0m
+Starting training for 2 epochs...
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K        1/2      13.6G      4.024      19.54      1.447       1563        640: 100% ━━━━━━━━━━━━ 15/15 2.6s/it 38.7s1.4s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 5/5 2.1s/it 10.4s.3s5s
+                   all        611      12424    0.00202     0.0549    0.00817    0.00519
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K        2/2      13.9G        3.9       12.1      1.403       1643        640: 100% ━━━━━━━━━━━━ 15/15 1.0s/it 15.5s1.0s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 5/5 1.6it/s 3.0s0.8ss
+                   all        611      12424     0.0544     0.0229     0.0373     0.0258
+
+2 epochs completed in 0.019 hours.
+Optimizer stripped from /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/yolov10n_trial_000/weights/last.pt, 5.7MB
+Optimizer stripped from /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/yolov10n_trial_000/weights/best.pt, 5.7MB
+
+Validating /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/yolov10n_trial_000/weights/best.pt...
+Ultralytics 8.3.231 🚀 Python-3.12.12 torch-2.9.0+cu126 CUDA:0 (Tesla T4, 15095MiB)
+YOLOv10n summary (fused): 102 layers, 2,267,118 parameters, 0 gradients, 6.5 GFLOPs
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 5/5 1.2s/it 5.8s1.5s
+                   all        611      12424     0.0543     0.0229     0.0373     0.0258
+                 rider         89        122          0          0          0          0
+                   car        606       6743       0.38      0.161      0.261      0.181
+                 truck        341        505          0          0          0          0
+                   bus        212        265          0          0          0          0
+                 train         11         12          0          0          0          0
+         traffic light        443       2264          0          0          0          0
+          traffic sign        524       2513          0          0          0          0
+Speed: 0.2ms preprocess, 1.5ms inference, 0.0ms loss, 0.6ms postprocess per image
+Results saved to [1m/computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/yolov10n_trial_000[0m
+Ultralytics 8.3.231 🚀 Python-3.12.12 torch-2.9.0+cu126 CUDA:0 (Tesla T4, 15095MiB)
+YOLOv10n summary (fused): 102 layers, 2,267,118 parameters, 0 gradients, 6.5 GFLOPs
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 985.9±466.1 MB/s, size: 69.2 KB)
+[K[34m[1mval: [0mScanning /computer_vision_yolo/bdd100k_yolo_limited/labels/val.cache... 611 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 611/611 513.2Kit/s 0.0s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 39/39 6.1it/s 6.4s<0.2s
+                   all        611      12424     0.0547     0.0229     0.0374     0.0259
+Speed: 1.0ms preprocess, 3.0ms inference, 0.0ms loss, 0.2ms postprocess per image
+Results saved to [1m/computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/val[0m
+✓ Trial 0 completed, results saved: /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_143454/trial_000/trial_results.json
+  mAP@0.5: 0.0374
+  mAP@0.5:0.95: 0.0259
+  Precision: 0.0547
+  Recall: 0.0229
+🧹 Removed last.pt to save space
+🧹 Model deleted from memory
