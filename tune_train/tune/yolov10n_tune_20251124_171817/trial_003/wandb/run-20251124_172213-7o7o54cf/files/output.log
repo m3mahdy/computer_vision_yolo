@@ -1,0 +1,30 @@
+
+================================================================================
+TRIAL 3/12
+================================================================================
+Optimizer: AdamW
+Learning Rate: lr0=0.000404, lrf=0.2124
+Momentum: 0.9151, Weight Decay: 0.000019
+Warmup: epochs=3, momentum=0.53, bias_lr=0.10
+Augmentation: hsv_h=0.077, hsv_s=0.479, hsv_v=0.402, translate=0.141, scale=1.189, mosaic=0.86, mixup=0.15
+Loss Weights: box=4.44, cls=1.04, dfl=0.67
+================================================================================
+❌ Trial 3 failed: 'scale=1.1892768570729007' is an invalid value. Valid 'scale' values are between 0.0 and 1.0.
+Traceback (most recent call last):
+  File "/tmp/ipython-input-3089349663.py", line 65, in objective
+    train_results = trial_model.train(
+                    ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/ultralytics/engine/model.py", line 768, in train
+    self.trainer = (trainer or self._smart_load("trainer"))(overrides=args, _callbacks=self.callbacks)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/ultralytics/models/yolo/detect/train.py", line 63, in __init__
+    super().__init__(cfg, overrides, _callbacks)
+  File "/usr/local/lib/python3.12/dist-packages/ultralytics/engine/trainer.py", line 124, in __init__
+    self.args = get_cfg(cfg, overrides)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/ultralytics/cfg/__init__.py", line 322, in get_cfg
+    check_cfg(cfg)
+  File "/usr/local/lib/python3.12/dist-packages/ultralytics/cfg/__init__.py", line 373, in check_cfg
+    raise ValueError(f"'{k}={v}' is an invalid value. Valid '{k}' values are between 0.0 and 1.0.")
+ValueError: 'scale=1.1892768570729007' is an invalid value. Valid 'scale' values are between 0.0 and 1.0.
+🧹 Model deleted from memory

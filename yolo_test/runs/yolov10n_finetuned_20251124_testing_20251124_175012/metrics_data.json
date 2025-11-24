@@ -1,0 +1,330 @@
+{
+  "metadata": {
+    "model_name": "yolov10n_finetuned_20251124",
+    "run_name": "yolov10n_finetuned_20251124_testing_20251124_175012",
+    "wb_run_name": "yolov10n_finetuned_20251124_bdd100k_yolo_limited_test_20251124_175012",
+    "timestamp": "2025-11-24T17:51:04.544574",
+    "dataset": "bdd100k_yolo_limited",
+    "data_split": "test",
+    "images_processed": 725,
+    "iou_threshold": 0.5,
+    "num_classes": 10
+  },
+  "model_info": {
+    "parameters": 2267118,
+    "model_size_mb": 4.47640323638916,
+    "flops_gflops": 6.537625599999998
+  },
+  "performance": {
+    "total_time_seconds": 14.116812944412231,
+    "avg_inference_time_ms": 5294.700179310894,
+    "fps": 188.86810700018714,
+    "images_processed": 725
+  },
+  "custom_metrics": {
+    "overall": {
+      "precision": 0.3428552535872512,
+      "recall": 0.7209399332591768,
+      "f1_score": 0.4647098364328927,
+      "true_positives": 5185,
+      "false_positives": 9938,
+      "false_negatives": 2007
+    },
+    "per_class": {
+      "pedestrian": {
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+      },
+      "rider": {
+        "true_positives": 5,
+        "false_positives": 173,
+        "false_negatives": 8,
+        "precision": 0.028089887640449437,
+        "recall": 0.38461538461538464,
+        "f1_score": 0.05235602094240837
+      },
+      "car": {
+        "true_positives": 3986,
+        "false_positives": 4721,
+        "false_negatives": 1348,
+        "precision": 0.45779258068220974,
+        "recall": 0.7472815898012748,
+        "f1_score": 0.5677658286446835
+      },
+      "truck": {
+        "true_positives": 111,
+        "false_positives": 441,
+        "false_negatives": 99,
+        "precision": 0.20108695652173914,
+        "recall": 0.5285714285714286,
+        "f1_score": 0.29133858267716534
+      },
+      "bus": {
+        "true_positives": 40,
+        "false_positives": 301,
+        "false_negatives": 37,
+        "precision": 0.11730205278592376,
+        "recall": 0.5194805194805194,
+        "f1_score": 0.19138755980861244
+      },
+      "train": {
+        "true_positives": 0,
+        "false_positives": 17,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+      },
+      "motorcycle": {
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+      },
+      "bicycle": {
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+      },
+      "traffic light": {
+        "true_positives": 487,
+        "false_positives": 2085,
+        "false_negatives": 213,
+        "precision": 0.18934681181959565,
+        "recall": 0.6957142857142857,
+        "f1_score": 0.2976772616136919
+      },
+      "traffic sign": {
+        "true_positives": 556,
+        "false_positives": 2200,
+        "false_negatives": 302,
+        "precision": 0.20174165457184326,
+        "recall": 0.6480186480186481,
+        "f1_score": 0.3076923076923077
+      }
+    }
+  },
+  "yolo_official_metrics": {
+    "overall": {
+      "precision": 0.5278436632394972,
+      "recall": 0.25546943623586577,
+      "map50": 0.2484181746100902,
+      "map50_95": 0.13128937196857038,
+      "fitness": 0.13128937196857038
+    },
+    "per_class": {
+      "rider": {
+        "precision": 0.5096746746769755,
+        "recall": 0.1109810372180005,
+        "ap50": 0.12415260071428595,
+        "ap50_95": 0.04943964562962235
+      },
+      "car": {
+        "precision": 0.48624292449540135,
+        "recall": 0.5673595957275755,
+        "ap50": 0.544657237504758,
+        "ap50_95": 0.30905820483297086
+      },
+      "truck": {
+        "precision": 0.3809780257192572,
+        "recall": 0.2809673843946758,
+        "ap50": 0.26656481693402784,
+        "ap50_95": 0.16920974973301292
+      },
+      "bus": {
+        "precision": 0.48048308930693767,
+        "recall": 0.2375366568914956,
+        "ap50": 0.26189973717974846,
+        "ap50_95": 0.17156816194857036
+      },
+      "train": {
+        "precision": 1.0,
+        "recall": 0.0,
+        "ap50": 0.0,
+        "ap50_95": 0.0
+      },
+      "traffic light": {
+        "precision": 0.4234230746671022,
+        "recall": 0.29354587869362364,
+        "ap50": 0.26712916703903766,
+        "ap50_95": 0.09521690278847524
+      },
+      "traffic sign": {
+        "precision": 0.4141038538108063,
+        "recall": 0.2978955007256894,
+        "ap50": 0.27452366289877356,
+        "ap50_95": 0.12453293884734049
+      }
+    }
+  },
+  "confusion_matrix": {
+    "matrix": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        8.0
+      ],
+      [
+        0.0,
+        4.0,
+        3986.0,
+        116.0,
+        47.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        3.0,
+        1177.0
+      ],
+      [
+        0.0,
+        0.0,
+        12.0,
+        111.0,
+        31.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        54.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        9.0,
+        40.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        28.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        487.0,
+        8.0,
+        205.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        556.0,
+        298.0
+      ],
+      [
+        0.0,
+        169.0,
+        4709.0,
+        316.0,
+        223.0,
+        14.0,
+        0.0,
+        0.0,
+        2081.0,
+        2189.0,
+        0.0
+      ]
+    ],
+    "diagonal_sum": 5185,
+    "total_predictions": 16893
+  },
+  "class_names": {
+    "0": "pedestrian",
+    "1": "rider",
+    "2": "car",
+    "3": "truck",
+    "4": "bus",
+    "5": "train",
+    "6": "motorcycle",
+    "7": "bicycle",
+    "8": "traffic light",
+    "9": "traffic sign"
+  }
+}

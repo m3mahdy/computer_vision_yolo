@@ -1,0 +1,58 @@
+{
+  "trial_number": 7,
+  "model_name": "yolov10n",
+  "dataset": "bdd100k_yolo_limited",
+  "trial_directory": "/computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_171817/trial_007",
+  "hyperparameters": {
+    "optimizer": "Adam",
+    "lr0": 0.0019165268411797845,
+    "lrf": 0.21534167280871647,
+    "momentum": 0.8879822625378682,
+    "weight_decay": 2.2760157668181607e-05,
+    "warmup_epochs": 3,
+    "warmup_momentum": 0.6555294354143696,
+    "warmup_bias_lr": 0.028087658811627066,
+    "hsv_h": 0.03514104336036132,
+    "hsv_s": 0.7318731252142745,
+    "hsv_v": 0.7700320083871631,
+    "scale": 0.8082871615312168,
+    "translate": 0.05846935870915645,
+    "mosaic": 0.5993021732090446,
+    "mixup": 0.11312539580047143,
+    "box": 6.613713053144144,
+    "cls": 1.1112028737029582,
+    "dfl": 1.9042471219221202,
+    "epochs": 6,
+    "batch": 64,
+    "imgsz": 640,
+    "device": "cuda",
+    "val": true,
+    "patience": 20,
+    "save": true,
+    "plots": true,
+    "cache": true,
+    "workers": 8,
+    "close_mosaic": 10,
+    "verbose": true
+  },
+  "validation_metrics": {
+    "map50": 0.12251963703992241,
+    "map50_95": 0.06422603458850672,
+    "precision": 0.09085771717048227,
+    "recall": 0.2733133821451902
+  },
+  "training_metrics": {
+    "metrics/precision(B)": 0.09067644725531245,
+    "metrics/recall(B)": 0.2737098005547677,
+    "metrics/mAP50(B)": 0.1224129677324287,
+    "metrics/mAP50-95(B)": 0.06402691103707062
+  },
+  "training_config": {
+    "epochs": 6,
+    "batch_size": 64,
+    "image_size": 640,
+    "device": "cuda"
+  },
+  "timestamp": "2025-11-24T17:30:52.215758",
+  "status": "completed"
+}

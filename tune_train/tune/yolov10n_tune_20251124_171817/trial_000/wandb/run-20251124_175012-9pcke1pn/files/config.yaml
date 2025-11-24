@@ -1,0 +1,75 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            jc50ecvl760k20a9bnqgqu6j1enjyclh:
+                codePath: yolo_v8_tuning_training.ipynb
+                colab: https://colab.research.google.com/notebook#fileId=https://github.com/m3mahdy/computer_vision_yolo/blob/main/tune_train/yolo_v8_tuning_training.ipynb
+                cpu_count: 1
+                cpu_count_logical: 2
+                cudaVersion: "12.4"
+                disk:
+                    /:
+                        total: "120942624768"
+                        used: "43865767936"
+                email: m3edris@gmail.com
+                executable: /usr/bin/python3
+                gpu: Tesla T4
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Turing
+                      cudaCores: 2560
+                      memoryTotal: "16106127360"
+                      name: Tesla T4
+                      uuid: GPU-c35ed661-5eba-0cbe-4bef-2d69306a572e
+                host: dde76a1a5076
+                memory:
+                    total: "13605842944"
+                os: Linux-6.6.105+-x86_64-with-glibc2.35
+                program: yolo_v8_tuning_training.ipynb
+                python: CPython 3.12.12
+                root: /computer_vision_yolo/tune_train/tune/yolov10n_tune_20251124_171817/trial_000
+                startedAt: "2025-11-24T17:50:12.164146Z"
+                writerId: jc50ecvl760k20a9bnqgqu6j1enjyclh
+        m: []
+        python_version: 3.12.12
+        t:
+            "1":
+                - 1
+                - 5
+                - 35
+                - 41
+                - 49
+                - 53
+                - 80
+                - 105
+            "2":
+                - 1
+                - 5
+                - 35
+                - 41
+                - 49
+                - 53
+                - 80
+                - 105
+            "3":
+                - 2
+                - 13
+                - 16
+            "4": 3.12.12
+            "5": 0.23.0
+            "8":
+                - 1
+                - 12
+            "12": 0.23.0
+            "13": linux-x86_64
+batch_size:
+    value: 64
+dataset:
+    value: bdd100k_yolo_limited
+iou_threshold:
+    value: 0.5
+model:
+    value: yolov10n_finetuned_20251124
+split:
+    value: test
