@@ -1412,6 +1412,13 @@ def run_validation_pipeline(
         except Exception as finish_error:
             print(f"\n⚠️  Error finishing W&B run: {finish_error}")
 
+    # Clean up model from memory
+    print("\n🧹 Cleaning up model from memory...")
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    print("✓ Model removed from memory")
+
     # Return comprehensive results
     return {
         "model_name": model_name,
