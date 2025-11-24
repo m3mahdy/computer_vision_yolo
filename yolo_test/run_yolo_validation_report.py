@@ -360,11 +360,15 @@ def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float
         print(f'Downloading {model_name} ...')
         
         try:
-            # Download model - it will be cached by ultralytics
-            MODEL_NAME_n = model_name 
-            if model_name.startswith('yolov11') or model_name.startswith('yolov12'):
-                MODEL_NAME_n = model_name + '.pt'
-            model = YOLO(MODEL_NAME_n)
+            # Download model - ensure .pt extension for ultralytics
+            # Ultralytics expects model names with .pt extension for download
+            if not model_name.endswith('.pt'):
+                model_name_for_download = model_name + '.pt'
+            else:
+                model_name_for_download = model_name
+                
+            print(f'  Requesting model: {model_name_for_download}')
+            model = YOLO(model_name_for_download)
             
             # Create models directory
             models_dir.mkdir(parents=True, exist_ok=True)
@@ -405,7 +409,6 @@ def load_model(model_name: str, models_dir: Path) -> Tuple[YOLO, Dict[str, float
             print(f'\n❌ Error downloading model: {e}')
             raise
     else:
-        print("test")
         model = YOLO(str(model_path))
         print(f'✓ Model loaded from {model_path}')
 
