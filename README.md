@@ -6,11 +6,23 @@ End-to-end pipeline for training and evaluating YOLO models on the BDD100K auton
 ## Colab Quick start
 
 ```bash
-cd /
+cd /content/Drive/MyDrive/ksu_yolo_2025
+```
+not needed if repo exist in g-drive, use pull
+```bash
 git clone https://github.com/m3mahdy/computer_vision_yolo
+```
+
+```bash
 cd computer_vision_yolo
-pip install -r requirements.txt
+pip install -r requirements.txt```
+
+```bash
 python process_limited_dataset.py
+```
+
+```bash
+python process_bdd100k_to_yolo_dataset.py
 ```
 
 ## 🚀 Quick Start
