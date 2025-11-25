@@ -2,7 +2,7 @@
 Utility script to extract the compressed limited BDD100K YOLO dataset.
 
 This script:
-1. Checks if bdd100k_yolo_limited.zip exists in bdd100k_yolo_limited_zipped/
+1. Checks if bdd100k_yolo_tuning.zip exists in bdd100k_yolo_tuning_zipped/
 2. If not found, downloads it from Google Drive using gdown
 3. Extracts the dataset for quick experiments without needing to process the full 100K dataset
 
@@ -16,8 +16,10 @@ import sys
 from pathlib import Path
 from tqdm import tqdm
 
-# Google Drive file ID for bdd100k_yolo_limited.zip
-GDRIVE_FILE_ID = '1ISNZ07CZtuuzMMU4wxAVI5YW_XI9at7z'
+
+
+# Google Drive file ID for bdd100k_yolo_tuning.zip
+GDRIVE_FILE_ID = '1i2CZRUr-Y3s_lKuxZ9kRKwIDsc0DYqqs'
 
 
 def check_gdown_installed():
@@ -64,8 +66,8 @@ def download_from_gdrive(file_id, output_path):
 def process_limited_dataset():
     """Extract the compressed limited dataset."""
     base_dir = Path(__file__).parent
-    zipped_dir = base_dir / 'bdd100k_yolo_limited_zipped'
-    compressed_file = zipped_dir / 'bdd100k_yolo_limited.zip'
+    zipped_dir = base_dir / 'bdd100k_yolo_tuning_zipped'
+    compressed_file = zipped_dir / 'bdd100k_yolo_tuning.zip'
     extract_dir = base_dir / 'bdd100k_yolo_limited'
     
     # Create zipped directory if it doesn't exist

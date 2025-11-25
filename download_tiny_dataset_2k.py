@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 from tqdm import tqdm
 
-# Google Drive file ID for bdd100k_yolo_limited.zip
+# Google Drive file ID for bdd100k_yolo_tiny_2k.zip
 GDRIVE_FILE_ID = '1ISNZ07CZtuuzMMU4wxAVI5YW_XI9at7z'
 
 
@@ -65,7 +65,7 @@ def process_limited_dataset():
     """Extract the compressed limited dataset."""
     base_dir = Path(__file__).parent
     zipped_dir = base_dir / 'bdd100k_yolo_limited_zipped'
-    compressed_file = zipped_dir / 'bdd100k_yolo_limited.zip'
+    compressed_file = zipped_dir / 'bdd100k_yolo_tiny_2k.zip'
     extract_dir = base_dir / 'bdd100k_yolo_limited'
     
     # Create zipped directory if it doesn't exist

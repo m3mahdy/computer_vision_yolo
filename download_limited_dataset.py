@@ -17,7 +17,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 # Google Drive file ID for bdd100k_yolo_limited.zip
-GDRIVE_FILE_ID = '1ISNZ07CZtuuzMMU4wxAVI5YW_XI9at7z'
+GDRIVE_FILE_ID = '1DFBUw9ltwvmnyiXuatPuAbrPtOskJ79h'
 
 
 def check_gdown_installed():
