@@ -1,0 +1,26 @@
+[
+  {
+    "trial_number": 0,
+    "timestamp": "2025-11-25 01:15:01",
+    "trial_state": "COMPLETE",
+    "best_map": 0.004671799658779366,
+    "completed_trials": 1,
+    "total_trials": 1
+  },
+  {
+    "trial_number": 1,
+    "timestamp": "2025-11-25 01:15:14",
+    "trial_state": "COMPLETE",
+    "best_map": 0.004671799658779366,
+    "completed_trials": 2,
+    "total_trials": 2
+  },
+  {
+    "trial_number": 2,
+    "timestamp": "2025-11-25 01:15:29",
+    "trial_state": "COMPLETE",
+    "best_map": 0.004671799658779366,
+    "completed_trials": 3,
+    "total_trials": 3
+  }
+]

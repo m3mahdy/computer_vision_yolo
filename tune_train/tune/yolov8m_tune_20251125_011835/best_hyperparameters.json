@@ -1,0 +1,24 @@
+{
+  "model": "yolov8m",
+  "dataset_root": "/computer_vision_yolo/bdd100k_yolo_limited",
+  "data_yaml_path": "/content/Drive/MyDrive/ksu_yolo_2025/computer_vision_yolo/tmp/yolov8m/data.yaml",
+  "optimization_results": {
+    "best_trial": 4,
+    "best_map50": 0.2794388952781793,
+    "total_trials": 6,
+    "optimization_duration": "0:05:59.584920"
+  },
+  "hyperparameters": {
+    "optimizer": "SGD",
+    "lr0": 0.0006354128541270993,
+    "momentum": 0.9390914149680019,
+    "weight_decay": 0.0003623575371607693,
+    "warmup_epochs": 0,
+    "warmup_momentum": 0.5714930969997855,
+    "warmup_bias_lr": 0.028261925335822943,
+    "mosaic": 0.9600243812142845,
+    "mixup": 0.040333652560882796
+  },
+  "timestamp": "2025-11-25T01:29:38.124562",
+  "notes": "Use these hyperparameters for training. Add epochs, batch, imgsz, device, and other training settings."
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "trial_number": 0,
+    "timestamp": "2025-11-25 01:21:14",
+    "trial_state": "COMPLETE",
+    "best_map": 0.004671799658779366,
+    "completed_trials": 1,
+    "total_trials": 1
+  },
+  {
+    "trial_number": 1,
+    "timestamp": "2025-11-25 01:24:25",
+    "trial_state": "COMPLETE",
+    "best_map": 0.08642368328644127,
+    "completed_trials": 2,
+    "total_trials": 2
+  },
+  {
+    "trial_number": 2,
+    "timestamp": "2025-11-25 01:25:31",
+    "trial_state": "COMPLETE",
+    "best_map": 0.08642368328644127,
+    "completed_trials": 3,
+    "total_trials": 3
+  },
+  {
+    "trial_number": 3,
+    "timestamp": "2025-11-25 01:26:38",
+    "trial_state": "COMPLETE",
+    "best_map": 0.08662624075806813,
+    "completed_trials": 4,
+    "total_trials": 4
+  },
+  {
+    "trial_number": 4,
+    "timestamp": "2025-11-25 01:27:49",
+    "trial_state": "COMPLETE",
+    "best_map": 0.2794388952781793,
+    "completed_trials": 5,
+    "total_trials": 5
+  },
+  {
+    "trial_number": 5,
+    "timestamp": "2025-11-25 01:29:06",
+    "trial_state": "COMPLETE",
+    "best_map": 0.2794388952781793,
+    "completed_trials": 6,
+    "total_trials": 6
+  }
+]

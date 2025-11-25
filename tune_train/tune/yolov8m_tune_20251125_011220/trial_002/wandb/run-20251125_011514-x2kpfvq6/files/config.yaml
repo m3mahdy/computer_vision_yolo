@@ -1,0 +1,112 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            pnc70l21oho1631ijzm9b9c1bklyo0qh:
+                codePath: yolo_v8m_limited_test_tuning_main.ipynb
+                colab: https://colab.research.google.com/notebook#fileId=1TbU9Oh9bISvVcy2AwYYiDOsONdiHXjgC
+                cpu_count: 6
+                cpu_count_logical: 12
+                cudaVersion: "12.4"
+                disk:
+                    /:
+                        total: "120942624768"
+                        used: "44845957120"
+                email: m3edris@gmail.com
+                executable: /usr/bin/python3
+                git:
+                    commit: 3a3b7cd20a4128432451642c244f80ee81ec3d81
+                    remote: https://github.com/m3mahdy/computer_vision_yolo
+                gpu: NVIDIA A100-SXM4-40GB
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "42949672960"
+                      name: NVIDIA A100-SXM4-40GB
+                      uuid: GPU-53251761-24b3-2585-fa4e-c6a41a3c0cff
+                host: 14f97a26c8a5
+                memory:
+                    total: "89629220864"
+                os: Linux-6.6.105+-x86_64-with-glibc2.35
+                program: yolo_v8m_limited_test_tuning_main.ipynb
+                python: CPython 3.12.12
+                root: /content/Drive/MyDrive/ksu_yolo_2025/computer_vision_yolo/tune_train/tune/yolov8m_tune_20251125_011220/trial_002
+                startedAt: "2025-11-25T01:15:14.919092Z"
+                writerId: pnc70l21oho1631ijzm9b9c1bklyo0qh
+        m: []
+        python_version: 3.12.12
+        t:
+            "1":
+                - 1
+                - 5
+                - 35
+                - 41
+                - 49
+                - 53
+                - 80
+                - 105
+            "2":
+                - 1
+                - 5
+                - 35
+                - 41
+                - 49
+                - 53
+                - 80
+                - 105
+            "3":
+                - 2
+                - 13
+                - 16
+            "4": 3.12.12
+            "5": 0.23.0
+            "8":
+                - 1
+                - 12
+            "10":
+                - 20
+            "12": 0.23.0
+            "13": linux-x86_64
+batch:
+    value: 64
+cache:
+    value: true
+close_mosaic:
+    value: 10
+device:
+    value: cuda
+epochs:
+    value: 3
+imgsz:
+    value: 640
+lr0:
+    value: 0.0010424063925536997
+mixup:
+    value: 0.0004834101521981973
+momentum:
+    value: 0.8865878532643187
+mosaic:
+    value: 0.9213284898050421
+optimizer:
+    value: Adam
+patience:
+    value: 20
+plots:
+    value: true
+save:
+    value: true
+val:
+    value: true
+verbose:
+    value: true
+warmup_bias_lr:
+    value: 0.040424036493414015
+warmup_epochs:
+    value: 0
+warmup_momentum:
+    value: 0.9243385081891088
+weight_decay:
+    value: 2.3870778732641956e-05
+workers:
+    value: 8
