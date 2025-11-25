@@ -7,8 +7,10 @@ bdd100k_tmp_images/**
 bdd100k_tmp_labels/**
 bdd100k_yolo/**
 bdd100k_yolo_limited/**
+bdd100k_yolo_tuning/**
 
 bdd100k_yolo_limited_zipped/**
+bdd100k_yolo_tuning_zipped/**
 
 
 

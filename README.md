@@ -16,11 +16,17 @@ git clone https://github.com/m3mahdy/computer_vision_yolo
 ```bash
 cd computer_vision_yolo
 pip install -r requirements.txt```
-
-```bash
-python process_limited_dataset.py
 ```
 
+```bash
+python download_limited_dataset.py
+```
+OR
+```bash
+python download_tuning_dataset.py
+```
+
+To process the full data
 ```bash
 python process_bdd100k_to_yolo_dataset.py
 ```

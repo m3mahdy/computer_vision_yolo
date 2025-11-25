@@ -58,10 +58,10 @@ from datetime import datetime
 
 
 # Sampling configuration for representative dataset
-SAMPLES_PER_ATTRIBUTE_COMBO = 1500  # Samples per (weather, scene, timeofday) combination
-MIN_SAMPLES_PER_CLASS = 1500  # Minimum samples per object class per split
-MIN_SAMPLES_PER_ATTRIBUTE_VALUE = 1500  # Minimum samples per individual attribute value (weather/scene/time)
-MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO = 500  # Minimum samples per (class, attribute) combination
+SAMPLES_PER_ATTRIBUTE_COMBO = 1000  # Samples per (weather, scene, timeofday) combination
+MIN_SAMPLES_PER_CLASS = 1000  # Minimum samples per object class per split
+MIN_SAMPLES_PER_ATTRIBUTE_VALUE = 1000  # Minimum samples per individual attribute value (weather/scene/time)
+MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO = 250  # Minimum samples per (class, attribute) combination
 
 
 # BDD100K object detection classes (10 classes)
@@ -459,7 +459,7 @@ def save_test_performance_metadata(tmp_labels_dir, yolo_labels_dir, split_name, 
     Save detailed per-image metadata to enable performance analysis.
     For each image, stores: basename, attributes (weather/scene/timeofday), 
     classes present, and object counts per class.
-    Works with both full dataset (all images) and limited dataset (representative samples).
+    Works with both full dataset (all images) and _limited dataset (representative samples).
     """
     print(f"\n  Generating performance analysis metadata for {split_name} split...")
     
@@ -1370,7 +1370,7 @@ Examples:
     base_dir = Path(__file__).parent
     source_dir = base_dir / "bdd_100k_source"
     yolo_dataset_root = base_dir / 'bdd100k_yolo'
-    limited_dataset_root = base_dir / 'bdd100k_yolo_limited'
+    limited_dataset_root = base_dir / 'bdd100k_yolo_tuning'
     
     # Handle reanalyze-only mode
     if args.reanalyze_only:
@@ -1546,9 +1546,9 @@ Examples:
     print("COMPRESSING LIMITED DATASET")
     print("="*70)
     
-    zipped_dir = base_dir / 'bdd100k_yolo_limited_zipped'
+    zipped_dir = base_dir / 'bdd100k_yolo_tuning_zipped'
     zipped_dir.mkdir(parents=True, exist_ok=True)
-    compressed_file = zipped_dir / 'bdd100k_yolo_limited.zip'
+    compressed_file = zipped_dir / 'bdd100k_yolo_tuning.zip'
     
     # Remove existing compressed file if present
     if compressed_file.exists():
@@ -1597,7 +1597,7 @@ Examples:
     print(f"  METADATA_DIR = YOLO_DATASET_ROOT / 'representative_json'")
     print(f"  # Load with: json.load(open(METADATA_DIR / 'train_metadata.json'))")
     print(f"\n  # For limited dataset (quick testing, visualization, experimentation):")
-    print(f"  YOLO_DATASET_ROOT = BASE_DIR / 'bdd100k_yolo_limited'")
+    print(f"  YOLO_DATASET_ROOT = BASE_DIR / 'bdd100k_yolo_tuning'")
     print(f"  DATA_YAML_PATH = YOLO_DATASET_ROOT / 'data.yaml'")
     print(f"  Note: Limited dataset IS the representative samples (physically copied)")
     print("="*70)
