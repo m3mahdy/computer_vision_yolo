@@ -15,8 +15,8 @@ REPRESENTATIVE_ATTRIBUTES = {
     'timeofday': ['daytime', 'night', 'dawn/dusk', 'undefined']
 }
 
-# Define base paths
-BASE_DIR = Path(__file__).parent
+# Define base paths - project root (parent of dataset/ folder)
+BASE_DIR = Path(__file__).parent.parent
 SOURCE_DIR = BASE_DIR / "bdd_100k_source"
 YOLO_DATASET_ROOT = BASE_DIR / 'bdd100k_yolo'
 

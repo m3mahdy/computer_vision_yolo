@@ -55,7 +55,9 @@ def convert_bbox_to_yolo(bbox, img_width, img_height):
 def convert_json_to_yolo_file(json_path, output_txt_path):
     """
     Convert a single BDD100K JSON label file to YOLO .txt format file.
-    Creates the output .txt file with YOLO format labels.
+    
+    IMPORTANT: Only processes box2d (detection bounding boxes).
+    Ignores segmentation data (poly2d, area, lane, drivable area).
     
     Args:
         json_path: Path to BDD100K JSON label file
@@ -87,10 +89,11 @@ def convert_json_to_yolo_file(json_path, output_txt_path):
         for obj in objects:
             category = obj.get('category', '')
             
-            # Skip only if category not in our class list
+            # Skip if category not in detection classes (excludes segmentation: area/*, lane/*)
             if category not in CLASS_TO_IDX:
                 continue
             
+            # Only process box2d (detection boxes) - skip objects without bounding boxes
             box2d = obj.get('box2d')
             if not box2d:
                 skipped_count += 1
