@@ -14,6 +14,10 @@ bdd100k_limited_datasets_zipped/**
 bdd100k_test_split_zipped/**
 
 
+bdd_100k_source_x/**
+bdd100k_tmp_images_x/**
+bdd100k_tmp_labels_x/**
+bdd100k_yolo_x/**
 
 
 
