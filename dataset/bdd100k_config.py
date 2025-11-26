@@ -41,6 +41,11 @@ BDD100K_CLASSES = [
     'traffic sign'
 ]
 
+# BDD100K standard image dimensions
+# All images in the dataset are 1280x720 pixels
+BDD100K_IMAGE_WIDTH = 1280
+BDD100K_IMAGE_HEIGHT = 720
+
 # Create class name to index mapping
 CLASS_TO_IDX = {cls_name: idx for idx, cls_name in enumerate(BDD100K_CLASSES)}
 
