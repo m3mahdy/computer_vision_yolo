@@ -57,34 +57,58 @@ import sys
 from datetime import datetime
 
 
-# Sampling configuration for representative dataset
-SAMPLES_PER_ATTRIBUTE_COMBO = 1500  # Samples per (weather, scene, timeofday) combination
-MIN_SAMPLES_PER_CLASS = 1500  # Minimum samples per object class per split
-MIN_SAMPLES_PER_ATTRIBUTE_VALUE = 1500  # Minimum samples per individual attribute value (weather/scene/time)
-MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO = 500  # Minimum samples per (class, attribute) combination
-
 # Define paths
 base_dir = Path(__file__).parent
 source_dir = base_dir / "bdd_100k_source"
 yolo_dataset_root = base_dir / 'bdd100k_yolo'
-limited_dataset_root = base_dir / 'bdd100k_yolo_limited'
 
+# Multiple limited dataset configurations
+# Each config creates a separate limited dataset with different sampling parameters
+LIMITED_DATASET_CONFIGS = [
+    {
+        'name': 'bdd100k_yolo_limited',
+        'description': 'Balanced limited dataset - medium coverage',
+        'samples_per_attribute_combo': 1500,
+        'min_samples_per_class': 1500,
+        'min_samples_per_attribute_value': 1500,
+        'min_samples_per_class_attribute_combo': 500,
+    },
+    {
+        'name': 'bdd100k_yolo_tuning',
+        'description': 'tuning dataset for tuning hyperparameters',
+        'samples_per_attribute_combo': 1000,
+        'min_samples_per_class': 1000,
+        'min_samples_per_attribute_value': 1000,
+        'min_samples_per_class_attribute_combo': 500,
+    },
+    {
+        'name': 'bdd100k_yolo_tiny',
+        'description': 'Small dataset for fast testing',
+        'samples_per_attribute_combo': 150,
+        'min_samples_per_class': 150,
+        'min_samples_per_attribute_value': 150,
+        'min_samples_per_class_attribute_combo': 50,
+    }
+]
 
-zipped_dir = base_dir / 'bdd100k_yolo_limited_zipped'
-zipped_dir.mkdir(parents=True, exist_ok=True)
-compressed_file = zipped_dir / 'bdd100k_yolo_limited.zip'
+# Global sampling configuration (will be set by active config)
+SAMPLES_PER_ATTRIBUTE_COMBO = 1500
+MIN_SAMPLES_PER_CLASS = 1500
+MIN_SAMPLES_PER_ATTRIBUTE_VALUE = 1500
+MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO = 500
 
 
 # BDD100K object detection classes (10 classes)
+# CRITICAL: These names must match exactly what's in the BDD100K JSON files
 BDD100K_CLASSES = [
-    'pedestrian',
+    'person', 
     'rider',
     'car',
     'truck',
     'bus',
     'train',
-    'motorcycle',
-    'bicycle',
+    'motor',
+    'bike',
     'traffic light',
     'traffic sign'
 ]
@@ -438,6 +462,206 @@ def count_objects_in_labels(labels_dir, desc="Counting objects"):
     return object_counts
 
 
+def count_objects_in_json_files(json_dir, desc="Counting objects in JSON"):
+    """
+    Count objects by class from original BDD100K JSON label files.
+    Returns dict: {class_name: count}
+    """
+    object_counts = {cls: 0 for cls in BDD100K_CLASSES}
+    json_files = list(json_dir.glob('*.json'))
+    
+    for json_file in tqdm(json_files, desc=desc, unit='files', leave=False):
+        try:
+            with open(json_file, 'r') as f:
+                label_data = json.load(f)
+            
+            # Get objects from frames or directly
+            frames = label_data.get('frames', [])
+            if frames:
+                objects = frames[0].get('objects', [])
+            else:
+                objects = label_data.get('objects', label_data.get('labels', []))
+            
+            # Count objects by category
+            for obj in objects:
+                category = obj.get('category', '')
+                if category in CLASS_TO_IDX and 'box2d' in obj:
+                    object_counts[category] += 1
+        
+        except Exception as e:
+            continue
+    
+    return object_counts
+
+
+def compare_dataset_statistics(tmp_labels_dir, yolo_labels_dir, split_name):
+    """
+    Compare object counts between original JSON files and generated YOLO labels.
+    Returns dict with comparison statistics.
+    """
+    print(f"\n{'='*70}")
+    print(f"DATASET STATISTICS COMPARISON - {split_name.upper()} SPLIT")
+    print(f"{'='*70}")
+    
+    # Count objects in original JSON files
+    json_dir = tmp_labels_dir / '100k' / split_name
+    if not json_dir.exists():
+        json_dir = tmp_labels_dir / split_name
+    
+    if not json_dir.exists():
+        print(f"⚠️  JSON directory not found: {json_dir}")
+        return None
+    
+    print(f"\nCounting objects in original JSON files...")
+    original_counts = count_objects_in_json_files(json_dir, f"  Analyzing {split_name} JSON")
+    
+    # Count objects in generated YOLO labels
+    print(f"\nCounting objects in generated YOLO labels...")
+    generated_counts = count_objects_in_labels(yolo_labels_dir, f"  Analyzing {split_name} YOLO")
+    
+    # Calculate statistics
+    comparison = {
+        'split': split_name,
+        'original_total': sum(original_counts.values()),
+        'generated_total': sum(generated_counts.values()),
+        'by_class': {}
+    }
+    
+    print(f"\n{'Class':<15} {'Original':>10} {'Generated':>10} {'Match':>8} {'Status':>10}")
+    print("-" * 70)
+    
+    all_match = True
+    for class_name in BDD100K_CLASSES:
+        orig = original_counts[class_name]
+        gen = generated_counts[class_name]
+        match = orig == gen
+        status = "✓ OK" if match else "✗ DIFF"
+        
+        if not match:
+            all_match = False
+        
+        comparison['by_class'][class_name] = {
+            'original': orig,
+            'generated': gen,
+            'match': match,
+            'difference': gen - orig
+        }
+        
+        print(f"{class_name:<15} {orig:>10,} {gen:>10,} {str(match):>8} {status:>10}")
+    
+    print("-" * 70)
+    print(f"{'TOTAL':<15} {comparison['original_total']:>10,} {comparison['generated_total']:>10,}")
+    
+    comparison['all_match'] = all_match
+    comparison['match_percentage'] = (comparison['generated_total'] / comparison['original_total'] * 100) if comparison['original_total'] > 0 else 0
+    
+    print(f"\nMatch Rate: {comparison['match_percentage']:.2f}%")
+    
+    if all_match:
+        print(f"✅ PERFECT MATCH: All objects successfully converted!")
+    else:
+        print(f"⚠️  DIFFERENCES DETECTED: Some objects may have been filtered or have validation issues")
+        print(f"   This is expected if bbox validation removed invalid coordinates")
+    
+    return comparison
+
+
+def compress_test_split_only(yolo_dataset_root, base_dir):
+    """
+    Compress only the test split from the full dataset for quick distribution.
+    Creates a standalone test dataset with data.yaml configured for test only.
+    """
+    print("\n" + "="*70)
+    print("COMPRESSING TEST SPLIT ONLY")
+    print("="*70)
+    
+    test_images_dir = yolo_dataset_root / 'images' / 'test'
+    test_labels_dir = yolo_dataset_root / 'labels' / 'test'
+    
+    if not test_images_dir.exists() or not test_labels_dir.exists():
+        print(f"⚠️  Test split not found in {yolo_dataset_root}")
+        return None
+    
+    # Create output directory
+    zipped_dir = base_dir / 'bdd100k_test_split_zipped'
+    zipped_dir.mkdir(parents=True, exist_ok=True)
+    compressed_file = zipped_dir / 'bdd100k_yolo_test_split.zip'
+    
+    # Remove existing compressed file
+    if compressed_file.exists():
+        print(f"Removing existing: {compressed_file.name}")
+        compressed_file.unlink()
+    
+    print(f"\nCompressing test split...")
+    print(f"  Source: {yolo_dataset_root}")
+    print(f"  Destination: {compressed_file}")
+    
+    with zipfile.ZipFile(compressed_file, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zipf:
+        # Count files first
+        test_images = list(test_images_dir.glob('*'))
+        test_labels = list(test_labels_dir.glob('*.txt'))
+        
+        # Add test images
+        for img_file in tqdm(test_images, desc="  Compressing images", unit='files'):
+            if img_file.is_file():
+                arcname = Path('bdd100k_yolo_test') / 'images' / 'test' / img_file.name
+                zipf.write(img_file, arcname=arcname)
+        
+        # Add test labels
+        for label_file in tqdm(test_labels, desc="  Compressing labels", unit='files'):
+            arcname = Path('bdd100k_yolo_test') / 'labels' / 'test' / label_file.name
+            zipf.write(label_file, arcname=arcname)
+        
+        # Create and add test-only data.yaml
+        test_data_yaml = f"""# BDD100K Test Split Only
+# Auto-generated by process_bdd100k_to_yolo_dataset.py
+
+path: .  # Current directory
+test: images/test  # Test images only
+
+# Number of classes
+nc: {len(BDD100K_CLASSES)}
+
+# Class names
+names: {BDD100K_CLASSES}
+"""
+        zipf.writestr('bdd100k_yolo_test/data.yaml', test_data_yaml)
+        
+        # Copy representative_json for test split if exists
+        test_json_dir = yolo_dataset_root / 'representative_json' / 'test'
+        if test_json_dir.exists():
+            json_files = list(test_json_dir.glob('*.json'))
+            for json_file in tqdm(json_files, desc="  Compressing metadata", unit='files', leave=False):
+                arcname = Path('bdd100k_yolo_test') / 'representative_json' / 'test' / json_file.name
+                zipf.write(json_file, arcname=arcname)
+        
+        # Copy test metadata and performance analysis files
+        for metadata_file in ['test_metadata.json', 'test_performance_analysis.json']:
+            src_file = yolo_dataset_root / 'representative_json' / metadata_file
+            if src_file.exists():
+                arcname = Path('bdd100k_yolo_test') / 'representative_json' / metadata_file
+                zipf.write(src_file, arcname=arcname)
+    
+    file_size_mb = compressed_file.stat().st_size / (1024 * 1024)
+    
+    print(f"\n✓ Test split compressed successfully!")
+    print(f"  Location: {compressed_file}")
+    print(f"  Size: {file_size_mb:.1f} MB")
+    print(f"  Images: {len(test_images):,}")
+    print(f"  Labels: {len(test_labels):,}")
+    print(f"\nTo extract and use:")
+    print(f"  unzip {compressed_file.name}")
+    print(f"  cd bdd100k_yolo_test")
+    print(f"  # Run YOLO validation with data.yaml")
+    
+    return {
+        'path': compressed_file,
+        'size_mb': file_size_mb,
+        'num_images': len(test_images),
+        'num_labels': len(test_labels)
+    }
+
+
 def perform_integrity_check(images_dir, labels_dir, split_name):
     """
     Verify all images have corresponding label files and vice versa.
@@ -572,7 +796,7 @@ def extract_zip_with_progress(zip_path, extract_to, description):
     return len(members)
 
 
-def select_representative_samples(split_labels_src, split_name):
+def select_representative_samples(split_labels_src, split_name, config=None):
     """
     Select representative samples ensuring comprehensive coverage:
     1. SAMPLES_PER_ATTRIBUTE_COMBO per (weather, scene, timeofday) combination
@@ -580,14 +804,25 @@ def select_representative_samples(split_labels_src, split_name):
     3. MIN_SAMPLES_PER_ATTRIBUTE_VALUE per individual attribute value
     4. MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO per (class, attribute) combination (per split)
     
+    Args:
+        split_labels_src: Path to source labels directory
+        split_name: Name of the split (train/val/test)
+        config: Optional dict with sampling configuration
+    
     Returns comprehensive metadata dict with statistics and selected samples.
     """
+    # Use provided config or global defaults
+    samples_per_combo = config['samples_per_attribute_combo'] if config else SAMPLES_PER_ATTRIBUTE_COMBO
+    min_per_class = config['min_samples_per_class'] if config else MIN_SAMPLES_PER_CLASS
+    min_per_attr = config['min_samples_per_attribute_value'] if config else MIN_SAMPLES_PER_ATTRIBUTE_VALUE
+    min_per_class_attr = config['min_samples_per_class_attribute_combo'] if config else MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO
+    
     print(f"\n  Analyzing labels for representative sample selection...")
     print(f"    Configuration:")
-    print(f"      - {SAMPLES_PER_ATTRIBUTE_COMBO} samples per attribute combo (weather×scene×time)")
-    print(f"      - {MIN_SAMPLES_PER_CLASS} samples per class")
-    print(f"      - {MIN_SAMPLES_PER_ATTRIBUTE_VALUE} samples per attribute value")
-    print(f"      - {MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO} samples per (class×attribute) combo PER SPLIT")
+    print(f"      - {samples_per_combo} samples per attribute combo (weather×scene×time)")
+    print(f"      - {min_per_class} samples per class")
+    print(f"      - {min_per_attr} samples per attribute value")
+    print(f"      - {min_per_class_attr} samples per (class×attribute) combo PER SPLIT")
     
     # Get all JSON files (for limited dataset, analyze .txt files instead)
     json_files = list(split_labels_src.glob('*.json'))
@@ -600,10 +835,10 @@ def select_representative_samples(split_labels_src, split_name):
             'split': split_name,
             'generation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'configuration': {
-                'samples_per_attribute_combo': SAMPLES_PER_ATTRIBUTE_COMBO,
-                'min_samples_per_class': MIN_SAMPLES_PER_CLASS,
-                'min_samples_per_attribute_value': MIN_SAMPLES_PER_ATTRIBUTE_VALUE,
-                'min_samples_per_class_attribute_combo': MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO
+                'samples_per_attribute_combo': samples_per_combo,
+                'min_samples_per_class': min_per_class,
+                'min_samples_per_attribute_value': min_per_attr,
+                'min_samples_per_class_attribute_combo': min_per_class_attr
             },
             'classes': BDD100K_CLASSES,
             'attributes': REPRESENTATIVE_ATTRIBUTES,
@@ -635,10 +870,10 @@ def select_representative_samples(split_labels_src, split_name):
             'split': split_name,
             'generation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'configuration': {
-                'samples_per_attribute_combo': SAMPLES_PER_ATTRIBUTE_COMBO,
-                'min_samples_per_class': MIN_SAMPLES_PER_CLASS,
-                'min_samples_per_attribute_value': MIN_SAMPLES_PER_ATTRIBUTE_VALUE,
-                'min_samples_per_class_attribute_combo': MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO
+                'samples_per_attribute_combo': samples_per_combo,
+                'min_samples_per_class': min_per_class,
+                'min_samples_per_attribute_value': min_per_attr,
+                'min_samples_per_class_attribute_combo': min_per_class_attr
             },
             'classes': BDD100K_CLASSES,
             'attributes': REPRESENTATIVE_ATTRIBUTES,
@@ -712,10 +947,10 @@ def select_representative_samples(split_labels_src, split_name):
         'split': split_name,
         'generation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'configuration': {
-            'samples_per_attribute_combo': SAMPLES_PER_ATTRIBUTE_COMBO,
-            'min_samples_per_class': MIN_SAMPLES_PER_CLASS,
-            'min_samples_per_attribute_value': MIN_SAMPLES_PER_ATTRIBUTE_VALUE,
-            'min_samples_per_class_attribute_combo': MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO
+            'samples_per_attribute_combo': samples_per_combo,
+            'min_samples_per_class': min_per_class,
+            'min_samples_per_attribute_value': min_per_attr,
+            'min_samples_per_class_attribute_combo': min_per_class_attr
         },
         'classes': BDD100K_CLASSES,
         'attributes': REPRESENTATIVE_ATTRIBUTES,
@@ -752,7 +987,7 @@ def select_representative_samples(split_labels_src, split_name):
             reverse=True
         )
         
-        num_to_select = min(SAMPLES_PER_ATTRIBUTE_COMBO, len(sorted_files))
+        num_to_select = min(samples_per_combo, len(sorted_files))
         selected = sorted_files[:num_to_select]
         
         if selected:
@@ -768,7 +1003,7 @@ def select_representative_samples(split_labels_src, split_name):
     print(f"    ✓ Selected {len(selected_files)} samples from {len(attribute_combo_groups)} combinations")
     
     # Step 2: Ensure minimum samples per class
-    print(f"\n  Step 2: Ensuring {MIN_SAMPLES_PER_CLASS} samples per class...")
+    print(f"\n  Step 2: Ensuring {min_per_class} samples per class...")
     for class_id, samples in class_samples.items():
         if not samples:
             continue
@@ -776,7 +1011,7 @@ def select_representative_samples(split_labels_src, split_name):
         # Count already selected samples for this class
         current_count = sum(1 for file_info in samples if file_info['path'] in selected_files)
         
-        if current_count < MIN_SAMPLES_PER_CLASS:
+        if current_count < min_per_class:
             # Sort by diversity and add more samples
             sorted_samples = sorted(
                 [s for s in samples if s['path'] not in selected_files],
@@ -784,7 +1019,7 @@ def select_representative_samples(split_labels_src, split_name):
                 reverse=True
             )
             
-            needed = MIN_SAMPLES_PER_CLASS - current_count
+            needed = min_per_class - current_count
             for sample in sorted_samples[:needed]:
                 selected_files.add(sample['path'])
     
@@ -799,7 +1034,7 @@ def select_representative_samples(split_labels_src, split_name):
     print(f"    ✓ Total samples after class coverage: {len(selected_files)}")
     
     # Step 3: Ensure minimum samples per individual attribute value
-    print(f"\n  Step 3: Ensuring {MIN_SAMPLES_PER_ATTRIBUTE_VALUE} samples per attribute value...")
+    print(f"\n  Step 3: Ensuring {min_per_attr} samples per attribute value...")
     for attr_dict, attr_name in [(weather_samples, 'weather'), 
                                   (scene_samples, 'scene'), 
                                   (timeofday_samples, 'timeofday')]:
@@ -809,14 +1044,14 @@ def select_representative_samples(split_labels_src, split_name):
             
             current_count = sum(1 for file_info in samples if file_info['path'] in selected_files)
             
-            if current_count < MIN_SAMPLES_PER_ATTRIBUTE_VALUE:
+            if current_count < min_per_attr:
                 sorted_samples = sorted(
                     [s for s in samples if s['path'] not in selected_files],
                     key=lambda x: (len(set(x['attrs']['categories'])), x['attrs']['num_objects']),
                     reverse=True
                 )
                 
-                needed = MIN_SAMPLES_PER_ATTRIBUTE_VALUE - current_count
+                needed = min_per_attr - current_count
                 for sample in sorted_samples[:needed]:
                     selected_files.add(sample['path'])
     
@@ -834,21 +1069,21 @@ def select_representative_samples(split_labels_src, split_name):
     print(f"    ✓ Total samples after attribute value coverage: {len(selected_files)}")
     
     # Step 4: Ensure minimum samples per (class, attribute) combination
-    print(f"\n  Step 4: Ensuring {MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO} samples per (class×attribute) combo...")
+    print(f"\n  Step 4: Ensuring {min_per_class_attr} samples per (class×attribute) combo...")
     for (class_id, attr_type, attr_value), samples in class_attribute_samples.items():
         if not samples:
             continue
         
         current_count = sum(1 for file_info in samples if file_info['path'] in selected_files)
         
-        if current_count < MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO:
+        if current_count < min_per_class_attr:
             sorted_samples = sorted(
                 [s for s in samples if s['path'] not in selected_files],
                 key=lambda x: (len(set(x['attrs']['categories'])), x['attrs']['num_objects']),
                 reverse=True
             )
             
-            needed = MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO - current_count
+            needed = min_per_class_attr - current_count
             for sample in sorted_samples[:needed]:
                 selected_files.add(sample['path'])
     
@@ -887,9 +1122,9 @@ def select_representative_samples(split_labels_src, split_name):
     
     print(f"\n  ✓ FINAL: Selected {total_selected} representative samples")
     print(f"    - {len(attribute_combo_groups)} attribute combinations covered")
-    print(f"    - All {len(BDD100K_CLASSES)} classes with min {MIN_SAMPLES_PER_CLASS} samples")
-    print(f"    - All attribute values with min {MIN_SAMPLES_PER_ATTRIBUTE_VALUE} samples")
-    print(f"    - Class×attribute combos with min {MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO} samples (PER SPLIT)")
+    print(f"    - All {len(BDD100K_CLASSES)} classes with min {min_per_class} samples")
+    print(f"    - All attribute values with min {min_per_attr} samples")
+    print(f"    - Class×attribute combos with min {min_per_class_attr} samples (PER SPLIT)")
     print(f"    - Attributes saved for {len(metadata['selected_samples']['details'])} samples")
     
     return selected_by_attributes, selected_files, metadata
@@ -921,7 +1156,7 @@ def create_yolo_dataset_structure(base_dir, dataset_name='bdd100k_yolo'):
     return dataset_root
 
 
-def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split):
+def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, config=None):
     """
     Process a dataset split: move images and convert labels to YOLO format.
     Also selects and saves representative JSON samples.
@@ -931,6 +1166,7 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split):
         tmp_labels_dir: Temporary labels directory (extracted)
         yolo_dataset_root: Root of YOLO dataset structure
         split: 'train', 'val', or 'test'
+        config: Optional dict with sampling configuration
     
     Returns:
         Tuple of (images_copied, labels_converted, representative_samples_set)
@@ -960,7 +1196,7 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split):
     metadata_dir.mkdir(parents=True, exist_ok=True)
     
     # Select representative samples with metadata
-    _, representative_files, split_metadata = select_representative_samples(split_labels_src, split)
+    _, representative_files, split_metadata = select_representative_samples(split_labels_src, split, config)
     
     # Flatten representative samples for easy lookup
     representative_basenames = {f.stem for f in representative_files}
@@ -1121,6 +1357,15 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split):
     if is_valid:
         print(f"  ✓ Integrity check PASSED: All images have labels and vice versa")
     
+    # Compare original JSON vs generated YOLO statistics
+    comparison_stats = compare_dataset_statistics(tmp_labels_dir, split_labels_dst, split)
+    if comparison_stats:
+        # Save comparison to metadata directory
+        comparison_file = metadata_dir / f'{split}_comparison.json'
+        with open(comparison_file, 'w') as f:
+            json.dump(comparison_stats, f, indent=2)
+        print(f"  ✓ Comparison saved: {comparison_file.name}")
+    
     print(f"\n✓ {split}: {images_copied} images, {labels_converted} labels")
     print(f"  Metadata saved: {metadata_file.name}")
     return images_copied, labels_converted, representative_basenames
@@ -1153,7 +1398,7 @@ names: {BDD100K_CLASSES}
     return yaml_path
 
 
-def create_limited_dataset(source_root, output_root, representative_samples_by_split):
+def create_limited_dataset(source_root, output_root, representative_samples_by_split, config):
     """
     Create a limited dataset using representative samples with diverse attributes.
     Uses the representative JSON samples selected during conversion.
@@ -1162,18 +1407,20 @@ def create_limited_dataset(source_root, output_root, representative_samples_by_s
         source_root: Source YOLO dataset root
         output_root: Output YOLO dataset root
         representative_samples_by_split: Dict of {split: set of basenames}
+        config: Configuration dict for this limited dataset
     """
     print("\n" + "="*70)
-    print("CREATING LIMITED DATASET FROM REPRESENTATIVE SAMPLES")
+    print(f"CREATING LIMITED DATASET: {config['name']}")
     print("="*70)
+    print(f"Description: {config['description']}")
     print(f"Source: {source_root}")
     print(f"Output: {output_root}")
     print("  Strategy: Using diverse representative samples with attributes")
     print(f"  Ensures:")
-    print(f"    - {SAMPLES_PER_ATTRIBUTE_COMBO} samples per attribute combination")
-    print(f"    - {MIN_SAMPLES_PER_CLASS} samples per class")
-    print(f"    - {MIN_SAMPLES_PER_ATTRIBUTE_VALUE} samples per attribute value")
-    print(f"    - {MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO} samples per class×attribute combo")
+    print(f"    - {config['samples_per_attribute_combo']} samples per attribute combination")
+    print(f"    - {config['min_samples_per_class']} samples per class")
+    print(f"    - {config['min_samples_per_attribute_value']} samples per attribute value")
+    print(f"    - {config['min_samples_per_class_attribute_combo']} samples per class×attribute combo")
     
     # Verify source exists
     if not source_root.exists():
@@ -1316,13 +1563,14 @@ def create_limited_dataset(source_root, output_root, representative_samples_by_s
     yaml_path = create_data_yaml(output_root, output_root.parent)
     
     print("\n" + "="*70)
-    print("LIMITED DATASET CREATED")
+    print(f"✓ {config['name'].upper()} CREATED")
     print("="*70)
     print(f"Dataset location: {output_root}")
     print(f"Configuration: {yaml_path}")
+    print(f"Description: {config['description']}")
     print(f"Total samples: {total_samples}")
     print(f"Composition: Diverse samples across weather/scene/time attributes")
-    print(f"Coverage: Minimum 10 samples per object class")
+    print(f"Per-class coverage: min {config['min_samples_per_class']} samples")
     print("="*70)
     
     return output_root, yaml_path
@@ -1541,64 +1789,185 @@ Examples:
         base_dir, source_dir, yolo_dataset_root, args.cleanup, force_reanalysis
     )
     
-    # Step 3: Create limited dataset from representative samples
+    # Step 3: Analyze and preview limited datasets configurations
     print("\n" + "="*70)
-    print("CREATING LIMITED DATASET FROM REPRESENTATIVE SAMPLES")
-    print("="*70)
-    create_limited_dataset(yolo_dataset_root, limited_dataset_root, representative_samples_by_split)
-    
-    # Step 4: Compress limited dataset for easy distribution
-    print("\n" + "="*70)
-    print("COMPRESSING LIMITED DATASET")
+    print(f"ANALYZING {len(LIMITED_DATASET_CONFIGS)} LIMITED DATASET CONFIGURATIONS")
     print("="*70)
     
-
-    # Remove existing compressed file if present
-    if compressed_file.exists():
-        print(f"Removing existing compressed file: {compressed_file.name}")
-        compressed_file.unlink()
+    config_analysis = []
     
-    print(f"Compressing {limited_dataset_root.name} to {compressed_file}...")
-    print(f"This may take a few minutes...")
-    
-    with zipfile.ZipFile(compressed_file, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zipf:
-        # Get all files in limited dataset
-        all_files = []
-        for root, dirs, files in os.walk(limited_dataset_root):
-            for file in files:
-                all_files.append(Path(root) / file)
+    for config in LIMITED_DATASET_CONFIGS:
+        print(f"\n{'='*70}")
+        print(f"Configuration: {config['name']}")
+        print(f"Description: {config['description']}")
+        print(f"{'='*70}")
         
-        # Add files with progress bar
-        for file_path in tqdm(all_files, desc="Compressing", unit='files'):
-            arcname = file_path.relative_to(limited_dataset_root.parent)
-            zipf.write(file_path, arcname)
+        # Analyze what samples would be selected for this configuration
+        config_sample_counts = {'train': 0, 'val': 0, 'test': 0}
+        config_object_counts = {'train': {}, 'val': {}, 'test': {}}
+        
+        for split in ['train', 'val', 'test']:
+            split_labels_src = (base_dir / 'bdd100k_tmp_labels' / '100k' / split)
+            if split_labels_src.exists():
+                # Get representative samples for this config
+                _, representative_files, metadata = select_representative_samples(split_labels_src, split, config)
+                config_sample_counts[split] = len(representative_files)
+                
+                # Get object counts from metadata
+                if 'statistics' in metadata and 'representative_samples' in metadata['statistics']:
+                    config_object_counts[split] = metadata['statistics']['representative_samples'].get('by_class', {})
+                
+                print(f"\n  {split.upper()} split:")
+                print(f"    Images: {config_sample_counts[split]:,}")
+                if config_object_counts[split]:
+                    total_objects = sum(config_object_counts[split].values())
+                    print(f"    Objects: {total_objects:,}")
+                    print(f"    Per class:")
+                    for class_name in BDD100K_CLASSES:
+                        count = config_object_counts[split].get(class_name, 0)
+                        if count > 0:
+                            print(f"      {class_name:<15} {count:>8,}")
+        
+        # Calculate totals
+        total_images = sum(config_sample_counts.values())
+        total_objects = sum(sum(counts.values()) for counts in config_object_counts.values())
+        
+        config_analysis.append({
+            'config': config,
+            'sample_counts': config_sample_counts,
+            'object_counts': config_object_counts,
+            'total_images': total_images,
+            'total_objects': total_objects
+        })
+        
+        print(f"\n  TOTAL for {config['name']}:")
+        print(f"    Images: {total_images:,}")
+        print(f"    Objects: {total_objects:,}")
     
-    compressed_size_mb = compressed_file.stat().st_size / (1024 * 1024)
-    print(f"✓ Compressed to: {compressed_file}")
-    print(f"  Size: {compressed_size_mb:.1f} MB")
-    
-    # Final summary
+    # Display summary table
     print("\n" + "="*70)
-    print("✅ DATASET PREPARATION COMPLETE")
+    print("SUMMARY - Limited Dataset Configurations")
     print("="*70)
-    print(f"\n📁 Created datasets:")
-    print(f"  1. Full dataset: {yolo_dataset_root}")
-    print(f"     data.yaml: {yolo_dataset_root / 'data.yaml'}")
-    print(f"  2. Limited dataset: {limited_dataset_root}")
-    print(f"     data.yaml: {limited_dataset_root / 'data.yaml'}")
-    print(f"  3. Compressed limited dataset: {compressed_file}")
-    print(f"     Size: {compressed_size_mb:.1f} MB")
+    print(f"\n{'Config':<25} {'Images':>12} {'Objects':>12} {'Description'}")
+    print("-" * 70)
+    for analysis in config_analysis:
+        config = analysis['config']
+        print(f"{config['name']:<25} {analysis['total_images']:>12,} {analysis['total_objects']:>12,} {config['description'][:30]}")
     
-    print(f"\n💡 Quick start with limited dataset:")
-    print(f"  python unzip_limited_dataset.py")
+    print("-" * 70)
     
-    print(f"\n💡 Usage in notebooks:")
-    print(f"  # For full dataset (production training and comprehensive analysis):")
-    print(f"  YOLO_DATASET_ROOT = BASE_DIR / 'bdd100k_yolo'")
-    print(f"  DATA_YAML_PATH = YOLO_DATASET_ROOT / 'data.yaml'")
-    print(f"  # Metadata files available at:")
-    print(f"  METADATA_DIR = YOLO_DATASET_ROOT / 'representative_json'")
-    print(f"  # Load with: json.load(open(METADATA_DIR / 'train_metadata.json'))")
+    # Ask for confirmation
+    print("\n" + "="*70)
+    print("⚠️  CONFIRMATION REQUIRED")
+    print("="*70)
+    print(f"\nThis will create {len(LIMITED_DATASET_CONFIGS)} limited datasets and compress them.")
+    print(f"Total images across all configs: {sum(a['total_images'] for a in config_analysis):,}")
+    print(f"Total objects across all configs: {sum(a['total_objects'] for a in config_analysis):,}")
+    print(f"\nEstimated disk space required:")
+    print(f"  - Uncompressed: ~{sum(a['total_images'] for a in config_analysis) * 0.5:.1f} MB")
+    print(f"  - Compressed: ~{sum(a['total_images'] for a in config_analysis) * 0.15:.1f} MB")
+    
+    response = input("\nDo you want to proceed with creating these limited datasets? (yes/no): ").strip().lower()
+    
+    if response not in ['yes', 'y']:
+        print("\n❌ Operation cancelled by user.")
+        print(f"Full dataset is still available at: {yolo_dataset_root}")
+        print(f"You can run this script again to create limited datasets later.")
+        return
+    
+    # Step 4: Create multiple limited datasets from representative samples
+    print("\n" + "="*70)
+    print(f"CREATING {len(LIMITED_DATASET_CONFIGS)} LIMITED DATASETS")
+    print("="*70)
+    
+    created_datasets = []
+    
+    for idx, analysis in enumerate(config_analysis, 1):
+        config = analysis['config']
+        # Set output path
+        limited_root = base_dir / config['name']
+        
+        # Generate representative samples for this configuration
+        print(f"\n{'='*70}")
+        print(f"[{idx}/{len(config_analysis)}] Creating: {config['name']}")
+        print(f"{'='*70}")
+        
+        # Re-analyze and select samples with this configuration
+        config_representative_samples = {}
+        for split in ['train', 'val', 'test']:
+            split_labels_src = (base_dir / 'bdd100k_tmp_labels' / '100k' / split)
+            if split_labels_src.exists():
+                _, representative_files, _ = select_representative_samples(split_labels_src, split, config)
+                config_representative_samples[split] = representative_files
+        
+        # Create limited dataset
+        create_limited_dataset(yolo_dataset_root, limited_root, config_representative_samples, config)
+        created_datasets.append({
+            'config': config,
+            'path': limited_root
+        })
+    
+    # Step 5: Compress all limited datasets
+    print("\n" + "="*70)
+    print(f"COMPRESSING {len(created_datasets)} LIMITED DATASETS")
+    print("="*70)
+    
+    zipped_dir = base_dir / 'bdd100k_limited_datasets_zipped'
+    zipped_dir.mkdir(parents=True, exist_ok=True)
+    
+    compressed_files = []
+    
+    for dataset_info in created_datasets:
+        config = dataset_info['config']
+        dataset_path = dataset_info['path']
+        compressed_file = zipped_dir / f"{config['name']}.zip"
+        
+        # Remove existing compressed file if present
+        if compressed_file.exists():
+            print(f"\nRemoving existing: {compressed_file.name}")
+            compressed_file.unlink()
+        
+        print(f"\nCompressing {config['name']}...")
+        print(f"  Destination: {compressed_file}")
+        
+        with zipfile.ZipFile(compressed_file, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zipf:
+            # Get all files in the limited dataset
+            all_files = list(dataset_path.rglob('*'))
+            for file_path in tqdm(all_files, desc=f"  Compressing {config['name']}", unit='files'):
+                if file_path.is_file():
+                    # Calculate relative path
+                    rel_path = file_path.relative_to(dataset_path.parent)
+                    zipf.write(file_path, arcname=rel_path)
+        
+        file_size_mb = compressed_file.stat().st_size / (1024 * 1024)
+        print(f"  ✓ Size: {file_size_mb:.1f} MB")
+        compressed_files.append({
+            'name': config['name'],
+            'path': compressed_file,
+            'size_mb': file_size_mb,
+            'description': config['description']
+        })
+    
+    print("\n" + "="*70)
+    print("✅ FULL PROCESS COMPLETE")
+    print("="*70)
+    print(f"\nFull dataset: {yolo_dataset_root}")
+    print(f"\nLimited datasets created ({len(created_datasets)}):")
+    for ds_info in created_datasets:
+        print(f"  - {ds_info['config']['name']}: {ds_info['path']}")
+    print(f"\nCompressed files ({len(compressed_files)}):")
+    for cf in compressed_files:
+        print(f"  - {cf['name']}.zip ({cf['size_mb']:.1f} MB) - {cf['description']}")
+    print(f"\nCompressed location: {zipped_dir}")
+    
+    # Step 6: Compress test split only from full dataset
+    test_split_result = compress_test_split_only(yolo_dataset_root, base_dir)
+    if test_split_result:
+        print(f"\n✅ Test split compressed:")
+        print(f"  - {test_split_result['path'].name} ({test_split_result['size_mb']:.1f} MB)")
+        print(f"  - {test_split_result['num_images']:,} images, {test_split_result['num_labels']:,} labels")
+    
+    print("\n" + "="*70)
     print(f"\n  # For limited dataset (quick testing, visualization, experimentation):")
     print(f"  YOLO_DATASET_ROOT = BASE_DIR / 'bdd100k_yolo_limited'")
     print(f"  DATA_YAML_PATH = YOLO_DATASET_ROOT / 'data.yaml'")
