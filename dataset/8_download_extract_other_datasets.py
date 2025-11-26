@@ -28,13 +28,13 @@ DATASETS = {
             {
                 'gdrive_id': '1yHEpeEdRDAz5yH4pbo4o1SvzKzGKRaLS',
                 'filename': 'bdd100k_images_100k.zip',
-                'size': '~6GB',
+                'size': '~5.28GB',
                 'extract_to': 'bdd100k_tmp_images'
             },
             {
                 'gdrive_id': '1Gh_5g-MAx1R5X3eNsTTdz_GPialECz0L',
                 'filename': 'bdd100k_labels.zip',
-                'size': '~300MB',
+                'size': '~180MB',
                 'extract_to': 'bdd100k_tmp_labels'
             }
         ],
@@ -45,10 +45,10 @@ DATASETS = {
         'description': 'Balanced limited dataset - 30-40% coverage (~25K train)',
         'files': [
             {
-                'gdrive_id': '1DFBUw9ltwvmnyiXuatPuAbrPtOskJ79h',
+                'gdrive_id': '1psk1Q9YUdV2e_xKzIV29hFfRjx4vGGmG',
                 'filename': 'bdd100k_yolo_limited.zip',
-                'size': '~2GB',
-                'extract_to': None  # Extracts to its own folder
+                'size': '~3.3GB',
+                'extract_to': '/computer_vision_yolo'  # Extracts to its own folder
             }
         ],
         'output_dir': 'bdd100k_limited_datasets_zipped'
@@ -58,10 +58,10 @@ DATASETS = {
         'description': 'Tuning dataset - 20% coverage (~14K train)',
         'files': [
             {
-                'gdrive_id': '1i2CZRUr-Y3s_lKuxZ9kRKwIDsc0DYqqs',
+                'gdrive_id': '',
                 'filename': 'bdd100k_yolo_tuning.zip',
-                'size': '~1GB',
-                'extract_to': None
+                'size': '~1.58GB',
+                'extract_to': '/computer_vision_yolo' 
             }
         ],
         'output_dir': 'bdd100k_limited_datasets_zipped'
@@ -71,10 +71,10 @@ DATASETS = {
         'description': 'Tiny dataset - ~500 train, ~1K total (fast testing)',
         'files': [
             {
-                'gdrive_id': '1ISNZ07CZtuuzMMU4wxAVI5YW_XI9at7z',
+                'gdrive_id': '',
                 'filename': 'bdd100k_yolo_tiny.zip',
                 'size': '~100MB',
-                'extract_to': None
+                'extract_to': '/computer_vision_yolo' 
             }
         ],
         'output_dir': 'bdd100k_limited_datasets_zipped'
@@ -84,10 +84,10 @@ DATASETS = {
         'description': 'Test split only for validation (20K images)',
         'files': [
             {
-                'gdrive_id': '1ionk_m0mot0LLzpDisfBAGXhXnmInMax',
+                'gdrive_id': '',
                 'filename': 'bdd100k_yolo_test_split.zip',
-                'size': '~1.5GB',
-                'extract_to': None
+                'size': '~1.1GB',
+                'extract_to': '/computer_vision_yolo' 
             }
         ],
         'output_dir': 'bdd100k_test_split_zipped'
