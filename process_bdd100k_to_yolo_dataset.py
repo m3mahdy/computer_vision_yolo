@@ -11,7 +11,7 @@ This script:
 7. Creates full YOLO dataset structure with metadata files (train/val/test_metadata.json)
 8. Automatically creates limited dataset from representative samples
 9. Intelligently skips already-completed steps (extraction, conversion, analysis)
-10. Keeps temporary directories by default for reference (use --cleanup to remove)
+10. Preserves temporary directories for reference and debugging
 
 Requirements:
     - gdown (auto-installed if needed for downloads)
@@ -32,16 +32,7 @@ Usage:
     pip install gdown
     gdown 1yHEpeEdRDAz5yH4pbo4o1SvzKzGKRaLS -O bdd_100k_source/bdd100k_images_100k.zip
     gdown 1Gh_5g-MAx1R5X3eNsTTdz_GPialECz0L -O bdd_100k_source/bdd100k_labels.zip
-    python process_bdd100k_to_yolo_dataset.py --skip-download
-
-    # Skip download if files already exist
-    python process_bdd100k_to_yolo_dataset.py --skip-download
-    
-    # Force metadata regeneration
-    python process_bdd100k_to_yolo_dataset.py --force-reanalysis
-    
-    # Remove temporary directories after processing
-    python process_bdd100k_to_yolo_dataset.py --cleanup
+    python process_bdd100k_to_yolo_dataset.py
 """
 
 import os
@@ -50,11 +41,11 @@ import zipfile
 from pathlib import Path
 from tqdm import tqdm
 import shutil
-import argparse
 import random
 import subprocess
 import sys
 from datetime import datetime
+
 
 
 # Define paths
@@ -64,39 +55,44 @@ yolo_dataset_root = base_dir / 'bdd100k_yolo'
 
 # Multiple limited dataset configurations
 # Each config creates a separate limited dataset with different sampling parameters
+# Dataset sizes: train=70K, val=10K, test=20K (total=100K images)
 LIMITED_DATASET_CONFIGS = [
-    {
+    {   'id': 1,
         'name': 'bdd100k_yolo_limited',
-        'description': 'Balanced limited dataset - medium coverage',
-        'samples_per_attribute_combo': 1500,
-        'min_samples_per_class': 1500,
-        'min_samples_per_attribute_value': 1500,
-        'min_samples_per_class_attribute_combo': 500,
+        'description': 'Balanced limited dataset - 30-40% coverage (target: ~25K train images)',
+        'samples_per_attribute_combo': 700,       # Increased to get more samples per combo
+        'min_samples_per_class': 2000,            # Increased from 1500 to ensure class coverage
+        'min_samples_per_attribute_value': 1000,  # Increased from 750
+        'min_samples_per_class_attribute_combo': 650,  # Increased from 500
+        'splits': ['train', 'val', 'test'],
+        'contain_full_val_split': True,  # Val split: full 10K images
+        'contain_full_test_split': True  # Test split: full 20K images
     },
     {
+        'id': 2,
         'name': 'bdd100k_yolo_tuning',
-        'description': 'tuning dataset for tuning hyperparameters',
-        'samples_per_attribute_combo': 1000,
-        'min_samples_per_class': 1000,
-        'min_samples_per_attribute_value': 1000,
-        'min_samples_per_class_attribute_combo': 500,
+        'description': 'Tuning dataset - 20% coverage (target: ~14K train images)',
+        'samples_per_attribute_combo': 400,       # Moderate sampling per combo
+        'min_samples_per_class': 1200,            # Adequate class coverage
+        'min_samples_per_attribute_value': 550,   # Moderate attribute coverage
+        'min_samples_per_class_attribute_combo': 350,  # Balanced combo coverage
+        'splits': ['train', 'val'],
+        'contain_full_val_split': True,  # Val split: full 10K images for reliable tuning
+        'contain_full_test_split': False  # No test split for tuning
     },
     {
+        'id': 3,
         'name': 'bdd100k_yolo_tiny',
-        'description': 'Small dataset for fast testing',
-        'samples_per_attribute_combo': 150,
-        'min_samples_per_class': 150,
-        'min_samples_per_attribute_value': 150,
-        'min_samples_per_class_attribute_combo': 50,
+        'description': 'Tiny dataset - ~500 train, ~1K total (for fast testing)',
+        'samples_per_attribute_combo': 5,        # Very small per combo
+        'min_samples_per_class': 15,              # Minimal class coverage
+        'min_samples_per_attribute_value': 10,    # Minimal attribute coverage
+        'min_samples_per_class_attribute_combo': 5,  # Minimal combo coverage
+        'splits': ['train', 'val', 'test'],
+        'contain_full_val_split': False,  # Sampled val split
+        'contain_full_test_split': False  # Sampled test split
     }
 ]
-
-# Global sampling configuration (will be set by active config)
-SAMPLES_PER_ATTRIBUTE_COMBO = 1500
-MIN_SAMPLES_PER_CLASS = 1500
-MIN_SAMPLES_PER_ATTRIBUTE_VALUE = 1500
-MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO = 500
-
 
 # BDD100K object detection classes (10 classes)
 # CRITICAL: These names must match exactly what's in the BDD100K JSON files
@@ -112,6 +108,11 @@ BDD100K_CLASSES = [
     'traffic light',
     'traffic sign'
 ]
+
+# BDD100K image dimensions - will be verified from actual images
+# These values are set dynamically after verifying the dataset
+BDD100K_IMAGE_WIDTH = None
+BDD100K_IMAGE_HEIGHT = None
 
 # Create class name to index mapping
 CLASS_TO_IDX = {cls_name: idx for idx, cls_name in enumerate(BDD100K_CLASSES)}
@@ -173,7 +174,7 @@ def download_file(gdown_id, output_path):
         return False
 
 
-def check_and_download_datasets(source_dir, skip_download=False):
+def check_and_download_datasets(source_dir):
     """
     Check if dataset files exist, prompt to download if missing.
     """
@@ -187,15 +188,6 @@ def check_and_download_datasets(source_dir, skip_download=False):
         print(f"  Images: {images_zip} ({images_zip.stat().st_size / (1024**3):.2f} GB)")
         print(f"  Labels: {labels_zip} ({labels_zip.stat().st_size / (1024**2):.2f} MB)")
         return True
-    
-    if skip_download:
-        print("\n⚠️  Dataset files not found and --skip-download flag is set.")
-        print("Please download manually from: http://bdd-data.berkeley.edu/")
-        print(f"  Required files:")
-        print(f"    - bdd100k_images_100k.zip (~6GB)")
-        print(f"    - bdd100k_labels.zip (~300MB)")
-        print(f"  Place them in: {source_dir}")
-        return False
     
     # Prompt user to download
     print("\n" + "="*70)
@@ -262,27 +254,27 @@ def check_and_download_datasets(source_dir, skip_download=False):
 
 
 def convert_bbox_to_yolo(bbox, img_width, img_height):
-
     """
-    Convert BDD100K bbox format to YOLO format.
+    Convert BDD100K bbox format to YOLO format WITHOUT validation or filtering.
+    Converts all boxes as-is from source data - does not hide data quality issues.
     
     BDD100K format: {x1, y1, x2, y2} (absolute pixel coordinates)
     YOLO format: [x_center, y_center, width, height] (normalized 0-1)
+    
+    Note: NO CLAMPING, NO VALIDATION. Preserves source data exactly including:
+    - Zero width/height boxes (degenerate annotations)
+    - Negative dimensions (if x2 < x1 or y2 < y1)
+    - Out of bounds coordinates
+    This allows training frameworks to handle or report these issues directly.
     """
     x1, y1 = bbox['x1'], bbox['y1']
     x2, y2 = bbox['x2'], bbox['y2']
     
-    # Calculate YOLO format values
+    # Calculate YOLO format values - convert exactly as-is
     x_center = ((x1 + x2) / 2.0) / img_width
     y_center = ((y1 + y2) / 2.0) / img_height
     width = (x2 - x1) / img_width
     height = (y2 - y1) / img_height
-    
-    # Ensure values are within [0, 1]
-    x_center = max(0.0, min(1.0, x_center))
-    y_center = max(0.0, min(1.0, y_center))
-    width = max(0.0, min(1.0, width))
-    height = max(0.0, min(1.0, height))
     
     return [x_center, y_center, width, height]
 
@@ -318,35 +310,19 @@ def get_label_attributes(json_path):
         return None
 
 
-def validate_yolo_bbox(bbox_coords):
+def convert_json_to_yolo(json_path):
     """
-    Validate YOLO format bounding box coordinates.
-    Returns True if valid, False otherwise.
-    """
-    if len(bbox_coords) != 4:
-        return False
+    Convert a single BDD100K JSON label file to YOLO format WITHOUT filtering.
+    Converts ALL objects from source data as-is, preserving all data quality issues.
     
-    x_center, y_center, width, height = bbox_coords
-    
-    # All values must be in [0, 1]
-    if not (0 <= x_center <= 1 and 0 <= y_center <= 1 and 0 <= width <= 1 and 0 <= height <= 1):
-        return False
-    
-    # Width and height must be positive
-    if width <= 0 or height <= 0:
-        return False
-    
-    return True
-
-
-def convert_json_to_yolo(json_path, validate=True):
-    """
-    Convert a single BDD100K JSON label file to YOLO format with validation.
-    Returns tuple: (yolo_labels, attributes, valid_objects, invalid_objects)
-    - yolo_labels: List of YOLO format strings
+    Returns tuple: (yolo_labels, attributes, converted_objects, skipped_objects)
+    - yolo_labels: List of YOLO format strings (ALL valid category objects)
     - attributes: Dict with weather, scene, timeofday
-    - valid_objects: Count of successfully converted objects
-    - invalid_objects: Count of objects that failed validation
+    - converted_objects: Count of successfully converted objects
+    - skipped_objects: Count of objects missing required fields only
+    
+    Note: Does NOT filter based on bbox dimensions - converts everything as-is.
+    Zero width/height boxes, negative dimensions, all converted exactly.
     """
     try:
         with open(json_path, 'r') as f:
@@ -359,14 +335,14 @@ def convert_json_to_yolo(json_path, validate=True):
             'timeofday': label_data.get('attributes', {}).get('timeofday', 'undefined')
         }
         
-        # BDD100K images are typically 1280x720
-        img_width = 1280
-        img_height = 720
+        # BDD100K images are standard 1280x720
+        img_width = BDD100K_IMAGE_WIDTH
+        img_height = BDD100K_IMAGE_HEIGHT
         
-        # Process labels
+        # Process labels - convert ALL objects without validation/filtering
         yolo_labels = []
-        valid_count = 0
-        invalid_count = 0
+        converted_count = 0
+        skipped_count = 0
         
         frames = label_data.get('frames', [])
         
@@ -378,45 +354,50 @@ def convert_json_to_yolo(json_path, validate=True):
         for obj in objects:
             category = obj.get('category', '')
             
+            # Skip only if category not in our class list
             if category not in CLASS_TO_IDX:
                 continue
             
             box2d = obj.get('box2d')
             if not box2d:
-                invalid_count += 1
+                skipped_count += 1
                 continue
             
-            # Validate bbox has required fields
+            # Skip only if required fields are completely missing
             if not all(k in box2d for k in ['x1', 'y1', 'x2', 'y2']):
-                invalid_count += 1
+                skipped_count += 1
                 continue
             
+            # Convert WITHOUT any validation - preserve ALL source data as-is
             class_idx = CLASS_TO_IDX[category]
             yolo_bbox = convert_bbox_to_yolo(box2d, img_width, img_height)
             
-            # Validate converted bbox
-            if validate and not validate_yolo_bbox(yolo_bbox):
-                invalid_count += 1
-                continue
-            
             # Format: class_idx x_center y_center width height
+            # Converts ALL boxes including zero width/height, negative, out-of-bounds, etc.
             yolo_line = f"{class_idx} {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}"
             yolo_labels.append(yolo_line)
-            valid_count += 1
+            converted_count += 1
         
-        return yolo_labels, attributes, valid_count, invalid_count
+        return yolo_labels, attributes, converted_count, skipped_count
     
     except Exception as e:
         print(f"Warning: Error processing {json_path}: {e}")
         return [], {}, 0, 0
 
 
-def count_attribute_distribution(tmp_labels_dir, split_name):
+def count_attribute_distribution(labels_dir, split_name):
     """
     Count distribution of attribute values (weather/scene/timeofday) across ALL images.
+    
+    Args:
+        labels_dir: Path to labels directory that ALREADY contains the split subdirectory
+                    (e.g., bdd100k_tmp_labels/100k or just bdd100k_tmp_labels)
+        split_name: Name of split (train/val/test)
+    
     Returns dict with counts for each attribute value.
     """
-    json_dir = tmp_labels_dir / split_name
+    # labels_dir should already contain the proper path structure
+    json_dir = labels_dir / split_name
     if not json_dir.exists():
         return {}, {}, {}
     
@@ -560,8 +541,7 @@ def compare_dataset_statistics(tmp_labels_dir, yolo_labels_dir, split_name):
     if all_match:
         print(f"✅ PERFECT MATCH: All objects successfully converted!")
     else:
-        print(f"⚠️  DIFFERENCES DETECTED: Some objects may have been filtered or have validation issues")
-        print(f"   This is expected if bbox validation removed invalid coordinates")
+        print(f"⚠️  UNEXPECTED DIFFERENCES: Larger than expected filtering")
     
     return comparison
 
@@ -689,12 +669,19 @@ def create_label_file(label_path, yolo_labels):
         # else: write empty file (required by YOLO format)
 
 
-def save_test_performance_metadata(tmp_labels_dir, yolo_labels_dir, split_name, output_file):
+def save_test_performance_metadata(labels_base_dir, yolo_labels_dir, split_name, output_file):
     """
     Save detailed per-image metadata to enable performance analysis.
     For each image, stores: basename, attributes (weather/scene/timeofday), 
     classes present, and object counts per class.
     Works with both full dataset (all images) and limited dataset (representative samples).
+    
+    Args:
+        labels_base_dir: Base labels directory that ALREADY contains proper structure
+                         (e.g., bdd100k_tmp_labels/100k for full, or limited dataset path)
+        yolo_labels_dir: YOLO labels directory for this split
+        split_name: Name of split (train/val/test)
+        output_file: Where to save the performance metadata JSON
     """
     print(f"\n  Generating performance analysis metadata for {split_name} split...")
     
@@ -706,10 +693,8 @@ def save_test_performance_metadata(tmp_labels_dir, yolo_labels_dir, split_name, 
     }
     
     # Get JSON files from source (contains attributes)
-    # Try 100k subfolder first (full dataset source), then direct path (limited dataset)
-    json_dir = tmp_labels_dir / '100k' / split_name
-    if not json_dir.exists():
-        json_dir = tmp_labels_dir / split_name
+    # labels_base_dir already has the correct structure
+    json_dir = labels_base_dir / split_name
     
     json_files = list(json_dir.glob('*.json')) if json_dir.exists() else []
     
@@ -796,32 +781,41 @@ def extract_zip_with_progress(zip_path, extract_to, description):
     return len(members)
 
 
-def select_representative_samples(split_labels_src, split_name, config=None):
+def select_representative_samples(split_labels_src, split_name, config, constrain_to_basenames=None):
     """
-    Select representative samples ensuring comprehensive coverage:
-    1. SAMPLES_PER_ATTRIBUTE_COMBO per (weather, scene, timeofday) combination
-    2. MIN_SAMPLES_PER_CLASS per object class
-    3. MIN_SAMPLES_PER_ATTRIBUTE_VALUE per individual attribute value
-    4. MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO per (class, attribute) combination (per split)
+    Select representative samples ensuring comprehensive coverage PER SPLIT.
+    All parameters apply independently to each split (train/val/test):
+    
+    1. samples_per_attribute_combo per (weather, scene, timeofday) combination PER SPLIT
+    2. min_samples_per_class per object class PER SPLIT
+    3. min_samples_per_attribute_value per individual attribute value PER SPLIT
+    4. min_samples_per_class_attribute_combo per (class, attribute) combination PER SPLIT
     
     Args:
         split_labels_src: Path to source labels directory
         split_name: Name of the split (train/val/test)
-        config: Optional dict with sampling configuration
+        config: REQUIRED dict with sampling configuration from LIMITED_DATASET_CONFIGS
+        constrain_to_basenames: Optional set of basenames to constrain selection to (for hierarchical subsets)
     
     Returns comprehensive metadata dict with statistics and selected samples.
+    
+    Note: This function is called separately for each split, so all limits are per-split.
+          If constrain_to_basenames is provided, samples are selected ONLY from that set (hierarchical).
     """
-    # Use provided config or global defaults
-    samples_per_combo = config['samples_per_attribute_combo'] if config else SAMPLES_PER_ATTRIBUTE_COMBO
-    min_per_class = config['min_samples_per_class'] if config else MIN_SAMPLES_PER_CLASS
-    min_per_attr = config['min_samples_per_attribute_value'] if config else MIN_SAMPLES_PER_ATTRIBUTE_VALUE
-    min_per_class_attr = config['min_samples_per_class_attribute_combo'] if config else MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO
+    # Extract config values - config is REQUIRED
+    if not config:
+        raise ValueError("Config is required for representative sample selection. Use a config from LIMITED_DATASET_CONFIGS.")
+    
+    samples_per_combo = config['samples_per_attribute_combo']
+    min_per_class = config['min_samples_per_class']
+    min_per_attr = config['min_samples_per_attribute_value']
+    min_per_class_attr = config['min_samples_per_class_attribute_combo']
     
     print(f"\n  Analyzing labels for representative sample selection...")
-    print(f"    Configuration:")
-    print(f"      - {samples_per_combo} samples per attribute combo (weather×scene×time)")
-    print(f"      - {min_per_class} samples per class")
-    print(f"      - {min_per_attr} samples per attribute value")
+    print(f"    Configuration (ALL LIMITS PER SPLIT):")
+    print(f"      - {samples_per_combo} samples per attribute combo (weather×scene×time) PER SPLIT")
+    print(f"      - {min_per_class} samples per class PER SPLIT")
+    print(f"      - {min_per_attr} samples per attribute value PER SPLIT")
     print(f"      - {min_per_class_attr} samples per (class×attribute) combo PER SPLIT")
     
     # Get all JSON files (for limited dataset, analyze .txt files instead)
@@ -845,14 +839,18 @@ def select_representative_samples(split_labels_src, split_name, config=None):
             'statistics': {
                 'total_files_analyzed': 0,
                 'total_selected': 0,
-                'by_class': {cls: 0 for cls in BDD100K_CLASSES},
+                'by_class_image_count': {cls: 0 for cls in BDD100K_CLASSES},
                 'by_weather': {},
                 'by_scene': {},
                 'by_timeofday': {},
-                'by_attribute_combo': {}
+                'by_attribute_combo': {},
+                'representative_samples': {}
+            },
+            'selected_samples': {
+                'by_class': {}
             }
         }
-        return {}, set(), empty_metadata
+        return set(), empty_metadata
     
     # For limited dataset with only .txt files, analyze those
     if txt_files and not json_files:
@@ -880,17 +878,18 @@ def select_representative_samples(split_labels_src, split_name, config=None):
             'statistics': {
                 'total_files_analyzed': len(txt_files),
                 'total_selected': len(txt_files),
-                'by_class': class_counts,
+                'by_class_image_count': class_counts,
                 'by_weather': {},
                 'by_scene': {},
                 'by_timeofday': {},
-                'by_attribute_combo': {}
+                'by_attribute_combo': {},
+                'representative_samples': {}
             },
             'selected_samples': {
                 'by_class': {cls: [f.stem for f in txt_files] for cls in BDD100K_CLASSES if class_counts[cls] > 0}
             }
         }
-        return {}, {f.stem for f in txt_files}, limited_metadata
+        return {f.stem for f in txt_files}, limited_metadata
     
     # Organize files by various groupings
     attribute_combo_groups = {}  # (weather, scene, timeofday) -> files
@@ -900,7 +899,14 @@ def select_representative_samples(split_labels_src, split_name, config=None):
     timeofday_samples = {t: [] for t in REPRESENTATIVE_ATTRIBUTES['timeofday']}  # time -> files
     class_attribute_samples = {}  # (class_id, attr_type, attr_value) -> files
     
-    for json_file in tqdm(json_files, desc="  Analyzing attributes", unit='files', leave=False):
+    # Filter JSON files to constrained set if hierarchical subset requested
+    files_to_process = json_files
+    if constrain_to_basenames is not None:
+        print(f"  Hierarchical constraint: Limiting to {len(constrain_to_basenames):,} samples from previous config")
+        files_to_process = [f for f in json_files if f.stem in constrain_to_basenames]
+        print(f"  Available for selection: {len(files_to_process):,} files")
+    
+    for json_file in tqdm(files_to_process, desc="  Analyzing attributes", unit='files', leave=False):
         attrs = get_label_attributes(json_file)
         if not attrs or not attrs['categories']:
             continue
@@ -943,6 +949,13 @@ def select_representative_samples(split_labels_src, split_name, config=None):
     selected_by_attributes = {}
     
     # Initialize metadata structure
+    # METADATA STRUCTURE DOCUMENTATION:
+    # - statistics.by_class_image_count: COUNT OF IMAGES containing each class (not object count)
+    # - statistics.total_selected: Total number of representative images selected
+    # - selected_samples.by_class: LIST OF BASENAMES for each class
+    # - Later in process_split, additional stats are added:
+    #   - statistics.full_dataset: Object counts for the FULL dataset
+    #   - statistics.representative_samples.by_class_object_counts: Object counts for representative samples
     metadata = {
         'split': split_name,
         'generation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -957,14 +970,15 @@ def select_representative_samples(split_labels_src, split_name, config=None):
         'statistics': {
             'total_files_analyzed': len(json_files),
             'total_selected': 0,
-            'by_class': {},
+            'by_class_image_count': {},  # COUNT OF IMAGES (not objects)
             'by_weather': {},
             'by_scene': {},
             'by_timeofday': {},
             'by_attribute_combo': {},
             'by_class_weather': {},
             'by_class_scene': {},
-            'by_class_timeofday': {}
+            'by_class_timeofday': {},
+            'representative_samples': {}  # Initialized here, populated in process_split
         },
         'selected_samples': {
             'by_attribute_combo': {},  # (weather, scene, time) -> [basenames]
@@ -1028,8 +1042,9 @@ def select_representative_samples(split_labels_src, split_name, config=None):
         class_name = BDD100K_CLASSES[class_id]
         class_basenames = [s['path'].stem for s in samples if s['path'] in selected_files]
         metadata['selected_samples']['by_class'][class_name] = class_basenames
-        # Store count of images with this class (not object count - that's calculated later)
-        metadata['statistics']['by_class'][class_name] = len(class_basenames)
+        # IMPORTANT: Store count of IMAGES containing this class (not object count)
+        # Object counts are calculated later from the actual YOLO label files
+        metadata['statistics']['by_class_image_count'][class_name] = len(class_basenames)
     
     print(f"    ✓ Total samples after class coverage: {len(selected_files)}")
     
@@ -1156,21 +1171,40 @@ def create_yolo_dataset_structure(base_dir, dataset_name='bdd100k_yolo'):
     return dataset_root
 
 
-def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, config=None):
+def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, config):
     """
     Process a dataset split: move images and convert labels to YOLO format.
-    Also selects and saves representative JSON samples.
+    Also selects and saves representative JSON samples for metadata.
     
     Args:
         tmp_images_dir: Temporary images directory (extracted)
         tmp_labels_dir: Temporary labels directory (extracted)
         yolo_dataset_root: Root of YOLO dataset structure
         split: 'train', 'val', or 'test'
-        config: Optional dict with sampling configuration
+        config: REQUIRED dict with sampling configuration for metadata generation
     
     Returns:
-        Tuple of (images_copied, labels_converted, representative_samples_set)
+        Tuple of (images_processed, labels_created, representative_samples_set)
+    
+    Note: Processes ALL images in the split. Config is only used for selecting
+    representative samples for metadata/analysis, not for filtering which images to process.
     """
+    # VALIDATION: Config is REQUIRED - fail fast
+    if not config:
+        raise ValueError(
+            f"Config parameter is required for processing {split} split. "
+            f"Must provide a config dict from LIMITED_DATASET_CONFIGS."
+        )
+    
+    required_keys = ['samples_per_attribute_combo', 'min_samples_per_class', 
+                     'min_samples_per_attribute_value', 'min_samples_per_class_attribute_combo']
+    missing_keys = [k for k in required_keys if k not in config]
+    if missing_keys:
+        raise ValueError(
+            f"Config is missing required keys for {split} split: {missing_keys}. "
+            f"Use a complete config from LIMITED_DATASET_CONFIGS."
+        )
+    
     print(f"\n{'='*70}")
     print(f"Processing {split} split")
     print(f"{'='*70}")
@@ -1210,8 +1244,8 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
     
     print(f"Found {len(image_files)} images")
     
-    images_copied = 0
-    labels_converted = 0
+    images_processed = 0
+    labels_created = 0
     validation_stats = {
         'total_processed': 0,
         'valid_objects': 0,
@@ -1225,11 +1259,12 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
     
     # Process each image
     for img_file in tqdm(image_files, desc=f"Processing {split}", unit='files'):
+        images_processed += 1
+        
         # Copy image
         dst_img_path = split_images_dst / img_file.name
         if not dst_img_path.exists():
             shutil.copy2(img_file, dst_img_path)
-            images_copied += 1
         
         # Convert label - ALWAYS create label file (empty if no objects)
         json_name = img_file.stem + '.json'
@@ -1237,35 +1272,37 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
         label_dst_path = split_labels_dst / (img_file.stem + '.txt')
         
         if json_path.exists():
-            yolo_labels, attributes, valid_count, invalid_count = convert_json_to_yolo(json_path, validate=True)
+            yolo_labels, attributes, converted_count, skipped_count = convert_json_to_yolo(json_path)
             
             # Store attributes for test split
             if split == 'test' and attributes:
                 image_attributes_map[img_file.stem] = attributes
             
-            # Update validation statistics
+            # Update conversion statistics
             validation_stats['total_processed'] += 1
-            validation_stats['valid_objects'] += valid_count
-            validation_stats['invalid_objects'] += invalid_count
+            validation_stats['valid_objects'] += converted_count
+            validation_stats['invalid_objects'] += skipped_count
             
             # Create label file (empty if no objects)
             create_label_file(label_dst_path, yolo_labels)
+            labels_created += 1
             
             if yolo_labels:
-                labels_converted += 1
                 validation_stats['images_with_objects'] += 1
             else:
                 validation_stats['images_without_objects'] += 1
         else:
             # Create empty label file if no JSON exists
             label_dst_path.touch()
+            labels_created += 1
             validation_stats['images_without_objects'] += 1
     
-    # Print validation statistics
-    print(f"\n  Validation Statistics:")
+    # Print conversion statistics (NO FILTERING APPLIED)
+    print(f"\n  Conversion Statistics:")
+    print(f"    ⚠️  NO FILTERING APPLIED - ALL objects with coordinates converted as-is")
     print(f"    JSON files processed: {validation_stats['total_processed']:,}")
-    print(f"    Valid objects converted: {validation_stats['valid_objects']:,}")
-    print(f"    Invalid objects skipped: {validation_stats['invalid_objects']:,}")
+    print(f"    Objects converted: {validation_stats['valid_objects']:,}")
+    print(f"    Objects skipped (missing fields only): {validation_stats['invalid_objects']:,}")
     print(f"    Images with objects: {validation_stats['images_with_objects']:,}")
     print(f"    Images without objects: {validation_stats['images_without_objects']:,}")
     
@@ -1290,19 +1327,11 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
     all_object_counts = count_objects_in_labels(split_labels_dst, f"  Counting {split}")
     print(f"  ✓ Total objects in full dataset: {sum(all_object_counts.values()):,}")
     
-    # Count objects in representative samples only
-    representative_object_counts = {cls: 0 for cls in BDD100K_CLASSES}
-    for basename in representative_basenames:
-        txt_file = split_labels_dst / f'{basename}.txt'
-        if txt_file.exists():
-            with open(txt_file, 'r') as f:
-                for line in f:
-                    if line.strip():
-                        class_id = int(line.split()[0])
-                        if 0 <= class_id < len(BDD100K_CLASSES):
-                            representative_object_counts[BDD100K_CLASSES[class_id]] += 1
+    # Count objects in representative samples from metadata that was already generated
+    # Note: This data already exists in split_metadata from select_representative_samples
+    representative_image_count = split_metadata['statistics']['total_selected']
     
-    print(f"  ✓ Objects in representative samples: {sum(representative_object_counts.values()):,}")
+    print(f"  ✓ Representative samples: {representative_image_count:,} images selected")
     
     # Count attribute distribution for FULL dataset
     print(f"\n  Analyzing attribute distribution for {split} split...")
@@ -1312,8 +1341,16 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
     if weather_dist or scene_dist or timeofday_dist:
         print(f"  ✓ Attribute distribution:")
         print(f"    Weather: {len(weather_dist)} types, {sum(weather_dist.values()):,} images")
+        for weather_type, count in sorted(weather_dist.items(), key=lambda x: x[1], reverse=True):
+            print(f"      - {weather_type}: {count:,} images")
+        
         print(f"    Scene: {len(scene_dist)} types, {sum(scene_dist.values()):,} images")
+        for scene_type, count in sorted(scene_dist.items(), key=lambda x: x[1], reverse=True):
+            print(f"      - {scene_type}: {count:,} images")
+        
         print(f"    Time: {len(timeofday_dist)} types, {sum(timeofday_dist.values()):,} images")
+        for time_type, count in sorted(timeofday_dist.items(), key=lambda x: x[1], reverse=True):
+            print(f"      - {time_type}: {count:,} images")
         
         # Update metadata with FULL dataset attribute distribution
         split_metadata['statistics']['full_dataset_attributes'] = {
@@ -1322,12 +1359,37 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
             'by_timeofday': timeofday_dist
         }
     
-    # Update metadata structure to include BOTH full dataset and representative sample statistics
-    split_metadata['statistics']['by_class'] = all_object_counts
-    split_metadata['statistics']['representative_samples'] = {
-        'total_selected': len(representative_basenames),
-        'by_class': representative_object_counts
+    # Update metadata structure with BOTH full dataset and representative sample statistics
+    # IMPORTANT: split_metadata already contains representative sample IMAGE counts from select_representative_samples()
+    # We add full dataset statistics WITHOUT overwriting the representative sample stats
+    
+    # Count objects in representative samples from YOLO files
+    representative_object_counts = {cls: 0 for cls in BDD100K_CLASSES}
+    for basename in representative_basenames:
+        txt_file = split_labels_dst / f'{basename}.txt'
+        if txt_file.exists():
+            with open(txt_file, 'r') as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            class_id = int(line.split()[0])
+                            if 0 <= class_id < len(BDD100K_CLASSES):
+                                representative_object_counts[BDD100K_CLASSES[class_id]] += 1
+                        except (ValueError, IndexError):
+                            continue
+    
+    # Add full dataset object counts (separate from representative samples)
+    split_metadata['statistics']['full_dataset'] = {
+        'total_images': len(image_files),
+        'by_class_object_counts': all_object_counts  # OBJECT counts for FULL dataset
     }
+    
+    # Add representative sample object counts (calculated from YOLO labels)
+    split_metadata['statistics']['representative_samples']['by_class_object_counts'] = representative_object_counts
+    split_metadata['statistics']['representative_samples']['total_objects'] = sum(representative_object_counts.values())
+    split_metadata['statistics']['representative_samples']['total_images'] = len(representative_basenames)
+    
+    # Add conversion/validation statistics
     split_metadata['validation'] = validation_stats
     
     # Save metadata JSON file for this split
@@ -1364,31 +1426,112 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
         comparison_file = metadata_dir / f'{split}_comparison.json'
         with open(comparison_file, 'w') as f:
             json.dump(comparison_stats, f, indent=2)
-        print(f"  ✓ Comparison saved: {comparison_file.name}")
+        print(f"  ✓ [2/3] Original vs Converted statistics validated: {comparison_file.name}")
+        
+        # [3/3] Validate representative JSON statistics
+        print(f"\n  [3/3] Validating representative JSON statistics...")
+        representative_json_dir = metadata_dir / split
+        if representative_json_dir.exists():
+            repr_json_files = list(representative_json_dir.glob('*.json'))
+            if repr_json_files:
+                repr_json_object_counts = count_objects_in_json_files(
+                    representative_json_dir, 
+                    f"    Counting representative JSON"
+                )
+                
+                # Compare with representative object counts from YOLO files
+                repr_match = True
+                mismatches = []
+                for cls in BDD100K_CLASSES:
+                    json_count = repr_json_object_counts.get(cls, 0)
+                    yolo_count = representative_object_counts.get(cls, 0)
+                    if json_count != yolo_count:
+                        repr_match = False
+                        mismatches.append(f"{cls}: JSON={json_count:,} vs YOLO={yolo_count:,}")
+                
+                if repr_match:
+                    print(f"    ✓ Representative JSON validated: {len(repr_json_files):,} files, "
+                          f"{sum(repr_json_object_counts.values()):,} objects (matches YOLO counts)")
+                else:
+                    print(f"    ⚠️  Representative JSON mismatch detected:")
+                    for mismatch in mismatches[:5]:  # Show first 5
+                        print(f"      {mismatch}")
+            else:
+                print(f"    ⚠️  No representative JSON files found")
+        else:
+            print(f"    ⚠️  Representative JSON directory not found: {representative_json_dir}")
+        
+        # Validate representative JSON statistics
+        print(f"\n  [VALIDATION] Checking representative JSON statistics...")
+        representative_json_dir = metadata_dir / split
+        if representative_json_dir.exists():
+            repr_json_files = list(representative_json_dir.glob('*.json'))
+            repr_json_object_counts = count_objects_in_json_files(
+                representative_json_dir, 
+                f"  Counting representative JSON"
+            )
+            
+            # Compare with representative object counts from YOLO files
+            repr_match = True
+            for cls in BDD100K_CLASSES:
+                json_count = repr_json_object_counts.get(cls, 0)
+                yolo_count = representative_object_counts.get(cls, 0)
+                if json_count != yolo_count:
+                    repr_match = False
+                    print(f"    ⚠️  Mismatch for {cls}: JSON={json_count:,}, YOLO={yolo_count:,}")
+            
+            if repr_match:
+                print(f"  ✓ Representative JSON statistics validated: {len(repr_json_files):,} files, "
+                      f"{sum(repr_json_object_counts.values()):,} objects match YOLO counts")
+            else:
+                print(f"  ⚠️  Representative JSON statistics mismatch detected!")
+        else:
+            print(f"  ⚠️  Representative JSON directory not found: {representative_json_dir}")
     
-    print(f"\n✓ {split}: {images_copied} images, {labels_converted} labels")
+    print(f"\n✓ {split}: {images_processed:,} images processed, {labels_created:,} labels created")
+    print(f"  - Images with objects: {validation_stats['images_with_objects']:,}")
+    print(f"  - Images without objects: {validation_stats['images_without_objects']:,}")
     print(f"  Metadata saved: {metadata_file.name}")
-    return images_copied, labels_converted, representative_basenames
+    return images_processed, labels_created, representative_basenames
 
 
 def create_data_yaml(dataset_root, base_dir):
     """
     Create data.yaml configuration file for YOLO training.
+    Only includes splits that actually exist in the dataset.
     """
-    data_yaml_content = f"""# BDD100K Dataset Configuration for YOLO
-# Auto-generated by process_bdd100k_to_yolo_dataset.py
-
-path: {dataset_root.absolute()}  # Dataset root directory
-train: images/train  # Train images (relative to 'path')
-val: images/val      # Validation images (relative to 'path')
-test: images/test    # Test images (relative to 'path')
-
-# Number of classes
-nc: {len(BDD100K_CLASSES)}
-
-# Class names
-names: {BDD100K_CLASSES}
-"""
+    # Check which splits exist in the dataset
+    images_dir = dataset_root / 'images'
+    existing_splits = []
+    for split in ['train', 'val', 'test']:
+        split_dir = images_dir / split
+        if split_dir.exists() and any(split_dir.iterdir()):
+            existing_splits.append(split)
+    
+    # Build data.yaml content dynamically
+    yaml_lines = [
+        "# BDD100K Dataset Configuration for YOLO",
+        "# Auto-generated by process_bdd100k_to_yolo_dataset.py",
+        "",
+        f"path: {dataset_root.absolute()}  # Dataset root directory"
+    ]
+    
+    # Add only existing splits
+    for split in existing_splits:
+        yaml_lines.append(f"{split}: images/{split}  # {split.capitalize()} images (relative to 'path')")
+    
+    # Add class configuration
+    yaml_lines.extend([
+        "",
+        "# Number of classes",
+        f"nc: {len(BDD100K_CLASSES)}",
+        "",
+        "# Class names",
+        f"names: {BDD100K_CLASSES}",
+        ""
+    ])
+    
+    data_yaml_content = "\n".join(yaml_lines)
     
     yaml_path = dataset_root / 'data.yaml'
     with open(yaml_path, 'w') as f:
@@ -1432,10 +1575,14 @@ def create_limited_dataset(source_root, output_root, representative_samples_by_s
     # Create output root
     output_root.mkdir(parents=True, exist_ok=True)
     
+    # Get splits to process from config (defaults to all if not specified)
+    splits_to_process = config.get('splits', ['train', 'val', 'test'])
+    print(f"\n  Splits to process: {', '.join(splits_to_process)}")
+    
     total_samples = 0
     
-    # Process each split
-    for split in ['train', 'val', 'test']:
+    # Process only the specified splits
+    for split in splits_to_process:
         print(f"\n{split.upper()} SPLIT")
         print("-" * 70)
         
@@ -1453,18 +1600,34 @@ def create_limited_dataset(source_root, output_root, representative_samples_by_s
             print(f"⚠️  Source directory not found: {source_images_dir}")
             continue
         
-        # Get representative samples for this split
-        representative_basenames = representative_samples_by_split.get(split, set())
+        # Check if we should copy the ENTIRE split without sampling
+        copy_full_split = (
+            (split == 'test' and config.get('contain_full_test_split', False)) or
+            (split == 'val' and config.get('contain_full_val_split', False))
+        )
         
-        if not representative_basenames:
-            print(f"⚠️  No representative samples found for {split}")
-            continue
+        if copy_full_split:
+            # Copy ALL files from test split without sampling
+            print(f"Copying ENTIRE {split} split (contain_full_test_split=True)...")
+            all_image_files = list(source_images_dir.glob('*.[jJ][pP][gG]')) + \
+                             list(source_images_dir.glob('*.[pP][nN][gG]')) + \
+                             list(source_images_dir.glob('*.[jJ][pP][eE][gG]'))
+            
+            basenames_to_copy = {img_file.stem for img_file in all_image_files}
+            print(f"Total files to copy: {len(basenames_to_copy)}")
+        else:
+            # Use representative samples as usual
+            basenames_to_copy = representative_samples_by_split.get(split, set())
+            
+            if not basenames_to_copy:
+                print(f"⚠️  No representative samples found for {split}")
+                continue
+            
+            print(f"Creating limited dataset with {len(basenames_to_copy)} representative samples...")
         
-        print(f"Creating limited dataset with {len(representative_basenames)} representative samples...")
-        
-        # Copy files for representative samples
+        # Copy files for representative samples (or all files if contain_full_test_split)
         samples_copied = 0
-        for basename in tqdm(representative_basenames, desc=f"Copying {split}", unit='files'):
+        for basename in tqdm(basenames_to_copy, desc=f"Copying {split}", unit='files'):
             # Copy image
             for ext in ['.jpg', '.png', '.jpeg']:
                 img_file = source_images_dir / f"{basename}{ext}"
@@ -1490,7 +1653,7 @@ def create_limited_dataset(source_root, output_root, representative_samples_by_s
             output_json_dir.mkdir(parents=True, exist_ok=True)
             json_files_copied = 0
             
-            for basename in representative_basenames:
+            for basename in basenames_to_copy:
                 json_file = source_json_dir / f"{basename}.json"
                 if json_file.exists():
                     dst_json_path = output_json_dir / json_file.name
@@ -1578,218 +1741,74 @@ def create_limited_dataset(source_root, output_root, representative_samples_by_s
  
 
 def main():
-    """Main entry point with argument parsing."""
-    parser = argparse.ArgumentParser(
-        description='Extract BDD100K dataset and prepare YOLO-compatible structure.\n'
-                    'Automatically creates both full and limited datasets.',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Extract full dataset + limited dataset (representative samples with comprehensive coverage)
-  python process_bdd100k_to_yolo_dataset.py
-  
-  # Skip download check (use when files already exist)
-  python process_bdd100k_to_yolo_dataset.py --skip-download
-  
-  # Force metadata regeneration
-  python process_bdd100k_to_yolo_dataset.py --force-reanalysis
-  
-  # Remove temporary directories after processing
-  python process_bdd100k_to_yolo_dataset.py --cleanup
-        """
-    )
-    
-    parser.add_argument(
-        '--skip-download',
-        action='store_true',
-        help='Skip download check (assume files already exist)'
-    )
-    
-    parser.add_argument(
-        '--cleanup',
-        action='store_true',
-        help='Remove temporary extraction directories after processing (default: keep them)'
-    )
-    
-    parser.add_argument(
-        '--force-reanalysis',
-        action='store_true',
-        help='Force regeneration of metadata files even if dataset exists (automatically enabled when creating limited dataset)'
-    )
-    
-    parser.add_argument(
-        '--reanalyze-only',
-        action='store_true',
-        help='Only regenerate metadata without reprocessing images/labels (dataset must already exist)'
-    )
-    
-    args = parser.parse_args()
-    
-  
-    # Handle reanalyze-only mode
-    if args.reanalyze_only:
-        print("=" * 70)
-        print("METADATA REGENERATION MODE")
-        print("=" * 70)
-        
-        if not yolo_dataset_root.exists():
-            print(f"\n❌ Dataset not found: {yolo_dataset_root}")
-            print("Please run full dataset creation first.")
-            return
-        
-        print(f"\nRegenerating metadata for: {yolo_dataset_root}")
-        
-        # Regenerate metadata for full dataset
-        for split in ['train', 'val', 'test']:
-            print(f"\n{'='*70}")
-            print(f"Reanalyzing {split} split")
-            print(f"{'='*70}")
-            
-            labels_dir = yolo_dataset_root / 'labels' / split
-            metadata_dir = yolo_dataset_root / 'representative_json'
-            
-            if not labels_dir.exists():
-                print(f"⚠️  Labels directory not found: {labels_dir}")
-                continue
-            
-            # Load existing metadata to get representative samples
-            metadata_file = metadata_dir / f'{split}_metadata.json'
-            if metadata_file.exists():
-                with open(metadata_file, 'r') as f:
-                    metadata = json.load(f)
-                
-                # Get representative basenames
-                representative_basenames = set()
-                if 'selected_samples' in metadata and 'by_class' in metadata['selected_samples']:
-                    for cls_samples in metadata['selected_samples']['by_class'].values():
-                        representative_basenames.update(cls_samples)
-            else:
-                representative_basenames = set()
-            
-            # Count objects in ALL files using method
-            print(f"Counting objects in full dataset...")
-            all_object_counts = count_objects_in_labels(labels_dir, f"  {split}")
-            all_txt_files = list(labels_dir.glob('*.txt'))
-            print(f"✓ Total: {sum(all_object_counts.values()):,} objects")
-            
-            # Count objects in representative samples using method
-            representative_object_counts = {cls: 0 for cls in BDD100K_CLASSES}
-            if representative_basenames:
-                for basename in tqdm(representative_basenames, desc=f"  Representative", leave=False):
-                    txt_file = labels_dir / f'{basename}.txt'
-                    if txt_file.exists():
-                        with open(txt_file, 'r') as f:
-                            for line in f:
-                                if line.strip():
-                                    try:
-                                        class_id = int(line.split()[0])
-                                        if 0 <= class_id < len(BDD100K_CLASSES):
-                                            representative_object_counts[BDD100K_CLASSES[class_id]] += 1
-                                    except (ValueError, IndexError):
-                                        continue
-            
-            # Update or create metadata
-            if metadata_file.exists():
-                metadata['statistics']['by_class'] = all_object_counts
-                metadata['statistics']['representative_samples'] = {
-                    'total_selected': len(representative_basenames),
-                    'by_class': representative_object_counts
-                }
-            else:
-                metadata = {
-                    'split': split,
-                    'generation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'statistics': {
-                        'total_files_analyzed': len(all_txt_files),
-                        'by_class': all_object_counts,
-                        'representative_samples': {
-                            'total_selected': len(representative_basenames),
-                            'by_class': representative_object_counts
-                        }
-                    }
-                }
-            
-            # Save metadata
-            metadata_dir.mkdir(parents=True, exist_ok=True)
-            with open(metadata_file, 'w') as f:
-                json.dump(metadata, f, indent=2)
-            
-            print(f"✓ {split}: {len(all_txt_files):,} files, {sum(all_object_counts.values()):,} objects")
-            if representative_basenames:
-                print(f"  Representative: {len(representative_basenames):,} samples, {sum(representative_object_counts.values()):,} objects")
-        
-        # Regenerate limited dataset metadata if it exists
-        if limited_dataset_root.exists():
-            print(f"\n{'='*70}")
-            print("REGENERATING LIMITED DATASET METADATA")
-            print(f"{'='*70}")
-            
-            # Inline regeneration for limited dataset
-            for split in ['train', 'val', 'test']:
-                limited_labels_dir = limited_dataset_root / 'labels' / split
-                if not limited_labels_dir.exists():
-                    continue
-                
-                # Count objects from txt files
-                txt_files = list(limited_labels_dir.glob('*.txt'))
-                object_counts = {cls: 0 for cls in BDD100K_CLASSES}
-                
-                for txt_file in txt_files:
-                    with open(txt_file, 'r') as f:
-                        for line in f:
-                            if line.strip():
-                                class_id = int(line.split()[0])
-                                if 0 <= class_id < len(BDD100K_CLASSES):
-                                    object_counts[BDD100K_CLASSES[class_id]] += 1
-                
-                # Create metadata
-                limited_metadata = {
-                    'split': split,
-                    'generation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'statistics': {
-                        'total_files_analyzed': len(txt_files),
-                        'total_selected': len(txt_files),
-                        'by_class': object_counts
-                    }
-                }
-                
-                # Save metadata
-                metadata_dir = limited_dataset_root / 'representative_json'
-                metadata_dir.mkdir(parents=True, exist_ok=True)
-                metadata_file = metadata_dir / f'{split}_metadata.json'
-                with open(metadata_file, 'w') as f:
-                    json.dump(limited_metadata, f, indent=2)
-                
-                print(f"  ✓ {split}: {len(txt_files):,} files, {sum(object_counts.values()):,} objects")
-        
-        print("\n" + "="*70)
-        print("✅ METADATA REGENERATION COMPLETE")
-        print("="*70)
-        return
-    
+    """Main entry point - runs complete dataset preparation without parameters."""
     # Step 1: Check/download dataset files
     print("=" * 70)
     print("BDD100K YOLO Dataset Preparation")
     print("=" * 70)
     
-    if not check_and_download_datasets(source_dir, args.skip_download):
+    if not check_and_download_datasets(source_dir):
         print("\n❌ Dataset files not available. Exiting.")
         return
     
-    # Step 2: Extract and create full dataset
+    # Step 2: Verify image dimensions from actual dataset
+    print("\n" + "="*70)
+    print("STEP 2: VERIFY IMAGE DIMENSIONS")
+    print("="*70)
+    
+    # Check if images are already extracted
+    tmp_images_dir = base_dir / 'bdd100k_tmp_images'
+    images_extracted = check_extraction_complete(tmp_images_dir)
+    
+    if not images_extracted:
+        print("\nExtracting images first to verify dimensions...")
+        images_zip = source_dir / "bdd100k_images_100k.zip"
+        if images_zip.exists():
+            extract_zip_with_progress(images_zip, tmp_images_dir, "Extracting images")
+        else:
+            raise FileNotFoundError(f"Images archive not found: {images_zip}")
+    
+    # Verify image dimensions
+    global BDD100K_IMAGE_WIDTH, BDD100K_IMAGE_HEIGHT
+    width, height, is_consistent, dimension_counts = verify_image_dimensions(tmp_images_dir)
+    
+    # Prompt user for confirmation
+    print("\n" + "="*70)
+    print("DIMENSION VERIFICATION CONFIRMATION")
+    print("="*70)
+    print(f"\nDetected image dimensions: {width}×{height}")
+    print(f"Consistency: {'All images match' if is_consistent else 'Multiple dimensions found'}")
+    
+    if not is_consistent:
+        print("\n⚠️  WARNING: Not all images have the same dimensions!")
+        print("   This may cause issues during conversion.")
+        print("\n   Dimension breakdown:")
+        for dim, cnt in dimension_counts.items():
+            print(f"     {dim[0]}×{dim[1]}: {cnt} images")
+    
+    print(f"\nThe script will use {width}×{height} for YOLO coordinate conversion.")
+    response = input("\nProceed with these dimensions? (yes/no): ").strip().lower()
+    
+    if response not in ['yes', 'y']:
+        print("\n❌ Operation cancelled by user.")
+        print("   Please verify your dataset images and try again.")
+        return
+    
+    # Set global dimension variables
+    BDD100K_IMAGE_WIDTH = width
+    BDD100K_IMAGE_HEIGHT = height
+    print(f"\n✓ Image dimensions set: {BDD100K_IMAGE_WIDTH}×{BDD100K_IMAGE_HEIGHT}")
+    
+    # Step 3: Extract and create full dataset
     print("\n" + "="*70)
     print("CREATING FULL DATASET")
     print("="*70)
     
-    # Force re-analysis to ensure fresh metadata for limited dataset creation
-    force_reanalysis = args.force_reanalysis or True
-
-    
     representative_samples_by_split = extract_and_prepare_yolo_dataset(
-        base_dir, source_dir, yolo_dataset_root, args.cleanup, force_reanalysis
+        base_dir, source_dir, yolo_dataset_root
     )
     
-    # Step 3: Analyze and preview limited datasets configurations
+    # Step 4: Analyze and preview limited datasets configurations
     print("\n" + "="*70)
     print(f"ANALYZING {len(LIMITED_DATASET_CONFIGS)} LIMITED DATASET CONFIGURATIONS")
     print("="*70)
@@ -1806,18 +1825,51 @@ Examples:
         config_sample_counts = {'train': 0, 'val': 0, 'test': 0}
         config_object_counts = {'train': {}, 'val': {}, 'test': {}}
         
-        for split in ['train', 'val', 'test']:
+        # Only analyze splits specified in this config
+        splits_to_analyze = config.get('splits', ['train', 'val', 'test'])
+        
+        for split in splits_to_analyze:
             split_labels_src = (base_dir / 'bdd100k_tmp_labels' / '100k' / split)
-            if split_labels_src.exists():
-                # Get representative samples for this config
-                _, representative_files, metadata = select_representative_samples(split_labels_src, split, config)
-                config_sample_counts[split] = len(representative_files)
+            yolo_labels_dir = yolo_dataset_root / 'labels' / split
+            
+            if split_labels_src.exists() and yolo_labels_dir.exists():
+                # Check if we should use ENTIRE split without sampling
+                use_full_split = (
+                    (split == 'test' and config.get('contain_full_test_split', False)) or
+                    (split == 'val' and config.get('contain_full_val_split', False))
+                )
                 
-                # Get object counts from metadata
-                if 'statistics' in metadata and 'representative_samples' in metadata['statistics']:
-                    config_object_counts[split] = metadata['statistics']['representative_samples'].get('by_class', {})
+                if use_full_split:
+                    # Use ALL basenames from the split (no sampling)
+                    print(f"\n  {split.upper()} split (FULL - no sampling):")
+                    all_label_files = list(yolo_labels_dir.glob('*.txt'))
+                    representative_basenames = {f.stem for f in all_label_files}
+                    config_sample_counts[split] = len(representative_basenames)
+                else:
+                    # Get representative samples for this config
+                    _, representative_files, metadata = select_representative_samples(split_labels_src, split, config)
+                    config_sample_counts[split] = len(representative_files)
+                    representative_basenames = {f.stem for f in representative_files}
+                    print(f"\n  {split.upper()} split:")
                 
-                print(f"\n  {split.upper()} split:")
+                # Count objects from YOLO label files for selected samples
+                class_counts = {cls: 0 for cls in BDD100K_CLASSES}
+                
+                for basename in representative_basenames:
+                    txt_file = yolo_labels_dir / f'{basename}.txt'
+                    if txt_file.exists():
+                        with open(txt_file, 'r') as f:
+                            for line in f:
+                                if line.strip():
+                                    try:
+                                        class_id = int(line.split()[0])
+                                        if 0 <= class_id < len(BDD100K_CLASSES):
+                                            class_counts[BDD100K_CLASSES[class_id]] += 1
+                                    except (ValueError, IndexError):
+                                        continue
+                
+                config_object_counts[split] = class_counts
+                
                 print(f"    Images: {config_sample_counts[split]:,}")
                 if config_object_counts[split]:
                     total_objects = sum(config_object_counts[split].values())
@@ -1848,26 +1900,40 @@ Examples:
     print("\n" + "="*70)
     print("SUMMARY - Limited Dataset Configurations")
     print("="*70)
-    print(f"\n{'Config':<25} {'Images':>12} {'Objects':>12} {'Description'}")
-    print("-" * 70)
-    for analysis in config_analysis:
-        config = analysis['config']
-        print(f"{config['name']:<25} {analysis['total_images']:>12,} {analysis['total_objects']:>12,} {config['description'][:30]}")
     
-    print("-" * 70)
+    # Detailed table for each config
+    for idx, analysis in enumerate(config_analysis, 1):
+        config = analysis['config']
+        print(f"\n[{idx}] {config['name']}")
+        print(f"    Description: {config['description']}")
+        print(f"    Splits: {', '.join(config.get('splits', ['train', 'val', 'test']))}")
+        print(f"    Configuration (PER SPLIT):")
+        print(f"      - samples_per_attribute_combo: {config['samples_per_attribute_combo']}")
+        print(f"      - min_samples_per_class: {config['min_samples_per_class']}")
+        print(f"      - min_samples_per_attribute_value: {config['min_samples_per_attribute_value']}")
+        print(f"      - min_samples_per_class_attribute_combo: {config['min_samples_per_class_attribute_combo']}")
+        print(f"    Expected Results:")
+        print(f"      Train: {analysis['sample_counts']['train']:>6,} images, {sum(analysis['object_counts']['train'].values()):>8,} objects")
+        print(f"      Val:   {analysis['sample_counts']['val']:>6,} images, {sum(analysis['object_counts']['val'].values()):>8,} objects")
+        print(f"      Test:  {analysis['sample_counts']['test']:>6,} images, {sum(analysis['object_counts']['test'].values()):>8,} objects")
+        print(f"      TOTAL: {analysis['total_images']:>6,} images, {analysis['total_objects']:>8,} objects")
+    
+    # Summary statistics
+    total_images_all = sum(a['total_images'] for a in config_analysis)
+    total_objects_all = sum(a['total_objects'] for a in config_analysis)
+    print("\n" + "="*70)
+    print("OVERALL SUMMARY")
+    print("="*70)
+    print(f"Configurations: {len(LIMITED_DATASET_CONFIGS)}")
+    print(f"Total images (all configs): {total_images_all:,}")
+    print(f"Total objects (all configs): {total_objects_all:,}")
+    print(f"Estimated disk space:")
+    print(f"  - Uncompressed: ~{total_images_all * 0.5:.1f} MB")
+    print(f"  - Compressed:   ~{total_images_all * 0.15:.1f} MB")
     
     # Ask for confirmation
     print("\n" + "="*70)
-    print("⚠️  CONFIRMATION REQUIRED")
-    print("="*70)
-    print(f"\nThis will create {len(LIMITED_DATASET_CONFIGS)} limited datasets and compress them.")
-    print(f"Total images across all configs: {sum(a['total_images'] for a in config_analysis):,}")
-    print(f"Total objects across all configs: {sum(a['total_objects'] for a in config_analysis):,}")
-    print(f"\nEstimated disk space required:")
-    print(f"  - Uncompressed: ~{sum(a['total_images'] for a in config_analysis) * 0.5:.1f} MB")
-    print(f"  - Compressed: ~{sum(a['total_images'] for a in config_analysis) * 0.15:.1f} MB")
-    
-    response = input("\nDo you want to proceed with creating these limited datasets? (yes/no): ").strip().lower()
+    response = input("Proceed with creating these limited datasets? (yes/no): ").strip().lower()
     
     if response not in ['yes', 'y']:
         print("\n❌ Operation cancelled by user.")
@@ -1875,39 +1941,195 @@ Examples:
         print(f"You can run this script again to create limited datasets later.")
         return
     
-    # Step 4: Create multiple limited datasets from representative samples
+    # Step 5: PHASE 1 - Define and validate sample selections for all limited datasets
+    # HIERARCHICAL STRUCTURE: Each config is a subset of the previous one
+    # Config 1 (largest) ⊇ Config 2 ⊇ Config 3 (smallest)
     print("\n" + "="*70)
-    print(f"CREATING {len(LIMITED_DATASET_CONFIGS)} LIMITED DATASETS")
+    print(f"STEP 5 - PHASE 1: DEFINING SAMPLE SELECTIONS")
+    print("="*70)
+    print("Determining which images each limited dataset will contain...")
+    print("Note: Each dataset is a SUBSET of the previous one:")
+    print(f"  Config 1 (largest) ⊇ Config 2 ⊇ Config 3 (smallest)")
+    print("="*70)
+    
+    # Store all configurations with their selected samples
+    all_configs_samples = []
+    previous_config_samples = None  # Track samples from previous config
+    
+    for idx, analysis in enumerate(config_analysis, 1):
+        config = analysis['config']
+        
+        print(f"\n{'='*70}")
+        print(f"[{idx}/{len(config_analysis)}] Analyzing: {config['name']} (ID: {config.get('id', idx)})")
+        print(f"{'='*70}")
+        if idx == 1:
+            print(f"Strategy: Base dataset - selecting from full dataset...")
+        else:
+            print(f"Strategy: Constrained subset - selecting ONLY from Config {idx-1} samples...")
+        
+        config_representative_samples = {}
+        for split in config.get('splits', ['train', 'val', 'test']):
+            split_labels_src = (base_dir / 'bdd100k_tmp_labels' / '100k' / split)
+            
+            # Check if we should use the ENTIRE split without sampling
+            use_full_split = (
+                (split == 'test' and config.get('contain_full_test_split', False)) or
+                (split == 'val' and config.get('contain_full_val_split', False))
+            )
+            
+            if use_full_split:
+                # Use ALL basenames from the split (no sampling)
+                # BUT respect hierarchical constraint if this is not the first config
+                split_type = 'val' if split == 'val' else 'test'
+                print(f"  {split.upper()}: Using ENTIRE split (contain_full_{split_type}_split=True)")
+                
+                if idx == 1:
+                    # First config: use ALL files from full dataset
+                    yolo_labels_dir = yolo_dataset_root / 'labels' / split
+                    if yolo_labels_dir.exists():
+                        all_label_files = list(yolo_labels_dir.glob('*.txt'))
+                        config_representative_samples[split] = {f.stem for f in all_label_files}
+                        print(f"         Selected: {len(config_representative_samples[split]):,} images (from full dataset)")
+                    else:
+                        print(f"  ⚠️  Warning: Labels directory not found: {yolo_labels_dir}")
+                        config_representative_samples[split] = set()
+                else:
+                    # Subsequent configs: use ALL files from previous config (hierarchical constraint)
+                    if previous_config_samples and split in previous_config_samples:
+                        config_representative_samples[split] = previous_config_samples[split]
+                        print(f"         Selected: {len(config_representative_samples[split]):,} images (from Config {idx-1})")
+                    else:
+                        print(f"  ⚠️  Warning: No samples from previous config for {split}")
+                        config_representative_samples[split] = set()
+            elif split_labels_src.exists():
+                print(f"  {split.upper()}: Sampling representative images...")
+                _, representative_files, _ = select_representative_samples(
+                    split_labels_src, 
+                    split, 
+                    config,
+                    constrain_to_basenames=previous_config_samples.get(split) if previous_config_samples else None
+                )
+                config_representative_samples[split] = representative_files
+                print(f"         Selected: {len(representative_files):,} images")
+            else:
+                print(f"  ⚠️  Warning: Split '{split}' not found, skipping...")
+                config_representative_samples[split] = set()
+        
+        # Calculate total for this config
+        total_images = sum(len(samples) for samples in config_representative_samples.values())
+        
+        # Store configuration with samples
+        all_configs_samples.append({
+            'config': config,
+            'samples': config_representative_samples,
+            'total_images': total_images,
+            'output_path': base_dir / config['name']
+        })
+        
+        print(f"\n  Total selected for {config['name']}: {total_images:,} images")
+        
+        # Store samples for next config to use as constraint
+        previous_config_samples = config_representative_samples
+    
+    # Verify hierarchical structure
+    print("\n" + "="*70)
+    print("HIERARCHICAL STRUCTURE VERIFICATION")
+    print("="*70)
+    
+    hierarchical_valid = True
+    for i in range(1, len(all_configs_samples)):
+        current = all_configs_samples[i]
+        previous = all_configs_samples[i-1]
+        
+        print(f"\nVerifying: {current['config']['name']} ⊆ {previous['config']['name']}")
+        
+        for split in current['samples'].keys():
+            if split in previous['samples']:
+                current_set = current['samples'][split]
+                previous_set = previous['samples'][split]
+                
+                # Check if current is subset of previous
+                if not current_set.issubset(previous_set):
+                    extra_samples = current_set - previous_set
+                    print(f"  ✗ {split}: VIOLATION! {len(extra_samples)} samples not in previous config")
+                    hierarchical_valid = False
+                else:
+                    percentage = (len(current_set) / len(previous_set) * 100) if len(previous_set) > 0 else 0
+                    print(f"  ✓ {split}: Valid subset ({len(current_set):,}/{len(previous_set):,} = {percentage:.1f}%)")
+    
+    if not hierarchical_valid:
+        print("\n❌ ERROR: Hierarchical structure violated!")
+        print("   Some configurations contain samples not present in previous configs.")
+        print("   This should not happen. Please report this issue.")
+        return
+    
+    print("\n✓ Hierarchical structure validated: Config 3 ⊆ Config 2 ⊆ Config 1")
+    
+    # Display summary for user confirmation
+    print("\n" + "="*70)
+    print("SAMPLE SELECTION SUMMARY")
+    print("="*70)
+    
+    for idx, config_info in enumerate(all_configs_samples, 1):
+        config = config_info['config']
+        samples = config_info['samples']
+        
+        print(f"\n{idx}. {config['name']}")
+        print(f"   Description: {config['description']}")
+        print(f"   Output: {config_info['output_path']}")
+        
+        for split in sorted(samples.keys()):
+            count = len(samples[split])
+            print(f"   - {split}: {count:,} images")
+        
+        print(f"   TOTAL: {config_info['total_images']:,} images")
+    
+    total_all = sum(c['total_images'] for c in all_configs_samples)
+    print(f"\n{'='*70}")
+    print(f"Grand Total (all configs): {total_all:,} images")
+    print(f"Estimated disk space: ~{total_all * 0.5:.1f} MB")
+    print(f"{'='*70}")
+    
+    # PHASE 2: User confirmation before copying
+    print("\n" + "="*70)
+    print("STEP 5 - PHASE 2: CONFIRMATION")
+    print("="*70)
+    print("\nThe sample selection is complete and validated.")
+    print("Hierarchical structure verified: Config 3 ⊆ Config 2 ⊆ Config 1")
+    print("\nProceed with copying files to create limited datasets?")
+    
+    response = input("Continue? (yes/no): ").strip().lower()
+    
+    if response not in ['yes', 'y']:
+        print("\n❌ Operation cancelled by user.")
+        print(f"Full dataset is still available at: {yolo_dataset_root}")
+        print("No limited datasets were created. You can run this script again later.")
+        return
+    
+    # PHASE 3: Execute - Create limited datasets
+    print("\n" + "="*70)
+    print("STEP 5 - PHASE 3: CREATING LIMITED DATASETS")
     print("="*70)
     
     created_datasets = []
     
-    for idx, analysis in enumerate(config_analysis, 1):
-        config = analysis['config']
-        # Set output path
-        limited_root = base_dir / config['name']
+    for idx, config_info in enumerate(all_configs_samples, 1):
+        config = config_info['config']
+        samples = config_info['samples']
+        output_path = config_info['output_path']
         
-        # Generate representative samples for this configuration
         print(f"\n{'='*70}")
-        print(f"[{idx}/{len(config_analysis)}] Creating: {config['name']}")
+        print(f"[{idx}/{len(all_configs_samples)}] Creating: {config['name']}")
         print(f"{'='*70}")
         
-        # Re-analyze and select samples with this configuration
-        config_representative_samples = {}
-        for split in ['train', 'val', 'test']:
-            split_labels_src = (base_dir / 'bdd100k_tmp_labels' / '100k' / split)
-            if split_labels_src.exists():
-                _, representative_files, _ = select_representative_samples(split_labels_src, split, config)
-                config_representative_samples[split] = representative_files
-        
         # Create limited dataset
-        create_limited_dataset(yolo_dataset_root, limited_root, config_representative_samples, config)
+        create_limited_dataset(yolo_dataset_root, output_path, samples, config)
         created_datasets.append({
             'config': config,
-            'path': limited_root
+            'path': output_path
         })
     
-    # Step 5: Compress all limited datasets
+    # Step 6: Compress all limited datasets
     print("\n" + "="*70)
     print(f"COMPRESSING {len(created_datasets)} LIMITED DATASETS")
     print("="*70)
@@ -1960,7 +2182,7 @@ Examples:
         print(f"  - {cf['name']}.zip ({cf['size_mb']:.1f} MB) - {cf['description']}")
     print(f"\nCompressed location: {zipped_dir}")
     
-    # Step 6: Compress test split only from full dataset
+    # Step 7: Compress test split only from full dataset
     test_split_result = compress_test_split_only(yolo_dataset_root, base_dir)
     if test_split_result:
         print(f"\n✅ Test split compressed:")
@@ -1973,6 +2195,77 @@ Examples:
     print(f"  DATA_YAML_PATH = YOLO_DATASET_ROOT / 'data.yaml'")
     print(f"  Note: Limited dataset IS the representative samples (physically copied)")
     print("="*70)
+
+
+def verify_image_dimensions(tmp_images_dir, sample_size=100):
+    """
+    Verify image dimensions from actual dataset images.
+    Checks multiple images to ensure consistency.
+    
+    Args:
+        tmp_images_dir: Path to temporary images directory
+        sample_size: Number of images to check (default 100)
+    
+    Returns:
+        Tuple of (width, height, is_consistent, dimension_counts)
+    """
+    from PIL import Image
+    
+    print("\n" + "="*70)
+    print("VERIFYING IMAGE DIMENSIONS FROM ACTUAL DATASET")
+    print("="*70)
+    
+    dimension_counts = {}
+    images_checked = 0
+    
+    # Check images from all splits
+    for split in ['train', 'val', 'test']:
+        split_dir = tmp_images_dir / '100k' / split
+        if not split_dir.exists():
+            continue
+        
+        # Get image files
+        image_files = list(split_dir.glob('*.jpg')) + list(split_dir.glob('*.png'))
+        
+        # Check up to sample_size images per split
+        for img_file in image_files[:min(sample_size, len(image_files))]:
+            try:
+                with Image.open(img_file) as img:
+                    dimensions = img.size  # Returns (width, height)
+                    dimension_counts[dimensions] = dimension_counts.get(dimensions, 0) + 1
+                    images_checked += 1
+            except Exception as e:
+                print(f"⚠️  Warning: Could not read {img_file.name}: {e}")
+                continue
+        
+        if images_checked >= sample_size:
+            break
+    
+    if not dimension_counts:
+        raise RuntimeError("Could not verify image dimensions - no images found or readable")
+    
+    # Find most common dimension
+    most_common_dim = max(dimension_counts.items(), key=lambda x: x[1])
+    width, height = most_common_dim[0]
+    count = most_common_dim[1]
+    
+    # Check if all images have the same dimension
+    is_consistent = len(dimension_counts) == 1
+    
+    print(f"\nImages checked: {images_checked}")
+    print(f"\nDimension analysis:")
+    for dim, cnt in sorted(dimension_counts.items(), key=lambda x: x[1], reverse=True):
+        percentage = (cnt / images_checked) * 100
+        status = "✓" if dim == most_common_dim[0] else "⚠️"
+        print(f"  {status} {dim[0]}×{dim[1]}: {cnt} images ({percentage:.1f}%)")
+    
+    if is_consistent:
+        print(f"\n✓ All images have consistent dimensions: {width}×{height}")
+    else:
+        print(f"\n⚠️  Warning: Multiple image dimensions detected!")
+        print(f"   Most common: {width}×{height} ({count}/{images_checked} images)")
+    
+    return width, height, is_consistent, dimension_counts
 
 
 def check_extraction_complete(tmp_dir, expected_splits=['train', 'val', 'test']):
@@ -2140,7 +2433,7 @@ def analyze_data_integrity(tmp_images_dir, tmp_labels_dir):
     return images_without_labels, labels_without_images, integrity_passed
 
 
-def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cleanup=False, force_reanalysis=False):
+def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root):
     """Extract BDD100K dataset and create YOLO-compatible structure with representative samples."""
     print("=" * 70)
     print("BDD100K Dataset Extraction & YOLO Conversion")
@@ -2192,10 +2485,20 @@ def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cl
             print(f"⚠️  Warning: Labels zip not found: {labels_zip}")
     
     # STEP 1.5: DATA INTEGRITY CHECK (MANDATORY - CANNOT BE SKIPPED)
+    # This step performs comprehensive validation:
+    # 1. Image-Label Matching: Ensures all images have corresponding labels (JSON format)
+    # 2. Original vs Converted Statistics: Validates object counts match between JSON and YOLO formats
+    # 3. Representative JSON Validation: Ensures representative samples statistics are consistent
     print("\n" + "="*70)
     print("STEP 1.5: DATA INTEGRITY CHECK")
     print("="*70)
-    print("Analyzing original TMP dataset before YOLO conversion...")
+    print("This step validates:")
+    print("  1. Image-Label matching (all images have corresponding JSON labels)")
+    print("  2. Original JSON vs Converted YOLO statistics (object counts match)")
+    print("  3. Representative JSON files statistics (subset consistency)")
+    print("="*70)
+    
+    print("\n[1/3] Analyzing original TMP dataset before YOLO conversion...")
     print("Checking for mismatches between images and labels (JSON format)")
     
     # Run integrity analysis on TMP dataset (original JSON labels)
@@ -2207,17 +2510,24 @@ def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cl
     # Note: We continue processing regardless of integrity issues
     # The YOLO conversion will handle mismatches appropriately
     
-    # Step 2 & 3: Create YOLO dataset and process splits (skip if complete, unless forced)
+    print("\n" + "="*70)
+    print("STEP 1.5 COMPLETE: DATA INTEGRITY CHECK SUMMARY")
+    print("="*70)
+    print("✓ [1/3] Image-Label matching validation: DONE")
+    print("✓ [2/3] Original vs Converted statistics: Will be validated per split during conversion")
+    print("✓ [3/3] Representative JSON validation: Will be validated per split during conversion")
+    print("="*70)
+    
+    # Step 2 & 3: Create YOLO dataset and process splits (skip if complete)
     dataset_complete = check_dataset_complete(yolo_dataset_root)
     
-    if dataset_complete and not force_reanalysis:
+    if dataset_complete:
         print("\n" + "="*70)
         print("STEPS 2-3: DATASET ALREADY COMPLETE, SKIPPING...")
         print("="*70)
         print(f"✓ YOLO dataset found: {yolo_dataset_root}")
         print(f"✓ All splits (train/val/test) verified")
         print(f"✓ Metadata files verified")
-        print("\n  Use --force-reanalysis to regenerate metadata")
         
         # Load representative samples from metadata files
         representative_samples_by_split = {}
@@ -2227,23 +2537,18 @@ def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cl
             if metadata_file.exists():
                 with open(metadata_file, 'r') as f:
                     metadata = json.load(f)
-                    # Extract basenames from all sample categories
+                    # Extract basenames from selected_samples.by_class structure
                     basenames = set()
-                    for category in metadata.get('selected_samples', {}).values():
-                        if isinstance(category, dict):
-                            for samples in category.values():
-                                basenames.update(samples)
-                        elif isinstance(category, list):
-                            basenames.update(category)
+                    by_class = metadata.get('selected_samples', {}).get('by_class', {})
+                    for class_name, class_basenames in by_class.items():
+                        if isinstance(class_basenames, list):
+                            basenames.update(class_basenames)
                     representative_samples_by_split[split] = basenames
         
         yolo_dataset_root_created = yolo_dataset_root
         total_images = sum(1 for _ in (yolo_dataset_root / 'images' / 'train').glob('*'))
         total_labels = sum(1 for _ in (yolo_dataset_root / 'labels' / 'train').glob('*.txt'))
     else:
-        if force_reanalysis:
-            print("\n⚠️  Force re-analysis enabled: Regenerating metadata...")
-        
         # Step 2: Create YOLO dataset structure
         print("\n" + "="*70)
         print("STEP 2: CREATING YOLO DATASET STRUCTURE")
@@ -2261,8 +2566,12 @@ def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cl
         total_labels = 0
         representative_samples_by_split = {}
         
+        # Use first config for full dataset metadata (representative sample selection for analysis only)
+        # This does NOT filter images - ALL images are processed regardless of config
+        metadata_config = LIMITED_DATASET_CONFIGS[0]
+        
         for split in ['train', 'val', 'test']:
-            imgs, lbls, repr_samples = process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root_created, split)
+            imgs, lbls, repr_samples = process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root_created, split, metadata_config)
             total_images += imgs
             total_labels += lbls
             representative_samples_by_split[split] = repr_samples
@@ -2274,26 +2583,11 @@ def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cl
     
     yaml_path = create_data_yaml(yolo_dataset_root_created, base_dir)
     
-    # Step 5: Clean up temporary directories (optional)
     print("\n" + "="*70)
-    print("STEP 5: CLEANUP")
+    print("NOTE: Temporary directories preserved for reference:")
+    print(f"  {tmp_images_dir}")
+    print(f"  {tmp_labels_dir}")
     print("="*70)
-    
-    if cleanup:
-        print("Removing temporary directories...")
-        if tmp_images_dir.exists():
-            shutil.rmtree(tmp_images_dir)
-            print(f"✓ Removed: {tmp_images_dir}")
-        
-        if tmp_labels_dir.exists():
-            shutil.rmtree(tmp_labels_dir)
-            print(f"✓ Removed: {tmp_labels_dir}")
-        
-        print("✓ Cleanup complete")
-    else:
-        print(f"Keeping temporary directories (use --cleanup flag to remove):")
-        print(f"  {tmp_images_dir}")
-        print(f"  {tmp_labels_dir}")
     
     # Final Summary
     print("\n" + "="*70)
@@ -2305,7 +2599,7 @@ def extract_and_prepare_yolo_dataset(base_dir, source_dir, yolo_dataset_root, cl
     print(f"  Total images: {total_images}")
     print(f"  Total labels: {total_labels}")
     print(f"  Classes: {len(BDD100K_CLASSES)}")
-    print(f"  Integrity checks: ✓ PASSED (all splits)")
+    # Note: Integrity status determined in process_split for each split
     print(f"\nYOLO Dataset Structure:")
     print(f"  {yolo_dataset_root_created}/")
     print(f"    ├── images/")
