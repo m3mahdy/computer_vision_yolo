@@ -8,11 +8,14 @@ bdd100k_tmp_labels/**
 bdd100k_yolo/**
 bdd100k_yolo_limited/**
 bdd100k_yolo_tuning/**
-
-bdd100k_yolo_limited_zipped/**
-bdd100k_yolo_tuning_zipped/**
-
 bdd100k_yolo_tiny/**
+
+bdd100k_limited_datasets_zipped/**
+bdd100k_test_split_zipped/**
+
+
+
+
 
 
 
@@ -20,8 +23,7 @@ bdd100k_yolo_tiny/**
 .DS_Store
 
 
-bdd100k_labels/**
-old/**
+
 tmp/**
 
 
