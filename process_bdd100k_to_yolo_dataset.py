@@ -63,6 +63,17 @@ MIN_SAMPLES_PER_CLASS = 1500  # Minimum samples per object class per split
 MIN_SAMPLES_PER_ATTRIBUTE_VALUE = 1500  # Minimum samples per individual attribute value (weather/scene/time)
 MIN_SAMPLES_PER_CLASS_ATTRIBUTE_COMBO = 500  # Minimum samples per (class, attribute) combination
 
+# Define paths
+base_dir = Path(__file__).parent
+source_dir = base_dir / "bdd_100k_source"
+yolo_dataset_root = base_dir / 'bdd100k_yolo'
+limited_dataset_root = base_dir / 'bdd100k_yolo_limited'
+
+
+zipped_dir = base_dir / 'bdd100k_yolo_limited_zipped'
+zipped_dir.mkdir(parents=True, exist_ok=True)
+compressed_file = zipped_dir / 'bdd100k_yolo_limited.zip'
+
 
 # BDD100K object detection classes (10 classes)
 BDD100K_CLASSES = [
@@ -1366,12 +1377,7 @@ Examples:
     
     args = parser.parse_args()
     
-    # Define paths
-    base_dir = Path(__file__).parent
-    source_dir = base_dir / "bdd_100k_source"
-    yolo_dataset_root = base_dir / 'bdd100k_yolo'
-    limited_dataset_root = base_dir / 'bdd100k_yolo_limited'
-    
+  
     # Handle reanalyze-only mode
     if args.reanalyze_only:
         print("=" * 70)
@@ -1546,10 +1552,7 @@ Examples:
     print("COMPRESSING LIMITED DATASET")
     print("="*70)
     
-    zipped_dir = base_dir / 'bdd100k_yolo_limited_zipped'
-    zipped_dir.mkdir(parents=True, exist_ok=True)
-    compressed_file = zipped_dir / 'bdd100k_yolo_limited.zip'
-    
+
     # Remove existing compressed file if present
     if compressed_file.exists():
         print(f"Removing existing compressed file: {compressed_file.name}")

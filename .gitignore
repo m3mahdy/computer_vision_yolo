@@ -12,8 +12,12 @@ bdd100k_yolo_tuning/**
 bdd100k_yolo_limited_zipped/**
 bdd100k_yolo_tuning_zipped/**
 
+bdd100k_yolo_tiny/**
 
 
+
+#any file nmae .DS_Store
+.DS_Store
 
 
 bdd100k_labels/**
@@ -40,3 +44,8 @@ __pychache__/
 *.pyc
 *.pyo
 *.pyd
+
+
+#temp must be removed latet to save the data
+tune_train/tune/
+yolo_test/analysis_runs/
