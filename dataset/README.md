@@ -26,7 +26,7 @@ Comprehensive validation of script 2 outputs: verifies object counts match betwe
 ```bash
 python dataset/3_create_limited_datasets.py
 ```
-Interactive menu creates subset datasets with sophisticated representative sampling: Limited (~25K train), Tuning (~14K train), or Tiny (~500 train). Ensures diverse coverage across weather, scene, time, and class combinations.
+`Interactive menu creates subset datasets with sophisticated representative sampling: Limited (~25K train), Tuning (~14K train), or Tiny (~500 train). Ensures diverse coverage across weather, scene, time, and class combinations.
 
 ### 4️⃣ Create Metadata and Performance JSON
 ```bash
@@ -62,15 +62,6 @@ Compresses only test split from full dataset as standalone package. Output: `bdd
 python dataset/8_download_extract_other_datasets.py
 ```
 Interactive menu downloads pre-made datasets (Limited, Tuning, Tiny, Test-only) from Google Drive with automatic extraction.
-
----
-
-## Utility Modules
-
-- **`bdd100k_config.py`** - Constants, paths, configurations, representative attributes
-- **`bdd100k_download.py`** - Google Drive download utilities
-- **`bdd100k_validate.py`** - Validation functions
-- **`bdd100k_compress.py`** - ZIP compression utilities
 
 ---
 
