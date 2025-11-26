@@ -61,7 +61,7 @@ def compress_test_split(dataset_root, dataset_name, output_dir):
         
         # Create test-only data.yaml
         yaml_lines = [
-            "path: .",
+            "path: /computer_vision_yolo/bdd100k_yolo_limited",
             "",
             "test: images/test",
             "",
