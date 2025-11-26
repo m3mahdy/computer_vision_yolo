@@ -18,7 +18,7 @@ bdd_100k_source_x/**
 bdd100k_tmp_images_x/**
 bdd100k_tmp_labels_x/**
 bdd100k_yolo_x/**
-bdd100k_yolo_tuning_limited_x/**
+bdd100k_yolo_limited_x/**
 bdd100k_yolo_tuning_x/**
 bdd100k_yolo_tiny_x/**
 
