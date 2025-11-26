@@ -257,7 +257,7 @@ def generate_sample_comparisons(
         # )
         plt.tight_layout()
 
-        comparison_path = comparisons_dir / f"comparison_{idx:02d}.png"
+        comparison_path = comparisons_dir / f"comparison_{idx:02d}_{img_path.stem}.png"
         plt.savefig(comparison_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
 
@@ -885,12 +885,15 @@ def plot_core_and_map_metrics(
     # Precision by class
     precision_sorted = df_metrics.sort_values("Precision")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
-    ax.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
+    bars = ax.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
     ax.set_title("Precision by Class", fontweight="bold", fontsize=22)
     ax.set_xlabel("Precision", fontweight="bold", fontsize=18)
-    ax.set_xlim(0, 1)
+    ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=14)
+    # Add value labels
+    for idx, (bar, value) in enumerate(zip(bars, precision_sorted["Precision"])):
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
     plt.tight_layout()
     fig_paths["precision_by_class"] = test_run_dir / "precision_by_class.png"
     plt.savefig(fig_paths["precision_by_class"], dpi=300, bbox_inches="tight")
@@ -899,12 +902,15 @@ def plot_core_and_map_metrics(
     # Recall by class
     recall_sorted = df_metrics.sort_values("Recall")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
-    ax.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
+    bars = ax.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
     ax.set_title("Recall by Class", fontweight="bold", fontsize=22)
     ax.set_xlabel("Recall", fontweight="bold", fontsize=18)
-    ax.set_xlim(0, 1)
+    ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=14)
+    # Add value labels
+    for idx, (bar, value) in enumerate(zip(bars, recall_sorted["Recall"])):
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
     plt.tight_layout()
     fig_paths["recall_by_class"] = test_run_dir / "recall_by_class.png"
     plt.savefig(fig_paths["recall_by_class"], dpi=300, bbox_inches="tight")
@@ -913,12 +919,15 @@ def plot_core_and_map_metrics(
     # F1-Score by class
     f1_sorted = df_metrics.sort_values("F1-Score")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
-    ax.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
+    bars = ax.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
     ax.set_title("F1-Score by Class", fontweight="bold", fontsize=22)
     ax.set_xlabel("F1-Score", fontweight="bold", fontsize=18)
-    ax.set_xlim(0, 1)
+    ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=14)
+    # Add value labels
+    for idx, (bar, value) in enumerate(zip(bars, f1_sorted["F1-Score"])):
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
     plt.tight_layout()
     fig_paths["f1_by_class"] = test_run_dir / "f1_by_class.png"
     plt.savefig(fig_paths["f1_by_class"], dpi=300, bbox_inches="tight")
@@ -949,12 +958,15 @@ def plot_core_and_map_metrics(
     # mAP@0.5 by class
     map_sorted = df_metrics.sort_values("mAP@0.5")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
-    ax.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
+    bars = ax.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
     ax.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=22)
     ax.set_xlabel("mAP@0.5", fontweight="bold", fontsize=18)
     ax.set_xlim(0, 1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=14)
+    # Add value labels
+    for idx, (bar, value) in enumerate(zip(bars, map_sorted["mAP@0.5"])):
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
     plt.tight_layout()
     fig_paths["map50_by_class"] = test_run_dir / "map50_by_class.png"
     plt.savefig(fig_paths["map50_by_class"], dpi=300, bbox_inches="tight")
