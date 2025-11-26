@@ -1,8 +1,8 @@
 """
-3.0. Create Metadata for YOLO Dataset.
+3. Create Metadata for YOLO Dataset.
 
 Creates representative_json metadata files for bdd100k_yolo dataset.
-This metadata enables fast representative sampling in script 3.1.
+This metadata enables fast representative sampling in script 4.
 
 Reads from: bdd100k_tmp_labels (original BDD100K JSON files)
 Writes to: bdd100k_yolo/representative_json/
@@ -11,7 +11,7 @@ Output files:
 - representative_json/{split}_metadata.json (train/val/test)
 
 Usage:
-    python dataset/3.0_create_metadata_for_yolo.py
+    python dataset/3_create_metadata_for_yolo.py
 """
 
 import json
@@ -185,7 +185,7 @@ def main():
         print(f"⚠️  PARTIAL SUCCESS: {len(splits_processed)}/3 splits")
     print("="*70)
     print(f"Location: {yolo_dataset_root / 'representative_json'}")
-    print("\nNext step: Run script 3.1 to create limited datasets")
+    print("\nNext step: Run script 4 to create limited datasets")
     print("="*70)
 
 

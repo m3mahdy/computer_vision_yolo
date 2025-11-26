@@ -1,5 +1,5 @@
 """
-3.1. Create Limited Datasets.
+4. Create Limited Datasets.
 
 Creates limited datasets using sophisticated representative sampling.
 Ensures diverse coverage across weather, scene, time, and class combinations.
@@ -14,13 +14,13 @@ Source hierarchy (READ-ONLY):
 - Config 2 sources from: bdd100k_yolo_limited (Config 1, created by this script)
 - Config 3 sources from: bdd100k_yolo_limited (Config 1, created by this script)
 
-Metadata (required for Config 1, optional for Config 2/3):
-- Script 3.0 creates representative_json metadata for bdd100k_yolo
-- Metadata enables fast processing; falls back to tmp_labels if missing
-- Recommended: Run script 3.0 on bdd100k_yolo before creating Config 1
+Metadata (REQUIRED):
+- Script 3 creates representative_json metadata for source datasets
+- Metadata is mandatory - script will fail if not present
+- Run script 3 on source dataset before creating limited datasets
 
 Usage:
-    python dataset/3.1_create_limited_datasets.py
+    python dataset/4_create_limited_datasets.py
 """
 
 import json
@@ -33,13 +33,14 @@ from bdd100k_config import (LIMITED_DATASET_CONFIGS, YOLO_DATASET_ROOT,
 
 
 def load_metadata_from_source(source_root, split_name):
-    """Load metadata from source dataset's representative_json (READ-ONLY)."""
+    """Load metadata from source dataset's representative_json (READ-ONLY, REQUIRED)."""
     metadata_file = source_root / 'representative_json' / f'{split_name}_metadata.json'
     
     if not metadata_file.exists():
-        print(f"    ⚠️  Metadata not found: {metadata_file}")
-        print(f"    ⚠️  Will read from tmp_labels (slower). Run script 3.0 for better performance.")
-        return None
+        raise FileNotFoundError(
+            f"Metadata required: {metadata_file}\n"
+            f"Run script 3 on source dataset first to create metadata."
+        )
     
     try:
         with open(metadata_file, 'r') as f:
@@ -47,9 +48,7 @@ def load_metadata_from_source(source_root, split_name):
         print(f"    ✓ Loaded metadata: {len(metadata.get('files', {}))} files")
         return metadata
     except Exception as e:
-        print(f"    ⚠️  Failed to load metadata: {e}")
-        print(f"    ⚠️  Will read from tmp_labels (slower)")
-        return None
+        raise RuntimeError(f"Failed to load metadata from {metadata_file}: {e}")
 
 
 def get_label_attributes_from_metadata(metadata, basename):
@@ -71,34 +70,6 @@ def get_label_attributes_from_metadata(metadata, basename):
     }
 
 
-def get_label_attributes_from_json(json_path):
-    """Extract attributes from BDD100K JSON label file (READ-ONLY fallback)."""
-    try:
-        with open(json_path, 'r') as f:
-            label_data = json.load(f)
-        
-        attributes = label_data['attributes']
-        frames = label_data.get('frames', [])
-        objects = frames[0].get('objects', []) if frames else label_data.get('objects', label_data.get('labels', []))
-        categories = [obj.get('category', '') for obj in objects if 'box2d' in obj]
-        valid_categories = [cat for cat in categories if cat in CLASS_TO_IDX]
-        
-        # Count objects per class
-        from collections import Counter
-        class_counts = Counter(valid_categories)
-        
-        return {
-            'weather': attributes['weather'],
-            'scene': attributes['scene'],
-            'timeofday': attributes['timeofday'],
-            'categories': list(set(valid_categories)),
-            'class_counts': dict(class_counts),
-            'num_objects': len(valid_categories)
-        }
-    except:
-        return None
-
-
 def select_representative_samples(source_root, split_name, config, base_dir, constrain_to_basenames=None):
     """
     Select representative samples with sophisticated attribute-based sampling.
@@ -116,7 +87,7 @@ def select_representative_samples(source_root, split_name, config, base_dir, con
     print(f"    - {min_per_attr} per attribute value")
     print(f"    - {min_per_class_attr} per class×attribute")
     
-    # Try to load metadata from source dataset (READ-ONLY, optional)
+    # Load metadata from source dataset (READ-ONLY, REQUIRED)
     metadata = load_metadata_from_source(source_root, split_name)
     
     # Get available basenames from source (READ-ONLY)
@@ -142,16 +113,9 @@ def select_representative_samples(source_root, split_name, config, base_dir, con
     timeofday_samples = {t: [] for t in REPRESENTATIVE_ATTRIBUTES['timeofday']}
     class_attribute_samples = {}
     
-    # Analyze files: try metadata first, fallback to tmp_labels JSON (READ-ONLY)
-    tmp_labels_dir = base_dir / 'bdd100k_tmp_labels' / '100k' / split_name
-    
+    # Analyze files using metadata from source (READ-ONLY)
     for basename in tqdm(available_basenames, desc="  Analyzing", leave=False):
-        # Try metadata first (fast), fallback to JSON (slower)
-        if metadata:
-            attrs = get_label_attributes_from_metadata(metadata, basename)
-        else:
-            json_file = tmp_labels_dir / f"{basename}.json"
-            attrs = get_label_attributes_from_json(json_file) if json_file.exists() else None
+        attrs = get_label_attributes_from_metadata(metadata, basename)
         
         if not attrs or not attrs['categories']:
             continue

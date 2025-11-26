@@ -1,11 +1,12 @@
 """
-7. Compress Test Split Only.
+7. Compress Test Split Only (READ-ONLY).
 
-Compresses only the test split from the full dataset for quick distribution.
+Compresses only the test split from the first limited dataset in config.
 Creates a standalone test dataset with data.yaml configured for test only.
+Read-only operation - never modifies source data.
 
-Source: bdd100k_yolo (full dataset)
-Output: bdd100k_test_split_zipped/bdd100k_yolo_test_split.zip
+Source: First limited dataset from config (LIMITED_DATASET_CONFIGS[0])
+Output: bdd100k_limited_datasets_zipped/{dataset_name}_test_split.zip
 
 Usage:
     python dataset/7_compress_test_only.py
@@ -15,33 +16,35 @@ import zipfile
 from pathlib import Path
 from tqdm import tqdm
 
-from bdd100k_config import YOLO_DATASET_ROOT, BDD100K_CLASSES
+from bdd100k_config import BDD100K_CLASSES, LIMITED_DATASET_CONFIGS
 
 
-def compress_test_split(yolo_dataset_root, base_dir):
-    """Compress only the test split for distribution."""
+def compress_test_split(dataset_root, dataset_name, output_dir):
+    """Compress only the test split for distribution (READ-ONLY)."""
     print("\n" + "="*70)
-    print("COMPRESSING TEST SPLIT ONLY")
+    print(f"COMPRESSING TEST SPLIT ONLY (READ-ONLY): {dataset_name}")
     print("="*70)
     
-    test_images_dir = yolo_dataset_root / 'images' / 'test'
-    test_labels_dir = yolo_dataset_root / 'labels' / 'test'
+    test_images_dir = dataset_root / 'images' / 'test'
+    test_labels_dir = dataset_root / 'labels' / 'test'
     
     if not test_images_dir.exists() or not test_labels_dir.exists():
-        print(f"⚠️  Test split not found in {yolo_dataset_root}")
+        print(f"⚠️  Test split not found in {dataset_root}")
         return None
     
-    zipped_dir = base_dir / 'bdd100k_test_split_zipped'
-    zipped_dir.mkdir(parents=True, exist_ok=True)
-    compressed_file = zipped_dir / 'bdd100k_yolo_test_split.zip'
+    output_dir.mkdir(parents=True, exist_ok=True)
+    compressed_file = output_dir / f"{dataset_name}_test_split.zip"
     
     if compressed_file.exists():
         print(f"Removing existing: {compressed_file.name}")
         compressed_file.unlink()
     
     print(f"\nCompressing test split...")
-    print(f"  Source: {yolo_dataset_root}")
+    print(f"  Source: {dataset_root}")
     print(f"  Destination: {compressed_file}")
+    print(f"  Note: Source data will not be modified.")
+    
+    archive_name = f"{dataset_name}_test"
     
     with zipfile.ZipFile(compressed_file, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zipf:
         test_images = list(test_images_dir.glob('*'))
@@ -49,13 +52,14 @@ def compress_test_split(yolo_dataset_root, base_dir):
         
         for img_file in tqdm(test_images, desc="  Compressing images", unit='files'):
             if img_file.is_file():
-                arcname = Path('bdd100k_yolo_test') / 'images' / 'test' / img_file.name
+                arcname = Path(archive_name) / 'images' / 'test' / img_file.name
                 zipf.write(img_file, arcname=arcname)
         
         for label_file in tqdm(test_labels, desc="  Compressing labels", unit='files'):
-            arcname = Path('bdd100k_yolo_test') / 'labels' / 'test' / label_file.name
+            arcname = Path(archive_name) / 'labels' / 'test' / label_file.name
             zipf.write(label_file, arcname=arcname)
         
+        # Create test-only data.yaml
         yaml_lines = [
             "path: .",
             "",
@@ -69,12 +73,13 @@ def compress_test_split(yolo_dataset_root, base_dir):
             yaml_lines.append(f"- {class_name}")
         
         test_data_yaml = "\n".join(yaml_lines)
-        zipf.writestr('bdd100k_yolo_test/data.yaml', test_data_yaml)
+        zipf.writestr(f'{archive_name}/data.yaml', test_data_yaml)
         
+        # Include test metadata if available
         for metadata_file in ['test_metadata.json', 'test_performance_analysis.json']:
-            src_file = yolo_dataset_root / 'representative_json' / metadata_file
+            src_file = dataset_root / 'representative_json' / metadata_file
             if src_file.exists():
-                arcname = Path('bdd100k_yolo_test') / 'representative_json' / metadata_file
+                arcname = Path(archive_name) / 'representative_json' / metadata_file
                 zipf.write(src_file, arcname=arcname)
     
     file_size_mb = compressed_file.stat().st_size / (1024 * 1024)
@@ -86,7 +91,7 @@ def compress_test_split(yolo_dataset_root, base_dir):
     print(f"  Labels: {len(test_labels):,}")
     print(f"\nTo extract and use:")
     print(f"  unzip {compressed_file.name}")
-    print(f"  cd bdd100k_yolo_test")
+    print(f"  cd {archive_name}")
     
     return {
         'path': compressed_file,
@@ -97,31 +102,46 @@ def compress_test_split(yolo_dataset_root, base_dir):
 
 
 def main():
-    """Main function."""
+    """Main function (READ-ONLY operation)."""
     base_dir = Path(__file__).parent.parent
     
-    print(f"\n{'='*70}")
-    print("COMPRESS TEST SPLIT ONLY")
-    print(f"{'='*70}")
-    print(f"Source: {YOLO_DATASET_ROOT}")
-    print(f"Output: bdd100k_test_split_zipped/")
-    
-    if not YOLO_DATASET_ROOT.exists() or not (YOLO_DATASET_ROOT / 'data.yaml').exists():
-        print(f"\n❌ Full dataset not found: {YOLO_DATASET_ROOT}")
-        print("Create full dataset first with script 2")
+    # Get first limited dataset from config
+    if not LIMITED_DATASET_CONFIGS:
+        print("\n❌ No limited datasets in config")
         return
     
-    test_images_dir = YOLO_DATASET_ROOT / 'images' / 'test'
-    test_labels_dir = YOLO_DATASET_ROOT / 'labels' / 'test'
+    config = LIMITED_DATASET_CONFIGS[0]
+    dataset_name = config['name']
+    dataset_root = base_dir / dataset_name
+    
+    print(f"\n{'='*70}")
+    print(f"COMPRESS TEST SPLIT (READ-ONLY): {dataset_name}")
+    print(f"{'='*70}")
+    print(f"Source: {config['description']}")
+    print(f"Path: {dataset_root}")
+    print(f"{'='*70}")
+    
+    # Check dataset exists
+    if not dataset_root.exists() or not (dataset_root / 'data.yaml').exists():
+        print(f"\n❌ Dataset not found: {dataset_root}")
+        print("Create limited datasets first with script 4")
+        return
+    
+    # Check test split exists
+    test_images_dir = dataset_root / 'images' / 'test'
+    test_labels_dir = dataset_root / 'labels' / 'test'
     
     if not test_images_dir.exists() or not test_labels_dir.exists():
-        print(f"\n❌ Test split not found in full dataset")
+        print(f"\n❌ Test split not found in {dataset_name}")
         print(f"Expected:")
         print(f"  {test_images_dir}")
         print(f"  {test_labels_dir}")
         return
     
-    result = compress_test_split(YOLO_DATASET_ROOT, base_dir)
+    # Output directory
+    output_dir = base_dir / 'bdd100k_limited_datasets_zipped'
+    
+    result = compress_test_split(dataset_root, dataset_name, output_dir)
     
     if result:
         print(f"\n{'='*70}")

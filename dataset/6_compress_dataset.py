@@ -1,8 +1,9 @@
 """
-6. Compress Dataset Files.
+6. Compress Dataset Files (READ-ONLY).
 
-Compresses selected dataset into ZIP file for distribution.
-Allows selecting which dataset to compress.
+Compresses limited datasets (from config) into ZIP files for distribution.
+Only compresses limited datasets, not the full bdd100k_yolo dataset.
+Read-only operation - never modifies source data.
 
 Usage:
     python dataset/6_compress_dataset.py
@@ -15,7 +16,7 @@ from bdd100k_config import LIMITED_DATASET_CONFIGS, BDD100K_CLASSES
 
 
 def compress_dataset(dataset_root, output_dir, dataset_name):
-    """Compress a dataset into a ZIP file."""
+    """Compress a dataset into a ZIP file (READ-ONLY operation)."""
     compressed_file = output_dir / f"{dataset_name}.zip"
     
     if compressed_file.exists():
@@ -65,21 +66,13 @@ def compress_dataset(dataset_root, output_dir, dataset_name):
 
 
 def select_dataset():
-    """Display menu and select dataset."""
+    """Display menu and select limited dataset from config."""
     base_dir = Path(__file__).parent.parent
     
     datasets = []
     
-    full_dataset = base_dir / 'bdd100k_yolo'
-    if full_dataset.exists() and (full_dataset / 'data.yaml').exists():
-        datasets.append({
-            'id': 1,
-            'name': 'bdd100k_yolo',
-            'path': full_dataset,
-            'description': 'Full BDD100K dataset (~70K train)'
-        })
-    
-    for idx, config in enumerate(LIMITED_DATASET_CONFIGS, start=2):
+    # Only include limited datasets from config (exclude full bdd100k_yolo)
+    for idx, config in enumerate(LIMITED_DATASET_CONFIGS, start=1):
         dataset_path = base_dir / config['name']
         if dataset_path.exists() and (dataset_path / 'data.yaml').exists():
             datasets.append({
@@ -90,12 +83,14 @@ def select_dataset():
             })
     
     if not datasets:
-        print("\n❌ No datasets found")
-        print("Create datasets first with scripts 2 and 3")
+        print("\n❌ No limited datasets found")
+        print("Create limited datasets first with script 4")
         return None
     
     print("\n" + "="*70)
-    print("SELECT DATASET TO COMPRESS")
+    print("SELECT LIMITED DATASET TO COMPRESS")
+    print("="*70)
+    print("Note: Only limited datasets from config are available for compression.")
     print("="*70)
     
     for ds in datasets:
@@ -121,7 +116,7 @@ def select_dataset():
 
 
 def main():
-    """Main function."""
+    """Main function (READ-ONLY operation)."""
     base_dir = Path(__file__).parent.parent
     
     dataset = select_dataset()
@@ -133,15 +128,14 @@ def main():
     dataset_name = dataset['name']
     
     print(f"\n{'='*70}")
-    print(f"COMPRESSING: {dataset_name}")
+    print(f"COMPRESSING (READ-ONLY): {dataset_name}")
     print(f"{'='*70}")
     print(f"Location: {dataset_root}")
+    print(f"Note: Source data will not be modified.")
+    print(f"{'='*70}")
     
-    if dataset_name == 'bdd100k_yolo':
-        output_dir = base_dir / 'bdd100k_zipped'
-    else:
-        output_dir = base_dir / 'bdd100k_limited_datasets_zipped'
-    
+    # All limited datasets go to the same output directory
+    output_dir = base_dir / 'bdd100k_limited_datasets_zipped'
     output_dir.mkdir(parents=True, exist_ok=True)
     
     result = compress_dataset(dataset_root, output_dir, dataset_name)
