@@ -457,20 +457,20 @@ def load_dataset(used_dataset_root: Path, used_split: str, data_config: Dict[str
     print(f"  Label files: {len(label_files)}")
 
     metadata_dir = used_dataset_root / "representative_json"
-    performance_file = metadata_dir / f"{used_split}_performance_analysis.json"
+    metadata_file = metadata_dir / f"{used_split}_metadata.json"
 
-    if performance_file.exists():
-        with open(performance_file, "r") as f:
-            performance_data = json.load(f)
-        print(f"\n✓ Performance metadata loaded: {performance_file.name}")
-        print(f"  Images with attributes: {performance_data['total_images']}")
+    if metadata_file.exists():
+        with open(metadata_file, "r") as f:
+            metadata_data = json.load(f)
+        print(f"\n✓ Metadata loaded: {metadata_file.name}")
+        print(f"  Images with attributes: {metadata_data.get('total_files', 0)}")
 
-        # Map using basename so we can look up attributes by image stem
-        # (e.g., image file d0518d52-0188b977.jpg -> basename key "d0518d52-0188b977").
-        image_attributes = {img["basename"]: img for img in performance_data["images"]}
+        # The new structure has 'files' as a dict where keys are image IDs (basenames)
+        # and values contain weather, scene, timeofday, categories, class_counts, object_count
+        image_attributes = metadata_data.get("files", {})
     else:
-        print(f"\n⚠️ Performance metadata not found: {performance_file}")
-        performance_data = None
+        print(f"\n⚠️ Metadata not found: {metadata_file}")
+        metadata_data = None
         image_attributes = {}
 
     num_classes = data_config["nc"]
@@ -483,7 +483,7 @@ def load_dataset(used_dataset_root: Path, used_split: str, data_config: Dict[str
         "image_files": image_files,
         "valid_images": valid_images,
         "metadata_dir": metadata_dir,
-        "performance_data": performance_data,
+        "metadata_data": metadata_data,
         "image_attributes": image_attributes,
         "num_classes": num_classes,
         "class_names": class_names,
@@ -1093,7 +1093,7 @@ def generate_failure_analysis(
     """
     Comprehensive analysis of prediction accuracy in relation to:
     - Image attributes (weather, scene, timeofday)
-    - Object counts (total_objects, objects_per_class)
+    - Object counts (object_count, class_counts)
     
     Generates:
     - CSV files with detailed per-image and aggregated data
@@ -1115,19 +1115,20 @@ def generate_failure_analysis(
     # Load training split metadata to analyze training exposure
     train_class_counts = {}
     train_total_images = 0
-    train_metadata_path = dataset_root / "representative_json" / "train_performance_analysis.json"
+    train_metadata_path = dataset_root / "representative_json" / "train_metadata.json"
     
     if train_metadata_path.exists():
         print("\nLoading training split metadata for exposure analysis...")
         try:
             with open(train_metadata_path, "r") as f:
                 train_data = json.load(f)
-            train_total_images = train_data.get("total_images", 0)
+            train_total_images = train_data.get("total_files", 0)
             
             # Extract per-class counts from training data
-            for img_data in train_data.get("images", []):
-                objects_per_class = img_data.get("objects_per_class", {})
-                for class_name, count in objects_per_class.items():
+            # New structure: files is a dict with image IDs as keys
+            for img_id, img_data in train_data.get("files", {}).items():
+                class_counts = img_data.get("class_counts", {})
+                for class_name, count in class_counts.items():
                     cid = class_name_to_id.get(class_name)
                     if cid is not None:
                         train_class_counts[cid] = train_class_counts.get(cid, 0) + int(count)
@@ -1217,8 +1218,9 @@ def generate_failure_analysis(
         scene = attrs.get("scene", "unknown")
         timeofday = attrs.get("timeofday", "unknown")
         
-        expected_objects_map = attrs.get("objects_per_class", {}) if isinstance(attrs.get("objects_per_class", {}), dict) else {}
-        expected_total = int(attrs.get("total_objects", rec.get("n_gts", 0)))
+        # New metadata structure uses 'class_counts' and 'object_count'
+        expected_objects_map = attrs.get("class_counts", {}) if isinstance(attrs.get("class_counts", {}), dict) else {}
+        expected_total = int(attrs.get("object_count", rec.get("n_gts", 0)))
 
         # Match predictions to ground truth
         preds = rec.get("preds", [])
@@ -2545,7 +2547,7 @@ def run_validation_pipeline(
         image_attributes=dataset_info.get("image_attributes"),
     )
 
-    # Generate failure analysis using expected counts (objects_per_class & total_objects)
+    # Generate failure analysis using expected counts (class_counts & object_count)
     failure_analysis_summary = generate_failure_analysis(
         per_image_records=validation_results.per_image,
         image_attributes=dataset_info.get("image_attributes", {}),

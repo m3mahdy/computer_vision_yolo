@@ -456,20 +456,20 @@ def load_dataset(used_dataset_root: Path, used_split: str, data_config: Dict[str
     print(f"  Label files: {len(label_files)}")
 
     metadata_dir = used_dataset_root / "representative_json"
-    performance_file = metadata_dir / f"{used_split}_performance_analysis.json"
+    metadata_file = metadata_dir / f"{used_split}_metadata.json"
 
-    if performance_file.exists():
-        with open(performance_file, "r") as f:
-            performance_data = json.load(f)
-        print(f"\n✓ Performance metadata loaded: {performance_file.name}")
-        print(f"  Images with attributes: {performance_data['total_images']}")
+    if metadata_file.exists():
+        with open(metadata_file, "r") as f:
+            metadata_data = json.load(f)
+        print(f"\n✓ Metadata loaded: {metadata_file.name}")
+        print(f"  Images with attributes: {metadata_data.get('total_files', 0)}")
 
-        # Map using basename so we can look up attributes by image stem
-        # (e.g., image file d0518d52-0188b977.jpg -> basename key "d0518d52-0188b977").
-        image_attributes = {img["basename"]: img for img in performance_data["images"]}
+        # The new structure has 'files' as a dict where keys are image IDs (basenames)
+        # and values contain weather, scene, timeofday, categories, class_counts, object_count
+        image_attributes = metadata_data.get("files", {})
     else:
-        print(f"\n⚠️ Performance metadata not found: {performance_file}")
-        performance_data = None
+        print(f"\n⚠️ Metadata not found: {metadata_file}")
+        metadata_data = None
         image_attributes = {}
 
     num_classes = data_config["nc"]
@@ -482,7 +482,7 @@ def load_dataset(used_dataset_root: Path, used_split: str, data_config: Dict[str
         "image_files": image_files,
         "valid_images": valid_images,
         "metadata_dir": metadata_dir,
-        "performance_data": performance_data,
+        "metadata_data": metadata_data,
         "image_attributes": image_attributes,
         "num_classes": num_classes,
         "class_names": class_names,
