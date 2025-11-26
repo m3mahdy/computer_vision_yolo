@@ -14,6 +14,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.patches import Rectangle
+from tqdm import tqdm
 
 import shutil
 import time
@@ -499,26 +500,213 @@ def run_yolo_validation(
     test_run_dir: Path,
     batch_size: int = 16,
 ) -> Tuple[Any, float]:
-    print("\nRunning YOLO validation...")
+    """
+    Run per-image prediction using `model.predict` and compute simple detection metrics
+    (TP/FP/FN per class) by IoU matching. This replaces the coarse `model.val` call
+    so we can attach per-image metadata and produce richer failure analysis.
+
+    Returns a lightweight object similar to ultralytics' validation result containing
+    basic timing and box-level aggregated metrics, plus the total_time.
+    """
+    print("\nRunning per-image YOLO evaluation (model.predict)...")
+
+    images_dir = None
+    # try to infer images dir from data_yaml
+    try:
+        with open(data_yaml_path, 'r') as f:
+            data_cfg = yaml.safe_load(f)
+        images_dir = Path(data_cfg.get('path', '.')) / 'images' / used_split
+    except Exception:
+        images_dir = None
+
+    # collect image files
+    if images_dir and images_dir.exists():
+        image_files = sorted(list(images_dir.glob('*.jpg')) + list(images_dir.glob('*.png')))
+    else:
+        # fallback: try to find images under current working dir
+        image_files = []
+
     start_time = time.time()
-    results = model.val(
-        data=data_yaml_path,
-        split=used_split,
-        device=device,
-        save_json=False,
-        save_txt=False,
-        conf=0.001,
-        iou=iou_threshold,
-        verbose=True,
-        plots=True,
-        project=str(test_run_dir),
-        name="yolo_validation",
-        batch=batch_size,
-    )
+
+    # Helper functions
+    def iou_xyxy(box_a, box_b):
+        # boxes are [x1,y1,x2,y2]
+        xa1, ya1, xa2, ya2 = box_a
+        xb1, yb1, xb2, yb2 = box_b
+        xi1 = max(xa1, xb1)
+        yi1 = max(ya1, yb1)
+        xi2 = min(xa2, xb2)
+        yi2 = min(ya2, yb2)
+        inter_w = max(0, xi2 - xi1)
+        inter_h = max(0, yi2 - yi1)
+        inter_area = inter_w * inter_h
+        area_a = max(0, xa2 - xa1) * max(0, ya2 - ya1)
+        area_b = max(0, xb2 - xb1) * max(0, yb2 - yb1)
+        union = area_a + area_b - inter_area
+        return inter_area / union if union > 0 else 0.0
+
+    # Initialize accumulators
+    per_image_records = []
+    num_images = len(image_files)
+    total_infer_time = 0.0
+
+    # prepare confusion matrix counts
+    num_classes = len(model.names)
+    confusion = np.zeros((num_classes, num_classes), dtype=int)
+    class_tp = {i: 0 for i in range(num_classes)}
+    class_fp = {i: 0 for i in range(num_classes)}
+    class_fn = {i: 0 for i in range(num_classes)}
+
+    for img_path in tqdm(image_files, desc="Evaluating images", unit="img"):
+        t0 = time.time()
+        results = model.predict(str(img_path), device=device, verbose=False)
+        infer_time = time.time() - t0
+        total_infer_time += infer_time
+
+        # take first result
+        res = results[0]
+
+        # predicted boxes: list of [x1,y1,x2,y2], cls, conf
+        preds = []
+        for b in res.boxes:
+            try:
+                xyxy = b.xyxy[0].cpu().numpy().tolist()
+                conf = float(b.conf[0].cpu().numpy())
+                cls = int(b.cls[0].cpu().numpy())
+            except Exception:
+                # fallback for non-tensor boxes
+                xyxy = b.xyxy[0].tolist()
+                conf = float(b.conf[0])
+                cls = int(b.cls[0])
+            preds.append({'xyxy': xyxy, 'conf': conf, 'cls': cls})
+
+        # load GT boxes
+        label_path = img_path.with_suffix('.txt')
+        gts = []
+        if label_path.exists():
+            h_w = PILImage.open(img_path).size  # (w,h)
+            w_img, h_img = h_w
+            with open(label_path, 'r') as lf:
+                for line in lf:
+                    parts = line.strip().split()
+                    if len(parts) >= 5:
+                        cls = int(parts[0])
+                        x_center, y_center, bw, bh = map(float, parts[1:5])
+                        x1 = (x_center - bw / 2) * w_img
+                        y1 = (y_center - bh / 2) * h_img
+                        x2 = (x_center + bw / 2) * w_img
+                        y2 = (y_center + bh / 2) * h_img
+                        gts.append({'xyxy': [x1, y1, x2, y2], 'cls': cls})
+
+        # match preds to gts by IoU and class
+        matched_gt = set()
+        matched_pred = set()
+
+        for pi, p in enumerate(preds):
+            best_iou = 0.0
+            best_gi = None
+            for gi, g in enumerate(gts):
+                if gi in matched_gt:
+                    continue
+                if p['cls'] != g['cls']:
+                    continue
+                iou_val = iou_xyxy(p['xyxy'], g['xyxy'])
+                if iou_val > best_iou:
+                    best_iou = iou_val
+                    best_gi = gi
+
+            if best_gi is not None and best_iou >= iou_threshold:
+                # true positive
+                class_tp[p['cls']] += 1
+                matched_gt.add(best_gi)
+                matched_pred.add(pi)
+                # mark confusion: correctly predicted class
+                confusion[gts[best_gi]['cls'], p['cls']] += 1
+            else:
+                # false positive (either no gt or class mismatch)
+                class_fp[p['cls']] += 1
+                # if there is a closest gt but different class, count confusion
+                best_iou_any = 0.0
+                best_gi_any = None
+                for gi, g in enumerate(gts):
+                    if gi in matched_gt:
+                        continue
+                    iou_val = iou_xyxy(p['xyxy'], g['xyxy'])
+                    if iou_val > best_iou_any:
+                        best_iou_any = iou_val
+                        best_gi_any = gi
+                if best_gi_any is not None and best_iou_any >= iou_threshold:
+                    # predicted wrong class for an existing GT
+                    confusion[gts[best_gi_any]['cls'], p['cls']] += 1
+
+        # any unmatched gts are false negatives
+        for gi, g in enumerate(gts):
+            if gi not in matched_gt:
+                class_fn[g['cls']] += 1
+
+        per_image_records.append({
+            'image': str(img_path),
+            'n_preds': len(preds),
+            'n_gts': len(gts),
+            'preds': preds,
+            'gts': gts,
+            'infer_time': infer_time,
+        })
+
     end_time = time.time()
     total_time = end_time - start_time
-    print(f"\n✓ YOLO validation completed in {total_time:.2f} seconds")
-    return results, total_time
+
+    # compute per-class metrics
+    yolo_class_metrics = {}
+    p_list = []
+    r_list = []
+    for cls_idx in range(num_classes):
+        tp = class_tp.get(cls_idx, 0)
+        fp = class_fp.get(cls_idx, 0)
+        fn = class_fn.get(cls_idx, 0)
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        ap50 = precision  # approximate AP@0.5 with precision (not exact)
+        yolo_class_metrics[cls_idx] = {'precision': precision, 'recall': recall, 'ap50': ap50}
+        p_list.append(precision)
+        r_list.append(recall)
+
+    # aggregate metrics
+    mean_precision = float(np.mean(p_list)) if p_list else 0.0
+    mean_recall = float(np.mean(r_list)) if r_list else 0.0
+    map50 = float(np.mean([v['ap50'] for v in yolo_class_metrics.values()])) if yolo_class_metrics else 0.0
+
+    # prepare lightweight result object
+    class BoxStats:
+        pass
+
+    box = BoxStats()
+    box.mp = mean_precision
+    box.mr = mean_recall
+    box.map50 = map50
+    box.map = map50
+    box.ap_class_index = list(yolo_class_metrics.keys())
+    box.p = [yolo_class_metrics[i]['precision'] for i in sorted(yolo_class_metrics.keys())]
+    box.r = [yolo_class_metrics[i]['recall'] for i in sorted(yolo_class_metrics.keys())]
+    box.ap50 = [yolo_class_metrics[i]['ap50'] for i in sorted(yolo_class_metrics.keys())]
+    box.ap = box.ap50
+
+    speed = {'preprocess': 0.0, 'inference': total_infer_time / max(1, num_images) * 1000.0, 'loss': 0.0, 'postprocess': 0.0}
+
+    class ValRes:
+        pass
+
+    results_obj = ValRes()
+    results_obj.speed = speed
+    results_obj.box = box
+    results_obj.fitness = (box.mp + box.mr + box.map50) / 3.0
+    results_obj.confusion_matrix = type('C', (), {'matrix': confusion})
+    # attach per-image records for deeper analysis
+    results_obj.per_image = per_image_records
+
+    print(f"\n✓ Per-image evaluation completed: {len(per_image_records)} images, total_time={total_time:.2f}s")
+
+    return results_obj, total_time
 
 
 def extract_core_metrics(
@@ -881,6 +1069,804 @@ def plot_confusion_matrix(
     
     return confusion_matrix_path
 
+
+def generate_failure_analysis(
+    per_image_records: List[Dict[str, Any]],
+    image_attributes: Dict[str, Any],
+    class_names: Dict[int, str],
+    test_run_dir: Path,
+    dataset_root: Path,
+    iou_threshold: float = 0.5,
+) -> Dict[str, Any]:
+    """
+    Comprehensive analysis of prediction accuracy in relation to:
+    - Image attributes (weather, scene, timeofday)
+    - Object counts (total_objects, objects_per_class)
+    
+    Generates:
+    - CSV files with detailed per-image and aggregated data
+    - Charts showing accuracy by attribute values
+    - Charts showing accuracy by object count ranges
+    - Per-class accuracy breakdowns within each attribute
+    """
+    print("\n" + "=" * 80)
+    print("GENERATING COMPREHENSIVE FAILURE ANALYSIS")
+    print("Analyzing relationship between attributes and prediction accuracy...")
+    print("=" * 80)
+
+    # build reverse map from class name -> id
+    class_name_to_id = {name: cid for cid, name in class_names.items()}
+    
+    # Initialize train-test comparison DataFrame (will be populated later)
+    df_train_test = pd.DataFrame()
+    
+    # Load training split metadata to analyze training exposure
+    train_class_counts = {}
+    train_total_images = 0
+    train_metadata_path = dataset_root / "representative_json" / "train_performance_analysis.json"
+    
+    if train_metadata_path.exists():
+        print("\nLoading training split metadata for exposure analysis...")
+        try:
+            with open(train_metadata_path, "r") as f:
+                train_data = json.load(f)
+            train_total_images = train_data.get("total_images", 0)
+            
+            # Extract per-class counts from training data
+            for img_data in train_data.get("images", []):
+                objects_per_class = img_data.get("objects_per_class", {})
+                for class_name, count in objects_per_class.items():
+                    cid = class_name_to_id.get(class_name)
+                    if cid is not None:
+                        train_class_counts[cid] = train_class_counts.get(cid, 0) + int(count)
+            
+            print(f"✓ Training metadata loaded: {train_total_images} images, {sum(train_class_counts.values())} objects")
+        except Exception as e:
+            print(f"⚠️  Warning: Could not load training metadata: {e}")
+            train_class_counts = {}
+    else:
+        print(f"⚠️  Training metadata not found: {train_metadata_path}")
+        train_class_counts = {}
+
+    # Helper IoU function
+    def iou_xyxy(a, b):
+        xa1, ya1, xa2, ya2 = a
+        xb1, yb1, xb2, yb2 = b
+        xi1 = max(xa1, xb1)
+        yi1 = max(ya1, yb1)
+        xi2 = min(xa2, xb2)
+        yi2 = min(ya2, yb2)
+        inter_w = max(0, xi2 - xi1)
+        inter_h = max(0, yi2 - yi1)
+        inter_area = inter_w * inter_h
+        area_a = max(0, xa2 - xa1) * max(0, ya2 - ya1)
+        area_b = max(0, xb2 - xb1) * max(0, yb2 - yb1)
+        union = area_a + area_b - inter_area
+        return inter_area / union if union > 0 else 0.0
+
+    # Accumulators
+    per_image_summary_rows = []
+    
+    # Aggregate by attributes
+    attr_aggregates = {
+        "weather": {},
+        "scene": {},
+        "timeofday": {}
+    }
+    
+    # Per-class accuracy within each attribute
+    class_attr_stats = {
+        "weather": {},
+        "scene": {},
+        "timeofday": {}
+    }
+    
+    # Object count buckets
+    count_buckets = ["1-5", "6-10", "11-20", "21-50", "50+"]
+    count_bucket_stats = {bucket: {"expected": 0, "matched": 0, "images": 0} for bucket in count_buckets}
+    
+    # Object size buckets (based on bbox area ratio)
+    size_buckets = ["small", "medium", "large"]
+    size_bucket_stats = {bucket: {"expected": 0, "matched": 0} for bucket in size_buckets}
+    
+    # Per-class stats for each size bucket
+    class_size_stats = {}
+    for cid in class_names.keys():
+        class_size_stats[cid] = {bucket: {"expected": 0, "matched": 0} for bucket in size_buckets}
+    
+    def get_count_bucket(count: int) -> str:
+        if count <= 5:
+            return "1-5"
+        elif count <= 10:
+            return "6-10"
+        elif count <= 20:
+            return "11-20"
+        elif count <= 50:
+            return "21-50"
+        else:
+            return "50+"
+    
+    def get_size_bucket(area_ratio: float) -> str:
+        """Categorize object by bbox area ratio to image size"""
+        if area_ratio < 0.01:  # < 1% of image
+            return "small"
+        elif area_ratio < 0.05:  # 1-5% of image
+            return "medium"
+        else:  # > 5% of image
+            return "large"
+
+    # Process each image
+    for rec in per_image_records:
+        img_path = Path(rec["image"])
+        basename = img_path.stem
+        attrs = image_attributes.get(basename, {}) if image_attributes else {}
+
+        weather = attrs.get("weather", "unknown")
+        scene = attrs.get("scene", "unknown")
+        timeofday = attrs.get("timeofday", "unknown")
+        
+        expected_objects_map = attrs.get("objects_per_class", {}) if isinstance(attrs.get("objects_per_class", {}), dict) else {}
+        expected_total = int(attrs.get("total_objects", rec.get("n_gts", 0)))
+
+        # Match predictions to ground truth
+        preds = rec.get("preds", [])
+        gts = rec.get("gts", [])
+
+        matched_gt = set()
+        matched_per_class = {}
+        
+        # Get image dimensions for size calculation
+        try:
+            img = PILImage.open(img_path)
+            img_width, img_height = img.size
+            img_area = img_width * img_height
+        except Exception:
+            img_area = 1280 * 720  # fallback
+        
+        # Match predictions to ground truth and track sizes
+        for pi, p in enumerate(preds):
+            best_iou = 0.0
+            best_gi = None
+            for gi, g in enumerate(gts):
+                if gi in matched_gt:
+                    continue
+                if p["cls"] != g["cls"]:
+                    continue
+                iou_val = iou_xyxy(p["xyxy"], g["xyxy"])
+                if iou_val > best_iou:
+                    best_iou = iou_val
+                    best_gi = gi
+            if best_gi is not None and best_iou >= iou_threshold:
+                matched_gt.add(best_gi)
+                cls_id = p["cls"]
+                matched_per_class[cls_id] = matched_per_class.get(cls_id, 0) + 1
+                
+                # Calculate size for matched object
+                gt_box = gts[best_gi]["xyxy"]
+                box_area = max(0, gt_box[2] - gt_box[0]) * max(0, gt_box[3] - gt_box[1])
+                area_ratio = box_area / img_area if img_area > 0 else 0
+                size_bucket = get_size_bucket(area_ratio)
+                size_bucket_stats[size_bucket]["matched"] += 1
+                class_size_stats[cls_id][size_bucket]["matched"] += 1
+        
+        # Track all ground truth objects by size (including unmatched)
+        for gi, g in enumerate(gts):
+            gt_box = g["xyxy"]
+            box_area = max(0, gt_box[2] - gt_box[0]) * max(0, gt_box[3] - gt_box[1])
+            area_ratio = box_area / img_area if img_area > 0 else 0
+            size_bucket = get_size_bucket(area_ratio)
+            size_bucket_stats[size_bucket]["expected"] += 1
+            cls_id = g["cls"]
+            class_size_stats[cls_id][size_bucket]["expected"] += 1
+
+        matched_count = len(matched_gt)
+        accuracy = (matched_count / expected_total) if expected_total > 0 else None
+
+        # Store per-image data
+        per_image_summary_rows.append({
+            "image": basename,
+            "weather": weather,
+            "scene": scene,
+            "timeofday": timeofday,
+            "expected_total": expected_total,
+            "matched": matched_count,
+            "missed": expected_total - matched_count,
+            "accuracy": accuracy,
+        })
+
+        # Aggregate by attributes
+        for attr_key, attr_val in [("weather", weather), ("scene", scene), ("timeofday", timeofday)]:
+            if attr_val not in attr_aggregates[attr_key]:
+                attr_aggregates[attr_key][attr_val] = {"expected": 0, "matched": 0, "images": 0}
+            attr_aggregates[attr_key][attr_val]["expected"] += expected_total
+            attr_aggregates[attr_key][attr_val]["matched"] += matched_count
+            attr_aggregates[attr_key][attr_val]["images"] += 1
+            
+            # Per-class stats within this attribute
+            if attr_val not in class_attr_stats[attr_key]:
+                class_attr_stats[attr_key][attr_val] = {}
+            
+            for cname, cnt in expected_objects_map.items():
+                cid = class_name_to_id.get(cname)
+                if cid is None:
+                    continue
+                if cid not in class_attr_stats[attr_key][attr_val]:
+                    class_attr_stats[attr_key][attr_val][cid] = {"expected": 0, "matched": 0}
+                class_attr_stats[attr_key][attr_val][cid]["expected"] += int(cnt)
+                class_attr_stats[attr_key][attr_val][cid]["matched"] += matched_per_class.get(cid, 0)
+
+        # Aggregate by object count bucket
+        bucket = get_count_bucket(expected_total)
+        count_bucket_stats[bucket]["expected"] += expected_total
+        count_bucket_stats[bucket]["matched"] += matched_count
+        count_bucket_stats[bucket]["images"] += 1
+
+    # Create DataFrames
+    df_images = pd.DataFrame(per_image_summary_rows)
+    
+    # Attribute aggregates
+    attr_summary_dfs = {}
+    for attr_key, attr_vals in attr_aggregates.items():
+        rows = []
+        for val, stats in attr_vals.items():
+            accuracy = (stats["matched"] / stats["expected"]) if stats["expected"] > 0 else None
+            rows.append({
+                attr_key: val,
+                "images": stats["images"],
+                "expected": stats["expected"],
+                "matched": stats["matched"],
+                "missed": stats["expected"] - stats["matched"],
+                "accuracy": accuracy
+            })
+        df_temp = pd.DataFrame(rows) if rows else pd.DataFrame()
+        # Filter out rows with None accuracy before sorting
+        if not df_temp.empty:
+            df_temp = df_temp[df_temp["accuracy"].notna()]
+        attr_summary_dfs[attr_key] = df_temp.sort_values("accuracy") if not df_temp.empty else pd.DataFrame()
+
+    # Object count bucket summary
+    count_rows = []
+    for bucket, stats in count_bucket_stats.items():
+        accuracy = (stats["matched"] / stats["expected"]) if stats["expected"] > 0 else None
+        count_rows.append({
+            "object_count_range": bucket,
+            "images": stats["images"],
+            "expected": stats["expected"],
+            "matched": stats["matched"],
+            "missed": stats["expected"] - stats["matched"],
+            "accuracy": accuracy
+        })
+    df_count_buckets = pd.DataFrame(count_rows)
+    
+    # Object size bucket summary (overall)
+    size_rows = []
+    for bucket in size_buckets:
+        stats = size_bucket_stats[bucket]
+        accuracy = (stats["matched"] / stats["expected"]) if stats["expected"] > 0 else None
+        size_rows.append({
+            "size_bucket": bucket,
+            "expected": stats["expected"],
+            "matched": stats["matched"],
+            "missed": stats["expected"] - stats["matched"],
+            "accuracy": accuracy
+        })
+    df_size_buckets = pd.DataFrame(size_rows)
+    
+    # Per-class accuracy by size
+    class_size_rows = []
+    for cid, cname in class_names.items():
+        for bucket in size_buckets:
+            stats = class_size_stats[cid][bucket]
+            if stats["expected"] > 0:
+                accuracy = stats["matched"] / stats["expected"]
+                class_size_rows.append({
+                    "class_id": cid,
+                    "class_name": cname,
+                    "size_bucket": bucket,
+                    "expected": stats["expected"],
+                    "matched": stats["matched"],
+                    "accuracy": accuracy
+                })
+    df_class_size = pd.DataFrame(class_size_rows)
+    
+    # Per-class accuracy by weather/scene/timeofday
+    class_weather_rows = []
+    for weather_val, class_stats in class_attr_stats["weather"].items():
+        for cid, stats in class_stats.items():
+            if stats["expected"] > 0:
+                class_weather_rows.append({
+                    "weather": weather_val,
+                    "class_id": cid,
+                    "class_name": class_names[cid],
+                    "expected": stats["expected"],
+                    "matched": stats["matched"],
+                    "accuracy": stats["matched"] / stats["expected"]
+                })
+    df_class_weather = pd.DataFrame(class_weather_rows)
+    
+    class_scene_rows = []
+    for scene_val, class_stats in class_attr_stats["scene"].items():
+        for cid, stats in class_stats.items():
+            if stats["expected"] > 0:
+                class_scene_rows.append({
+                    "scene": scene_val,
+                    "class_id": cid,
+                    "class_name": class_names[cid],
+                    "expected": stats["expected"],
+                    "matched": stats["matched"],
+                    "accuracy": stats["matched"] / stats["expected"]
+                })
+    df_class_scene = pd.DataFrame(class_scene_rows)
+    
+    class_time_rows = []
+    for time_val, class_stats in class_attr_stats["timeofday"].items():
+        for cid, stats in class_stats.items():
+            if stats["expected"] > 0:
+                class_time_rows.append({
+                    "timeofday": time_val,
+                    "class_id": cid,
+                    "class_name": class_names[cid],
+                    "expected": stats["expected"],
+                    "matched": stats["matched"],
+                    "accuracy": stats["matched"] / stats["expected"]
+                })
+    df_class_time = pd.DataFrame(class_time_rows)
+
+    # Save CSVs
+    df_images.to_csv(test_run_dir / "per_image_accuracy.csv", index=False)
+    for attr_key, df in attr_summary_dfs.items():
+        if not df.empty:
+            df.to_csv(test_run_dir / f"accuracy_by_{attr_key}.csv", index=False)
+    df_count_buckets.to_csv(test_run_dir / "accuracy_by_object_count.csv", index=False)
+    df_size_buckets.to_csv(test_run_dir / "accuracy_by_size.csv", index=False)
+    if not df_class_size.empty:
+        df_class_size.to_csv(test_run_dir / "accuracy_by_class_and_size.csv", index=False)
+    if not df_class_weather.empty:
+        df_class_weather.to_csv(test_run_dir / "accuracy_by_class_and_weather.csv", index=False)
+    if not df_class_scene.empty:
+        df_class_scene.to_csv(test_run_dir / "accuracy_by_class_and_scene.csv", index=False)
+    if not df_class_time.empty:
+        df_class_time.to_csv(test_run_dir / "accuracy_by_class_and_timeofday.csv", index=False)
+    if not df_train_test.empty:
+        df_train_test.to_csv(test_run_dir / "train_test_class_comparison.csv", index=False)
+
+    # Generate charts
+    print("\nGenerating accuracy analysis charts...")
+    charts = {}
+    
+    sns.set_style("whitegrid")
+    
+    # Chart 1: Accuracy by Weather
+    if not attr_summary_dfs["weather"].empty:
+        df_weather = attr_summary_dfs["weather"].sort_values("accuracy")
+        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+        bars = ax.barh(df_weather["weather"], df_weather["accuracy"], color="#5BC0EB")
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=14)
+        ax.set_ylabel("Weather", fontweight="bold", fontsize=14)
+        ax.set_title("Prediction Accuracy by Weather Condition", fontweight="bold", fontsize=16)
+        ax.set_xlim(0, 1)
+        for i, (idx, row) in enumerate(df_weather.iterrows()):
+            ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
+                   va='center', fontsize=10)
+        plt.tight_layout()
+        chart_path = test_run_dir / "accuracy_by_weather.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_weather"] = str(chart_path)
+
+    # Chart 2: Accuracy by Scene
+    if not attr_summary_dfs["scene"].empty:
+        df_scene = attr_summary_dfs["scene"].sort_values("accuracy")
+        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+        bars = ax.barh(df_scene["scene"], df_scene["accuracy"], color="#F25F5C")
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=14)
+        ax.set_ylabel("Scene", fontweight="bold", fontsize=14)
+        ax.set_title("Prediction Accuracy by Scene Type", fontweight="bold", fontsize=16)
+        ax.set_xlim(0, 1)
+        for i, (idx, row) in enumerate(df_scene.iterrows()):
+            ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
+                   va='center', fontsize=10)
+        plt.tight_layout()
+        chart_path = test_run_dir / "accuracy_by_scene.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_scene"] = str(chart_path)
+
+    # Chart 3: Accuracy by Time of Day
+    if not attr_summary_dfs["timeofday"].empty:
+        df_time = attr_summary_dfs["timeofday"].sort_values("accuracy")
+        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+        bars = ax.barh(df_time["timeofday"], df_time["accuracy"], color="#9BC53D")
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=14)
+        ax.set_ylabel("Time of Day", fontweight="bold", fontsize=14)
+        ax.set_title("Prediction Accuracy by Time of Day", fontweight="bold", fontsize=16)
+        ax.set_xlim(0, 1)
+        for i, (idx, row) in enumerate(df_time.iterrows()):
+            ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
+                   va='center', fontsize=10)
+        plt.tight_layout()
+        chart_path = test_run_dir / "accuracy_by_timeofday.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_timeofday"] = str(chart_path)
+
+    # Chart 4: Accuracy by Object Count Range
+    if not df_count_buckets.empty:
+        # Filter out buckets with no data
+        df_count_valid = df_count_buckets[df_count_buckets["accuracy"].notna()].copy()
+        if not df_count_valid.empty:
+            fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+            bars = ax.bar(df_count_valid["object_count_range"], df_count_valid["accuracy"], color="#FFA630")
+            ax.set_xlabel("Objects per Image", fontweight="bold", fontsize=14)
+            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=14)
+            ax.set_title("Prediction Accuracy by Object Count", fontweight="bold", fontsize=16)
+            ax.set_ylim(0, 1)
+            for i, row in df_count_valid.iterrows():
+                ax.text(i, row["accuracy"] + 0.02, f'{row["accuracy"]:.2%}\n({row["images"]} imgs)', 
+                       ha='center', fontsize=9)
+            plt.tight_layout()
+            chart_path = test_run_dir / "accuracy_by_object_count.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_object_count"] = str(chart_path)
+    
+    # Chart 5: Accuracy by Object Size (Scale/Distance)
+    if not df_size_buckets.empty:
+        # Filter out buckets with no data (accuracy is None)
+        df_size_valid = df_size_buckets[df_size_buckets["accuracy"].notna()].copy()
+        if not df_size_valid.empty:
+            fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+            bars = ax.bar(df_size_valid["size_bucket"], df_size_valid["accuracy"], 
+                         color=["#E63946", "#F4A261", "#2A9D8F"][:len(df_size_valid)])
+            ax.set_xlabel("Object Size (bbox area relative to image)", fontweight="bold", fontsize=14)
+            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=14)
+            ax.set_title("Prediction Accuracy by Object Size\n(small: <1%, medium: 1-5%, large: >5% of image)", 
+                        fontweight="bold", fontsize=16)
+            ax.set_ylim(0, 1)
+            for i, row in df_size_valid.iterrows():
+                ax.text(i, row["accuracy"] + 0.02, 
+                       f'{row["accuracy"]:.2%}\n({row["expected"]} objs)', 
+                       ha='center', fontsize=10, fontweight='bold')
+            ax.grid(axis='y', alpha=0.3)
+            plt.tight_layout()
+            chart_path = test_run_dir / "accuracy_by_size.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_size"] = str(chart_path)
+    
+    # Chart 6: Per-Class Accuracy by Size (Heatmap)
+    if not df_class_size.empty:
+        pivot_data = df_class_size.pivot(index="class_name", columns="size_bucket", values="accuracy")
+        pivot_data = pivot_data[["small", "medium", "large"]]  # Order columns
+        
+        fig, ax = plt.subplots(figsize=(10, 8), dpi=200)
+        sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
+                   vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
+        ax.set_title("Per-Class Accuracy by Object Size", fontweight="bold", fontsize=16)
+        ax.set_xlabel("Object Size", fontweight="bold", fontsize=14)
+        ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+        plt.tight_layout()
+        chart_path = test_run_dir / "accuracy_by_class_and_size.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_class_and_size"] = str(chart_path)
+    
+    # Chart 7: Per-Class Accuracy by Weather (Top classes only for readability)
+    if not df_class_weather.empty:
+        # Get top 5 classes by total expected count
+        top_classes = df_class_weather.groupby("class_name")["expected"].sum().nlargest(5).index.tolist()
+        df_top = df_class_weather[df_class_weather["class_name"].isin(top_classes)]
+        
+        if not df_top.empty:
+            pivot_data = df_top.pivot(index="class_name", columns="weather", values="accuracy")
+            fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
+            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
+                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
+            ax.set_title("Per-Class Accuracy by Weather (Top 5 Classes)", fontweight="bold", fontsize=16)
+            ax.set_xlabel("Weather Condition", fontweight="bold", fontsize=14)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+            plt.tight_layout()
+            chart_path = test_run_dir / "accuracy_by_class_and_weather.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_class_and_weather"] = str(chart_path)
+    
+    # Chart 8: Per-Class Accuracy by Scene (Top classes only)
+    if not df_class_scene.empty:
+        top_classes = df_class_scene.groupby("class_name")["expected"].sum().nlargest(5).index.tolist()
+        df_top = df_class_scene[df_class_scene["class_name"].isin(top_classes)]
+        
+        if not df_top.empty:
+            pivot_data = df_top.pivot(index="class_name", columns="scene", values="accuracy")
+            fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
+            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
+                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
+            ax.set_title("Per-Class Accuracy by Scene (Top 5 Classes)", fontweight="bold", fontsize=16)
+            ax.set_xlabel("Scene Type", fontweight="bold", fontsize=14)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+            plt.tight_layout()
+            chart_path = test_run_dir / "accuracy_by_class_and_scene.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_class_and_scene"] = str(chart_path)
+    
+    # Chart 9: Per-Class Accuracy by Time of Day (Top classes only)
+    if not df_class_time.empty:
+        top_classes = df_class_time.groupby("class_name")["expected"].sum().nlargest(5).index.tolist()
+        df_top = df_class_time[df_class_time["class_name"].isin(top_classes)]
+        
+        if not df_top.empty:
+            pivot_data = df_top.pivot(index="class_name", columns="timeofday", values="accuracy")
+            fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
+            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
+                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
+            ax.set_title("Per-Class Accuracy by Time of Day (Top 5 Classes)", fontweight="bold", fontsize=16)
+            ax.set_xlabel("Time of Day", fontweight="bold", fontsize=14)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+            plt.tight_layout()
+            chart_path = test_run_dir / "accuracy_by_class_and_timeofday.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_class_and_timeofday"] = str(chart_path)
+    
+    # Chart 10: Train vs Test Class Distribution
+    if not df_train_test.empty and train_class_counts:
+        df_sorted = df_train_test.sort_values("train_count", ascending=False)
+        
+        fig, ax = plt.subplots(figsize=(12, 8), dpi=200)
+        x = np.arange(len(df_sorted))
+        width = 0.35
+        
+        bars1 = ax.bar(x - width/2, df_sorted["train_count"], width, label="Train Split", color="#3498db")
+        bars2 = ax.bar(x + width/2, df_sorted["test_count"], width, label="Test Split", color="#e74c3c")
+        
+        ax.set_xlabel("Class", fontweight="bold", fontsize=14)
+        ax.set_ylabel("Object Count", fontweight="bold", fontsize=14)
+        ax.set_title("Class Distribution: Training vs Testing Split", fontweight="bold", fontsize=16)
+        ax.set_xticks(x)
+        ax.set_xticklabels(df_sorted["class_name"], rotation=45, ha="right")
+        ax.legend(fontsize=12)
+        ax.grid(axis="y", alpha=0.3)
+        
+        plt.tight_layout()
+        chart_path = test_run_dir / "train_test_distribution.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["train_test_distribution"] = str(chart_path)
+    
+    # Chart 11: Test Accuracy vs Training Exposure (Scatter)
+    if not df_train_test.empty and train_class_counts:
+        df_valid = df_train_test[df_train_test["test_accuracy"].notna()].copy()
+        
+        if not df_valid.empty:
+            fig, ax = plt.subplots(figsize=(12, 8), dpi=200)
+            
+            # Scatter plot
+            scatter = ax.scatter(df_valid["train_count"], df_valid["test_accuracy"], 
+                               s=df_valid["test_count"]*3, alpha=0.6, c=df_valid["test_accuracy"],
+                               cmap="RdYlGn", vmin=0, vmax=1, edgecolors="black", linewidth=1)
+            
+            # Add class labels
+            for _, row in df_valid.iterrows():
+                ax.annotate(row["class_name"], 
+                          (row["train_count"], row["test_accuracy"]),
+                          xytext=(5, 5), textcoords="offset points", 
+                          fontsize=9, alpha=0.8)
+            
+            # Add trend line if enough data points
+            if len(df_valid) > 2:
+                z = np.polyfit(df_valid["train_count"], df_valid["test_accuracy"], 1)
+                p = np.poly1d(z)
+                x_line = np.linspace(df_valid["train_count"].min(), df_valid["train_count"].max(), 100)
+                ax.plot(x_line, p(x_line), "r--", alpha=0.5, linewidth=2, label="Trend Line")
+            
+            ax.set_xlabel("Training Exposure (Object Count in Train Split)", fontweight="bold", fontsize=14)
+            ax.set_ylabel("Test Accuracy", fontweight="bold", fontsize=14)
+            ax.set_title("Test Accuracy vs Training Exposure\n(bubble size = test object count)", 
+                        fontweight="bold", fontsize=16)
+            ax.set_ylim(0, 1.05)
+            ax.grid(alpha=0.3)
+            
+            # Colorbar
+            cbar = plt.colorbar(scatter, ax=ax)
+            cbar.set_label("Test Accuracy", fontweight="bold", fontsize=12)
+            
+            if len(df_valid) > 2:
+                ax.legend(fontsize=12)
+            
+            plt.tight_layout()
+            chart_path = test_run_dir / "accuracy_vs_training_exposure.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_vs_training_exposure"] = str(chart_path)
+    
+    # Chart 12: Train/Test Ratio vs Accuracy
+    if not df_train_test.empty and train_class_counts:
+        df_valid = df_train_test[(df_train_test["test_accuracy"].notna()) & 
+                                (df_train_test["train_test_ratio"].notna())].copy()
+        
+        if not df_valid.empty:
+            df_sorted = df_valid.sort_values("test_accuracy")
+            
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), dpi=200)
+            
+            # Left: Accuracy by class with train/test ratio as color
+            bars = ax1.barh(df_sorted["class_name"], df_sorted["test_accuracy"])
+            
+            # Color bars by train/test ratio
+            norm = plt.Normalize(vmin=df_sorted["train_test_ratio"].min(), 
+                               vmax=df_sorted["train_test_ratio"].max())
+            cmap = plt.cm.coolwarm
+            for bar, ratio in zip(bars, df_sorted["train_test_ratio"]):
+                bar.set_color(cmap(norm(ratio)))
+            
+            ax1.set_xlabel("Test Accuracy", fontweight="bold", fontsize=14)
+            ax1.set_ylabel("Class", fontweight="bold", fontsize=14)
+            ax1.set_title("Test Accuracy by Class\n(colored by train/test ratio)", 
+                         fontweight="bold", fontsize=14)
+            ax1.set_xlim(0, 1)
+            ax1.grid(axis="x", alpha=0.3)
+            
+            # Colorbar for left plot
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            sm.set_array([])
+            cbar1 = plt.colorbar(sm, ax=ax1)
+            cbar1.set_label("Train/Test Ratio", fontweight="bold", fontsize=12)
+            
+            # Right: Direct scatter of ratio vs accuracy
+            scatter = ax2.scatter(df_valid["train_test_ratio"], df_valid["test_accuracy"],
+                                s=100, alpha=0.6, c=df_valid["test_accuracy"],
+                                cmap="RdYlGn", vmin=0, vmax=1, edgecolors="black", linewidth=1)
+            
+            for _, row in df_valid.iterrows():
+                ax2.annotate(row["class_name"], 
+                           (row["train_test_ratio"], row["test_accuracy"]),
+                           xytext=(5, 5), textcoords="offset points", 
+                           fontsize=8, alpha=0.8)
+            
+            ax2.set_xlabel("Train/Test Object Ratio", fontweight="bold", fontsize=14)
+            ax2.set_ylabel("Test Accuracy", fontweight="bold", fontsize=14)
+            ax2.set_title("Accuracy vs Train/Test Ratio", fontweight="bold", fontsize=14)
+            ax2.set_ylim(0, 1.05)
+            ax2.grid(alpha=0.3)
+            
+            plt.tight_layout()
+            chart_path = test_run_dir / "accuracy_vs_train_test_ratio.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_vs_train_test_ratio"] = str(chart_path)
+
+    # Overall statistics
+    overall_expected = df_images["expected_total"].sum()
+    overall_matched = df_images["matched"].sum()
+    overall_accuracy = (overall_matched / overall_expected) if overall_expected > 0 else None
+    
+    # Per-class test accuracy summary (for train-test comparison)
+    test_class_stats = {}
+    for cid in class_names.keys():
+        total_expected = 0
+        total_matched = 0
+        for rec in per_image_records:
+            gts = rec.get("gts", [])
+            for g in gts:
+                if g["cls"] == cid:
+                    total_expected += 1
+            # Count matched for this class
+            preds = rec.get("preds", [])
+            matched_gt_local = set()
+            for p in preds:
+                if p["cls"] != cid:
+                    continue
+                for gi, g in enumerate(gts):
+                    if gi in matched_gt_local or g["cls"] != cid:
+                        continue
+                    if iou_xyxy(p["xyxy"], g["xyxy"]) >= iou_threshold:
+                        matched_gt_local.add(gi)
+                        total_matched += 1
+                        break
+        test_class_stats[cid] = {
+            "expected": total_expected,
+            "matched": total_matched,
+            "accuracy": (total_matched / total_expected) if total_expected > 0 else None
+        }
+    
+    # Build train-test comparison dataframe
+    train_test_rows = []
+    for cid, cname in class_names.items():
+        train_count = train_class_counts.get(cid, 0)
+        test_stats = test_class_stats.get(cid, {})
+        test_expected = test_stats.get("expected", 0)
+        test_accuracy = test_stats.get("accuracy")
+        
+        if test_expected > 0:  # Only include classes present in test set
+            train_test_rows.append({
+                "class_id": cid,
+                "class_name": cname,
+                "train_count": train_count,
+                "test_count": test_expected,
+                "test_accuracy": test_accuracy,
+                "train_test_ratio": (train_count / test_expected) if test_expected > 0 else None
+            })
+    
+    df_train_test = pd.DataFrame(train_test_rows)
+
+    # Summary output
+    summary = {
+        "overall": {
+            "total_images": len(df_images),
+            "total_expected_objects": int(overall_expected),
+            "total_matched_objects": int(overall_matched),
+            "overall_accuracy": overall_accuracy,
+        },
+        "train_metadata": {
+            "train_images": train_total_images,
+            "train_total_objects": sum(train_class_counts.values()) if train_class_counts else 0,
+        },
+        "by_weather": attr_summary_dfs["weather"].to_dict(orient="records") if not attr_summary_dfs["weather"].empty else [],
+        "by_scene": attr_summary_dfs["scene"].to_dict(orient="records") if not attr_summary_dfs["scene"].empty else [],
+        "by_timeofday": attr_summary_dfs["timeofday"].to_dict(orient="records") if not attr_summary_dfs["timeofday"].empty else [],
+        "by_object_count": df_count_buckets.to_dict(orient="records"),
+        "by_size": df_size_buckets.to_dict(orient="records"),
+        "by_class_and_size": df_class_size.to_dict(orient="records") if not df_class_size.empty else [],
+        "by_class_and_weather": df_class_weather.to_dict(orient="records") if not df_class_weather.empty else [],
+        "by_class_and_scene": df_class_scene.to_dict(orient="records") if not df_class_scene.empty else [],
+        "by_class_and_timeofday": df_class_time.to_dict(orient="records") if not df_class_time.empty else [],
+        "train_test_comparison": df_train_test.to_dict(orient="records") if not df_train_test.empty else [],
+        "charts": charts,
+    }
+
+    with open(test_run_dir / "failure_analysis_comprehensive.json", "w") as fh:
+        json.dump(summary, fh, indent=2)
+
+    # Print summary
+    print("\n" + "=" * 80)
+    print("ANALYSIS SUMMARY")
+    print("=" * 80)
+    print(f"Overall Accuracy: {overall_accuracy:.2%}" if overall_accuracy else "Overall Accuracy: N/A")
+    print(f"Total Images: {len(df_images)}")
+    print(f"Expected Objects: {overall_expected}")
+    print(f"Matched Objects: {overall_matched}")
+    
+    if not attr_summary_dfs["weather"].empty:
+        print("\nWeakest Weather Conditions:")
+        for _, row in attr_summary_dfs["weather"].head(3).iterrows():
+            if pd.notna(row['accuracy']):
+                print(f"  - {row['weather']}: {row['accuracy']:.2%} ({row['images']} images)")
+    
+    if not attr_summary_dfs["scene"].empty:
+        print("\nWeakest Scenes:")
+        for _, row in attr_summary_dfs["scene"].head(3).iterrows():
+            if pd.notna(row['accuracy']):
+                print(f"  - {row['scene']}: {row['accuracy']:.2%} ({row['images']} images)")
+    
+    if not attr_summary_dfs["timeofday"].empty:
+        print("\nWeakest Times of Day:")
+        for _, row in attr_summary_dfs["timeofday"].head(3).iterrows():
+            if pd.notna(row['accuracy']):
+                print(f"  - {row['timeofday']}: {row['accuracy']:.2%} ({row['images']} images)")
+    
+    if not df_size_buckets.empty:
+        print("\nAccuracy by Object Size (Scale/Distance):")
+        for _, row in df_size_buckets.iterrows():
+            if pd.notna(row['accuracy']):
+                print(f"  - {row['size_bucket']}: {row['accuracy']:.2%} ({row['expected']} objects)")
+    
+    if not df_train_test.empty and train_class_counts:
+        print("\nTrain-Test Comparison (Classes with Lowest Accuracy):")
+        df_lowest = df_train_test[df_train_test["test_accuracy"].notna()].nsmallest(3, "test_accuracy")
+        for _, row in df_lowest.iterrows():
+            print(f"  - {row['class_name']}: {row['test_accuracy']:.2%} accuracy | "
+                  f"Train: {row['train_count']} objs, Test: {row['test_count']} objs | "
+                  f"Ratio: {row['train_test_ratio']:.1f}x")
+    
+    print("\n✓ Comprehensive failure analysis complete")
+    print(f"  - Charts saved: {len(charts)}")
+    print(f"  - CSV files saved: {9 + len(attr_summary_dfs)}")
+    print(f"  - JSON summary: {test_run_dir / 'failure_analysis_comprehensive.json'}")
+    print("=" * 80)
+
+    return summary
+
 def generate_pdf_and_json_report(
     model_name: str,
     run_name: str,
@@ -896,6 +1882,7 @@ def generate_pdf_and_json_report(
     class_names: Dict[int, str],
     total_time: float,
     comparison_data: List[Dict[str, Any]] | None = None,
+    failure_analysis_summary: Dict[str, Any] | None = None,
 ) -> None:
     pdf_report_path = test_run_dir / "report.pdf"
     json_report_path = test_run_dir / "metrics_data.json"
@@ -928,7 +1915,7 @@ def generate_pdf_and_json_report(
         spaceBefore=20,
     )
 
-    story.append(Paragraph("YOLO Model Testing Report", title_style))
+    story.append(Paragraph("YOLO Model Analysis Report", title_style))
     story.append(Spacer(1, 12))
 
     info_data = [
@@ -1113,6 +2100,162 @@ def generate_pdf_and_json_report(
 
     story.append(Spacer(1, 12))
 
+    # Add Failure Analysis Section
+    if failure_analysis_summary and failure_analysis_summary.get("charts"):
+        story.append(PageBreak())
+        story.append(Paragraph("Comprehensive Failure Analysis", heading_style))
+        story.append(Spacer(1, 12))
+        
+        # Overall summary
+        overall = failure_analysis_summary.get("overall", {})
+        if overall:
+            analysis_data = [
+                ["Metric", "Value"],
+                ["Total Images Analyzed", str(overall.get("total_images", 0))],
+                ["Total Expected Objects", str(overall.get("total_expected_objects", 0))],
+                ["Total Matched Objects", str(overall.get("total_matched_objects", 0))],
+                ["Overall Accuracy", f"{overall.get('overall_accuracy', 0):.2%}" if overall.get('overall_accuracy') else "N/A"],
+            ]
+            analysis_table = Table(analysis_data, colWidths=[3 * inch, 3 * inch])
+            analysis_table.setStyle(
+                TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e67e22")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 12),
+                    ("FONTSIZE", (0, 1), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#fdebd0")),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ])
+            )
+            story.append(analysis_table)
+            story.append(Spacer(1, 20))
+        
+        charts = failure_analysis_summary.get("charts", {})
+        
+        # Attribute-based analysis charts
+        story.append(Paragraph("Accuracy by Environmental Attributes", heading_style))
+        story.append(Spacer(1, 8))
+        
+        for chart_key in ["accuracy_by_weather", "accuracy_by_scene", "accuracy_by_timeofday"]:
+            if chart_key in charts:
+                chart_path = Path(charts[chart_key])
+                if chart_path.exists():
+                    with PILImage.open(chart_path) as img:
+                        w, h = img.size
+                        ratio = h / w
+                        pdf_w = 5.5 * inch
+                        pdf_h = pdf_w * ratio
+                        story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
+                        story.append(Spacer(1, 10))
+        
+        story.append(PageBreak())
+        story.append(Paragraph("Accuracy by Object Characteristics", heading_style))
+        story.append(Spacer(1, 8))
+        
+        # Object count and size charts
+        for chart_key in ["accuracy_by_object_count", "accuracy_by_size"]:
+            if chart_key in charts:
+                chart_path = Path(charts[chart_key])
+                if chart_path.exists():
+                    with PILImage.open(chart_path) as img:
+                        w, h = img.size
+                        ratio = h / w
+                        pdf_w = 5.5 * inch
+                        pdf_h = pdf_w * ratio
+                        story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
+                        story.append(Spacer(1, 10))
+        
+        # Train-Test Comparison Section
+        if "train_test_distribution" in charts or "accuracy_vs_training_exposure" in charts:
+            story.append(PageBreak())
+            story.append(Paragraph("Training Exposure vs Test Performance", heading_style))
+            story.append(Spacer(1, 8))
+            
+            train_info = failure_analysis_summary.get("train_metadata", {})
+            if train_info:
+                train_summary_data = [
+                    ["Metric", "Train Split", "Test Split"],
+                    ["Total Images", str(train_info.get("train_images", 0)), 
+                     str(failure_analysis_summary["overall"]["total_images"])],
+                    ["Total Objects", str(train_info.get("train_total_objects", 0)),
+                     str(failure_analysis_summary["overall"]["total_expected_objects"])],
+                ]
+                train_table = Table(train_summary_data, colWidths=[2.5 * inch, 1.75 * inch, 1.75 * inch])
+                train_table.setStyle(
+                    TableStyle([
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#8e44ad")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 12),
+                        ("FONTSIZE", (0, 1), (-1, -1), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                        ("TOPPADDING", (0, 0), (-1, -1), 8),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#e8daef")),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ])
+                )
+                story.append(train_table)
+                story.append(Spacer(1, 16))
+            
+            # Train-test distribution chart
+            if "train_test_distribution" in charts:
+                chart_path = Path(charts["train_test_distribution"])
+                if chart_path.exists():
+                    with PILImage.open(chart_path) as img:
+                        w, h = img.size
+                        ratio = h / w
+                        pdf_w = 6.5 * inch
+                        pdf_h = pdf_w * ratio
+                        story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
+                        story.append(Spacer(1, 12))
+            
+            # Accuracy vs training exposure
+            if "accuracy_vs_training_exposure" in charts:
+                chart_path = Path(charts["accuracy_vs_training_exposure"])
+                if chart_path.exists():
+                    with PILImage.open(chart_path) as img:
+                        w, h = img.size
+                        ratio = h / w
+                        pdf_w = 6.5 * inch
+                        pdf_h = pdf_w * ratio
+                        story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
+                        story.append(Spacer(1, 12))
+            
+            # Accuracy vs train/test ratio
+            if "accuracy_vs_train_test_ratio" in charts:
+                chart_path = Path(charts["accuracy_vs_train_test_ratio"])
+                if chart_path.exists():
+                    with PILImage.open(chart_path) as img:
+                        w, h = img.size
+                        ratio = h / w
+                        pdf_w = 6.5 * inch
+                    pdf_h = pdf_w * ratio
+                    story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
+                    story.append(Spacer(1, 12))
+        
+        # Per-class breakdown charts
+        story.append(PageBreak())
+        story.append(Paragraph("Per-Class Performance Analysis", heading_style))
+        story.append(Spacer(1, 8))
+        
+        for chart_key in ["accuracy_by_class_and_size", "accuracy_by_class_and_weather", 
+                         "accuracy_by_class_and_scene", "accuracy_by_class_and_timeofday"]:
+            if chart_key in charts:
+                chart_path = Path(charts[chart_key])
+                if chart_path.exists():
+                    with PILImage.open(chart_path) as img:
+                        w, h = img.size
+                        ratio = h / w
+                        pdf_w = 6.5 * inch
+                        pdf_h = pdf_w * ratio
+                        story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
+                        story.append(Spacer(1, 12))
+    
     # Add sample comparisons section with detailed attributes and full-width images
     if comparison_data:
         story.append(PageBreak())
@@ -1278,7 +2421,7 @@ def run_validation_pipeline(
 
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_name = f"{model_name}_testing_{run_timestamp}"
-    runs_dir = base_dir / "yolo_test" / "runs"
+    runs_dir = base_dir / "yolo_test" / "analysis_runs"
     test_run_dir = runs_dir / run_name
     test_run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1390,6 +2533,16 @@ def run_validation_pipeline(
         image_attributes=dataset_info.get("image_attributes"),
     )
 
+    # Generate failure analysis using expected counts (objects_per_class & total_objects)
+    failure_analysis_summary = generate_failure_analysis(
+        per_image_records=validation_results.per_image,
+        image_attributes=dataset_info.get("image_attributes", {}),
+        class_names=dataset_info["class_names"],
+        test_run_dir=test_run_dir,
+        dataset_root=yolo_dataset_root,
+        iou_threshold=iou_threshold,
+    )
+
     if save_reports:
         generate_pdf_and_json_report(
             model_name=model_name,
@@ -1406,6 +2559,7 @@ def run_validation_pipeline(
             class_names=dataset_info["class_names"],
             total_time=total_time,
             comparison_data=comparison_data,
+            failure_analysis_summary=failure_analysis_summary,
         )
 
     if use_wandb:
@@ -1438,6 +2592,7 @@ def run_validation_pipeline(
             "confusion_matrix": confusion_matrix_path,
         },
         "comparison_data": comparison_data,
+        "failure_analysis_summary": failure_analysis_summary,
         "yolo_validation_dir": test_run_dir / "yolo_validation",
     }
 
