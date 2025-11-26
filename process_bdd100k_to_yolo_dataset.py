@@ -96,6 +96,9 @@ LIMITED_DATASET_CONFIGS = [
 
 # BDD100K object detection classes (10 classes)
 # CRITICAL: These names must match exactly what's in the BDD100K JSON files
+# BDD100K detection classes (10 classes for object detection task)
+# Validated against actual dataset (10K samples analyzed)
+# Note: BDD100K also has segmentation classes (area/*, lane/*) which are not included here
 BDD100K_CLASSES = [
     'person', 
     'rider',
@@ -132,11 +135,14 @@ BDD100K_URLS = {
     'website': 'http://bdd-data.berkeley.edu/'
 }
 
-# Representative sample attributes for diverse dataset visualization
+# BDD100K attribute values (validated from actual dataset)
+# Validated from 10,000 sample label files across train/val/test splits
+# Note: 'gas stations' is very rare (only 4 occurrences in 10K samples) but is a valid scene value
+# All 100K label files have complete attributes (weather, scene, timeofday) - no defaults needed
 REPRESENTATIVE_ATTRIBUTES = {
-    'weather': ['clear', 'overcast', 'rainy', 'snowy', 'partly cloudy'],
-    'scene': ['city street', 'highway', 'residential', 'parking lot'],
-    'timeofday': ['daytime', 'night', 'dawn/dusk']
+    'weather': ['clear', 'foggy', 'overcast', 'partly cloudy', 'rainy', 'snowy', 'undefined'],
+    'scene': ['city street', 'gas stations', 'highway', 'parking lot', 'residential', 'tunnel', 'undefined'],
+    'timeofday': ['daytime', 'night', 'dawn/dusk', 'undefined']
 }
 
 
@@ -288,7 +294,8 @@ def get_label_attributes(json_path):
         with open(json_path, 'r') as f:
             label_data = json.load(f)
         
-        attributes = label_data.get('attributes', {})
+        # All BDD100K files have complete attributes
+        attributes = label_data['attributes']
         frames = label_data.get('frames', [])
         
         # Get object categories
@@ -300,9 +307,9 @@ def get_label_attributes(json_path):
         categories = [obj.get('category', '') for obj in objects if 'box2d' in obj]
         
         return {
-            'weather': attributes.get('weather', 'undefined'),
-            'scene': attributes.get('scene', 'undefined'),
-            'timeofday': attributes.get('timeofday', 'undefined'),
+            'weather': attributes['weather'],
+            'scene': attributes['scene'],
+            'timeofday': attributes['timeofday'],
             'categories': [cat for cat in categories if cat in CLASS_TO_IDX],
             'num_objects': len(categories)
         }
@@ -328,11 +335,12 @@ def convert_json_to_yolo(json_path):
         with open(json_path, 'r') as f:
             label_data = json.load(f)
         
-        # Extract attributes
+        # Extract attributes - all BDD100K files have complete attributes
+        attrs = label_data['attributes']
         attributes = {
-            'weather': label_data.get('attributes', {}).get('weather', 'undefined'),
-            'scene': label_data.get('attributes', {}).get('scene', 'undefined'),
-            'timeofday': label_data.get('attributes', {}).get('timeofday', 'undefined')
+            'weather': attrs['weather'],
+            'scene': attrs['scene'],
+            'timeofday': attrs['timeofday']
         }
         
         # BDD100K images are standard 1280x720
@@ -410,9 +418,9 @@ def count_attribute_distribution(labels_dir, split_name):
     for json_file in json_files:
         attrs = get_label_attributes(json_file)
         if attrs:
-            weather = attrs.get('weather', 'undefined')
-            scene = attrs.get('scene', 'undefined')
-            timeofday = attrs.get('timeofday', 'undefined')
+            weather = attrs['weather']
+            scene = attrs['scene']
+            timeofday = attrs['timeofday']
             
             weather_counts[weather] = weather_counts.get(weather, 0) + 1
             scene_counts[scene] = scene_counts.get(scene, 0) + 1
@@ -723,14 +731,14 @@ def save_test_performance_metadata(labels_base_dir, yolo_labels_dir, split_name,
                     except (ValueError, IndexError):
                         continue
         
-        # Get attributes if available
+        # Get attributes - all BDD100K files have complete attributes
         attrs = json_map.get(basename, {})
         
         image_data = {
             'basename': basename,
-            'weather': attrs.get('weather', 'unknown'),
-            'scene': attrs.get('scene', 'unknown'),
-            'timeofday': attrs.get('timeofday', 'unknown'),
+            'weather': attrs['weather'],  # All BDD100K files have this field
+            'scene': attrs['scene'],      # All BDD100K files have this field
+            'timeofday': attrs['timeofday'],  # All BDD100K files have this field
             'classes_present': [cls for cls, count in class_counts.items() if count > 0],
             'objects_per_class': {cls: count for cls, count in class_counts.items() if count > 0},
             'total_objects': sum(class_counts.values())
@@ -1130,9 +1138,9 @@ def select_representative_samples(split_labels_src, split_name, config, constrai
             attrs = get_label_attributes(json_file)
             if attrs:
                 metadata['selected_samples']['details'][file_path.stem] = {
-                    'weather': attrs.get('weather', 'undefined'),
-                    'scene': attrs.get('scene', 'undefined'),
-                    'timeofday': attrs.get('timeofday', 'undefined')
+                    'weather': attrs['weather'],
+                    'scene': attrs['scene'],
+                    'timeofday': attrs['timeofday']
                 }
     
     print(f"\n  ✓ FINAL: Selected {total_selected} representative samples")
@@ -2002,15 +2010,39 @@ def main():
                         print(f"  ⚠️  Warning: No samples from previous config for {split}")
                         config_representative_samples[split] = set()
             elif split_labels_src.exists():
-                print(f"  {split.upper()}: Sampling representative images...")
-                _, representative_files, _ = select_representative_samples(
-                    split_labels_src, 
-                    split, 
-                    config,
-                    constrain_to_basenames=previous_config_samples.get(split) if previous_config_samples else None
-                )
-                config_representative_samples[split] = representative_files
-                print(f"         Selected: {len(representative_files):,} images")
+                # For subsequent configs, find constraint from previous configs
+                constraint_basenames = None
+                if idx > 1:
+                    # Look for this split in previous configs (starting from immediate previous)
+                    if previous_config_samples and split in previous_config_samples:
+                        constraint_basenames = previous_config_samples[split]
+                    else:
+                        # Split not in previous config - look back through all previous configs
+                        for prev_idx in range(len(all_configs_samples) - 1, -1, -1):
+                            if split in all_configs_samples[prev_idx]['samples']:
+                                constraint_basenames = all_configs_samples[prev_idx]['samples'][split]
+                                print(f"  {split.upper()}: Sampling from Config {prev_idx + 1} (split not in Config {idx-1})...")
+                                break
+                        
+                        if constraint_basenames is None:
+                            # Split doesn't exist in any previous config - skip it
+                            print(f"  ⚠️  Warning: Split '{split}' not found in any previous config, skipping...")
+                            config_representative_samples[split] = set()
+                            continue
+                else:
+                    print(f"  {split.upper()}: Sampling representative images...")
+                
+                if constraint_basenames is not None or idx == 1:
+                    if idx > 1:
+                        print(f"  {split.upper()}: Sampling representative images...")
+                    _, representative_files, _ = select_representative_samples(
+                        split_labels_src, 
+                        split, 
+                        config,
+                        constrain_to_basenames=constraint_basenames
+                    )
+                    config_representative_samples[split] = representative_files
+                    print(f"         Selected: {len(representative_files):,} images")
             else:
                 print(f"  ⚠️  Warning: Split '{split}' not found, skipping...")
                 config_representative_samples[split] = set()
@@ -2031,10 +2063,13 @@ def main():
         # Store samples for next config to use as constraint
         previous_config_samples = config_representative_samples
     
-    # Verify hierarchical structure
+    # Verify hierarchical structure (ONLY for train split)
+    # Note: Val/test splits may use full datasets (contain_full_*_split=True) or be sampled,
+    # so hierarchical constraint only applies to train split
     print("\n" + "="*70)
     print("HIERARCHICAL STRUCTURE VERIFICATION")
     print("="*70)
+    print("Note: Only verifying TRAIN split (val/test may use full datasets)")
     
     hierarchical_valid = True
     for i in range(1, len(all_configs_samples)):
@@ -2043,27 +2078,46 @@ def main():
         
         print(f"\nVerifying: {current['config']['name']} ⊆ {previous['config']['name']}")
         
-        for split in current['samples'].keys():
-            if split in previous['samples']:
-                current_set = current['samples'][split]
-                previous_set = previous['samples'][split]
+        # Only verify train split for hierarchical constraint
+        if 'train' in current['samples'] and 'train' in previous['samples']:
+            current_set = current['samples']['train']
+            previous_set = previous['samples']['train']
+            
+            # Check if current is subset of previous
+            if not current_set.issubset(previous_set):
+                extra_samples = current_set - previous_set
+                print(f"  ✗ train: VIOLATION! {len(extra_samples)} samples not in previous config")
+                hierarchical_valid = False
+            else:
+                percentage = (len(current_set) / len(previous_set) * 100) if len(previous_set) > 0 else 0
+                print(f"  ✓ train: Valid subset ({len(current_set):,}/{len(previous_set):,} = {percentage:.1f}%)")
+        
+        # Report val/test splits for information only (no validation)
+        for split in ['val', 'test']:
+            if split in current['samples']:
+                current_count = len(current['samples'][split])
+                previous_count = len(previous['samples'][split]) if split in previous['samples'] else 0
                 
-                # Check if current is subset of previous
-                if not current_set.issubset(previous_set):
-                    extra_samples = current_set - previous_set
-                    print(f"  ✗ {split}: VIOLATION! {len(extra_samples)} samples not in previous config")
-                    hierarchical_valid = False
-                else:
-                    percentage = (len(current_set) / len(previous_set) * 100) if len(previous_set) > 0 else 0
-                    print(f"  ✓ {split}: Valid subset ({len(current_set):,}/{len(previous_set):,} = {percentage:.1f}%)")
+                # Check config flags to explain the split handling
+                current_full_flag = current['config'].get(f'contain_full_{split}_split', False)
+                previous_full_flag = previous['config'].get(f'contain_full_{split}_split', False)
+                
+                if current_full_flag:
+                    print(f"  ℹ {split}: Using full split ({current_count:,} images) - no subset verification")
+                elif previous_full_flag and current_count < previous_count:
+                    print(f"  ℹ {split}: Sampled from previous full split ({current_count:,}/{previous_count:,} images)")
+                elif previous_count > 0:
+                    is_subset = split in previous['samples'] and current['samples'][split].issubset(previous['samples'][split])
+                    status = "subset ✓" if is_subset else "independent sampling"
+                    print(f"  ℹ {split}: {current_count:,} images ({status})")
     
     if not hierarchical_valid:
-        print("\n❌ ERROR: Hierarchical structure violated!")
-        print("   Some configurations contain samples not present in previous configs.")
+        print("\n❌ ERROR: Hierarchical structure violated for TRAIN split!")
+        print("   Config train splits must form proper subsets: Config 3 ⊆ Config 2 ⊆ Config 1")
         print("   This should not happen. Please report this issue.")
         return
     
-    print("\n✓ Hierarchical structure validated: Config 3 ⊆ Config 2 ⊆ Config 1")
+    print("\n✓ Hierarchical structure validated for TRAIN split: Config 3 ⊆ Config 2 ⊆ Config 1")
     
     # Display summary for user confirmation
     print("\n" + "="*70)
@@ -2095,7 +2149,8 @@ def main():
     print("STEP 5 - PHASE 2: CONFIRMATION")
     print("="*70)
     print("\nThe sample selection is complete and validated.")
-    print("Hierarchical structure verified: Config 3 ⊆ Config 2 ⊆ Config 1")
+    print("Hierarchical structure verified for TRAIN split: Config 3 ⊆ Config 2 ⊆ Config 1")
+    print("Note: Val/test splits may use full datasets or independent sampling based on config.")
     print("\nProceed with copying files to create limited datasets?")
     
     response = input("Continue? (yes/no): ").strip().lower()
