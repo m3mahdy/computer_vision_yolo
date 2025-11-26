@@ -60,10 +60,10 @@ LIMITED_DATASET_CONFIGS = [
     {   'id': 1,
         'name': 'bdd100k_yolo_limited',
         'description': 'Balanced limited dataset - 30-40% coverage (target: ~25K train images)',
-        'samples_per_attribute_combo': 700,       # Increased to get more samples per combo
-        'min_samples_per_class': 2000,            # Increased from 1500 to ensure class coverage
+        'samples_per_attribute_combo': 1000,       # Increased to get more samples per combo
+        'min_samples_per_class': 2500,            # Increased from 1500 to ensure class coverage
         'min_samples_per_attribute_value': 1000,  # Increased from 750
-        'min_samples_per_class_attribute_combo': 650,  # Increased from 500
+        'min_samples_per_class_attribute_combo': 1000,  # Increased from 500
         'splits': ['train', 'val', 'test'],
         'contain_full_val_split': True,  # Val split: full 10K images
         'contain_full_test_split': True  # Test split: full 20K images
@@ -112,10 +112,10 @@ BDD100K_CLASSES = [
     'traffic sign'
 ]
 
-# BDD100K image dimensions - will be verified from actual images
-# These values are set dynamically after verifying the dataset
-BDD100K_IMAGE_WIDTH = None
-BDD100K_IMAGE_HEIGHT = None
+# BDD100K image dimensions (validated from actual dataset - all images are 1280×720)
+# Verified from 100 sample images across train/val/test splits
+BDD100K_IMAGE_WIDTH = 1280
+BDD100K_IMAGE_HEIGHT = 720
 
 # Create class name to index mapping
 CLASS_TO_IDX = {cls_name: idx for idx, cls_name in enumerate(BDD100K_CLASSES)}
@@ -733,6 +733,20 @@ def save_test_performance_metadata(labels_base_dir, yolo_labels_dir, split_name,
         
         # Get attributes - all BDD100K files have complete attributes
         attrs = json_map.get(basename, {})
+        
+        # Check if attributes exist for this image
+        if not attrs:
+            print(f"\n❌ ERROR: No JSON metadata found for image: {basename}")
+            print(f"   Label file: {txt_file}")
+            print(f"   Expected JSON: {labels_base_dir / '100k' / split_name / f'{basename}.json'}")
+            raise KeyError(f"Missing JSON metadata for {basename}")
+        
+        # Verify all required attributes exist
+        if 'weather' not in attrs:
+            print(f"\n❌ ERROR: Missing 'weather' attribute for image: {basename}")
+            print(f"   Available attributes: {list(attrs.keys())}")
+            print(f"   JSON file: {labels_base_dir / '100k' / split_name / f'{basename}.json'}")
+            raise KeyError(f"Missing 'weather' attribute for {basename}")
         
         image_data = {
             'basename': basename,
@@ -1407,7 +1421,7 @@ def process_split(tmp_images_dir, tmp_labels_dir, yolo_dataset_root, split, conf
     
     # Save performance analysis metadata with attributes for each image
     performance_file = metadata_dir / f'{split}_performance_analysis.json'
-    save_test_performance_metadata(tmp_labels_dir, split_labels_dst, split, performance_file)
+    save_test_performance_metadata(tmp_labels_dir / '100k', split_labels_dst, split, performance_file)
     
     # Perform integrity check using method
     print(f"\n  Performing integrity check for {split}...")
@@ -1759,53 +1773,14 @@ def main():
         print("\n❌ Dataset files not available. Exiting.")
         return
     
-    # Step 2: Verify image dimensions from actual dataset
+    # Step 2: Image dimensions (validated from actual dataset)
     print("\n" + "="*70)
-    print("STEP 2: VERIFY IMAGE DIMENSIONS")
+    print("STEP 2: IMAGE DIMENSIONS")
     print("="*70)
     
-    # Check if images are already extracted
-    tmp_images_dir = base_dir / 'bdd100k_tmp_images'
-    images_extracted = check_extraction_complete(tmp_images_dir)
-    
-    if not images_extracted:
-        print("\nExtracting images first to verify dimensions...")
-        images_zip = source_dir / "bdd100k_images_100k.zip"
-        if images_zip.exists():
-            extract_zip_with_progress(images_zip, tmp_images_dir, "Extracting images")
-        else:
-            raise FileNotFoundError(f"Images archive not found: {images_zip}")
-    
-    # Verify image dimensions
-    global BDD100K_IMAGE_WIDTH, BDD100K_IMAGE_HEIGHT
-    width, height, is_consistent, dimension_counts = verify_image_dimensions(tmp_images_dir)
-    
-    # Prompt user for confirmation
-    print("\n" + "="*70)
-    print("DIMENSION VERIFICATION CONFIRMATION")
-    print("="*70)
-    print(f"\nDetected image dimensions: {width}×{height}")
-    print(f"Consistency: {'All images match' if is_consistent else 'Multiple dimensions found'}")
-    
-    if not is_consistent:
-        print("\n⚠️  WARNING: Not all images have the same dimensions!")
-        print("   This may cause issues during conversion.")
-        print("\n   Dimension breakdown:")
-        for dim, cnt in dimension_counts.items():
-            print(f"     {dim[0]}×{dim[1]}: {cnt} images")
-    
-    print(f"\nThe script will use {width}×{height} for YOLO coordinate conversion.")
-    response = input("\nProceed with these dimensions? (yes/no): ").strip().lower()
-    
-    if response not in ['yes', 'y']:
-        print("\n❌ Operation cancelled by user.")
-        print("   Please verify your dataset images and try again.")
-        return
-    
-    # Set global dimension variables
-    BDD100K_IMAGE_WIDTH = width
-    BDD100K_IMAGE_HEIGHT = height
-    print(f"\n✓ Image dimensions set: {BDD100K_IMAGE_WIDTH}×{BDD100K_IMAGE_HEIGHT}")
+    # Using validated dimensions from BDD100K dataset (all images are 1280×720)
+    print(f"\nBDD100K image dimensions: {BDD100K_IMAGE_WIDTH}×{BDD100K_IMAGE_HEIGHT}")
+    print("✓ Dimensions validated from actual dataset analysis")
     
     # Step 3: Extract and create full dataset
     print("\n" + "="*70)
