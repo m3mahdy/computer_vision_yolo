@@ -1,0 +1,1897 @@
+{
+  "overall": {
+    "total_images": 20000,
+    "total_expected_objects": 367728,
+    "total_matched_objects": 300926,
+    "overall_accuracy": 0.8183385545838229
+  },
+  "train_metadata": {
+    "train_images": 29959,
+    "train_total_objects": 629064
+  },
+  "by_weather": [
+    {
+      "weather": "overcast",
+      "images": 2568,
+      "expected": 54344,
+      "matched": 43855,
+      "missed": 10489,
+      "accuracy": 0.8069888120123657
+    },
+    {
+      "weather": "partly cloudy",
+      "images": 1441,
+      "expected": 28112,
+      "matched": 22851,
+      "missed": 5261,
+      "accuracy": 0.8128557199772339
+    },
+    {
+      "weather": "clear",
+      "images": 10756,
+      "expected": 187148,
+      "matched": 153063,
+      "missed": 34085,
+      "accuracy": 0.8178714172740291
+    },
+    {
+      "weather": "undefined",
+      "images": 2340,
+      "expected": 46993,
+      "matched": 38825,
+      "missed": 8168,
+      "accuracy": 0.8261868788968569
+    },
+    {
+      "weather": "snowy",
+      "images": 1551,
+      "expected": 28238,
+      "matched": 23362,
+      "missed": 4876,
+      "accuracy": 0.8273248813655358
+    },
+    {
+      "weather": "rainy",
+      "images": 1306,
+      "expected": 22348,
+      "matched": 18515,
+      "missed": 3833,
+      "accuracy": 0.8284857705387507
+    },
+    {
+      "weather": "foggy",
+      "images": 38,
+      "expected": 545,
+      "matched": 455,
+      "missed": 90,
+      "accuracy": 0.8348623853211009
+    }
+  ],
+  "by_scene": [
+    {
+      "scene": "highway",
+      "images": 5069,
+      "expected": 73549,
+      "matched": 59253,
+      "missed": 14296,
+      "accuracy": 0.8056261811853322
+    },
+    {
+      "scene": "city street",
+      "images": 12288,
+      "expected": 252212,
+      "matched": 206274,
+      "missed": 45938,
+      "accuracy": 0.8178595784498754
+    },
+    {
+      "scene": "undefined",
+      "images": 98,
+      "expected": 1076,
+      "matched": 899,
+      "missed": 177,
+      "accuracy": 0.8355018587360595
+    },
+    {
+      "scene": "residential",
+      "images": 2382,
+      "expected": 38980,
+      "matched": 32855,
+      "missed": 6125,
+      "accuracy": 0.8428681375064135
+    },
+    {
+      "scene": "tunnel",
+      "images": 49,
+      "expected": 325,
+      "matched": 275,
+      "missed": 50,
+      "accuracy": 0.8461538461538461
+    },
+    {
+      "scene": "parking lot",
+      "images": 108,
+      "expected": 1518,
+      "matched": 1311,
+      "missed": 207,
+      "accuracy": 0.8636363636363636
+    },
+    {
+      "scene": "gas stations",
+      "images": 6,
+      "expected": 68,
+      "matched": 59,
+      "missed": 9,
+      "accuracy": 0.8676470588235294
+    }
+  ],
+  "by_timeofday": [
+    {
+      "timeofday": "dawn/dusk",
+      "images": 1476,
+      "expected": 28884,
+      "matched": 23507,
+      "missed": 5377,
+      "accuracy": 0.8138415731893089
+    },
+    {
+      "timeofday": "daytime",
+      "images": 10446,
+      "expected": 206835,
+      "matched": 168870,
+      "missed": 37965,
+      "accuracy": 0.8164478932482413
+    },
+    {
+      "timeofday": "night",
+      "images": 8036,
+      "expected": 131707,
+      "matched": 108296,
+      "missed": 23411,
+      "accuracy": 0.8222493868966722
+    },
+    {
+      "timeofday": "undefined",
+      "images": 42,
+      "expected": 302,
+      "matched": 253,
+      "missed": 49,
+      "accuracy": 0.8377483443708609
+    }
+  ],
+  "by_object_count": [
+    {
+      "object_count_range": "1-5",
+      "images": 1148,
+      "expected": 5171,
+      "matched": 4557,
+      "missed": 614,
+      "accuracy": 0.8812608779733127
+    },
+    {
+      "object_count_range": "6-10",
+      "images": 3378,
+      "expected": 27420,
+      "matched": 23674,
+      "missed": 3746,
+      "accuracy": 0.8633843909555069
+    },
+    {
+      "object_count_range": "11-20",
+      "images": 8189,
+      "expected": 127057,
+      "matched": 107093,
+      "missed": 19964,
+      "accuracy": 0.8428736708721283
+    },
+    {
+      "object_count_range": "21-50",
+      "images": 7177,
+      "expected": 201968,
+      "matched": 161364,
+      "missed": 40604,
+      "accuracy": 0.7989582508120098
+    },
+    {
+      "object_count_range": "50+",
+      "images": 108,
+      "expected": 6112,
+      "matched": 4238,
+      "missed": 1874,
+      "accuracy": 0.6933900523560209
+    }
+  ],
+  "by_size": [
+    {
+      "size_bucket": "small",
+      "expected": 321502,
+      "matched": 256051,
+      "missed": 65451,
+      "accuracy": 0.7964211731186742
+    },
+    {
+      "size_bucket": "medium",
+      "expected": 33242,
+      "matched": 32218,
+      "missed": 1024,
+      "accuracy": 0.969195595932856
+    },
+    {
+      "size_bucket": "large",
+      "expected": 12984,
+      "matched": 12657,
+      "missed": 327,
+      "accuracy": 0.9748151571164511
+    }
+  ],
+  "by_class_and_size": [
+    {
+      "class_id": 0,
+      "class_name": "person",
+      "size_bucket": "small",
+      "expected": 23271,
+      "matched": 18171,
+      "accuracy": 0.7808431094495295
+    },
+    {
+      "class_id": 0,
+      "class_name": "person",
+      "size_bucket": "medium",
+      "expected": 1250,
+      "matched": 1187,
+      "accuracy": 0.9496
+    },
+    {
+      "class_id": 0,
+      "class_name": "person",
+      "size_bucket": "large",
+      "expected": 129,
+      "matched": 118,
+      "accuracy": 0.9147286821705426
+    },
+    {
+      "class_id": 1,
+      "class_name": "rider",
+      "size_bucket": "small",
+      "expected": 1109,
+      "matched": 606,
+      "accuracy": 0.5464382326420198
+    },
+    {
+      "class_id": 1,
+      "class_name": "rider",
+      "size_bucket": "medium",
+      "expected": 160,
+      "matched": 151,
+      "accuracy": 0.94375
+    },
+    {
+      "class_id": 1,
+      "class_name": "rider",
+      "size_bucket": "large",
+      "expected": 25,
+      "matched": 22,
+      "accuracy": 0.88
+    },
+    {
+      "class_id": 2,
+      "class_name": "car",
+      "size_bucket": "small",
+      "expected": 167001,
+      "matched": 135843,
+      "accuracy": 0.8134262669085814
+    },
+    {
+      "class_id": 2,
+      "class_name": "car",
+      "size_bucket": "medium",
+      "expected": 27324,
+      "matched": 26920,
+      "accuracy": 0.985214463475333
+    },
+    {
+      "class_id": 2,
+      "class_name": "car",
+      "size_bucket": "large",
+      "expected": 10825,
+      "matched": 10745,
+      "accuracy": 0.9926096997690531
+    },
+    {
+      "class_id": 3,
+      "class_name": "truck",
+      "size_bucket": "small",
+      "expected": 5226,
+      "matched": 3476,
+      "accuracy": 0.6651358591657099
+    },
+    {
+      "class_id": 3,
+      "class_name": "truck",
+      "size_bucket": "medium",
+      "expected": 2145,
+      "matched": 1858,
+      "accuracy": 0.8662004662004662
+    },
+    {
+      "class_id": 3,
+      "class_name": "truck",
+      "size_bucket": "large",
+      "expected": 1333,
+      "matched": 1186,
+      "accuracy": 0.8897224306076519
+    },
+    {
+      "class_id": 4,
+      "class_name": "bus",
+      "size_bucket": "small",
+      "expected": 1898,
+      "matched": 1017,
+      "accuracy": 0.535827186512118
+    },
+    {
+      "class_id": 4,
+      "class_name": "bus",
+      "size_bucket": "medium",
+      "expected": 759,
+      "matched": 622,
+      "accuracy": 0.8194993412384717
+    },
+    {
+      "class_id": 4,
+      "class_name": "bus",
+      "size_bucket": "large",
+      "expected": 560,
+      "matched": 498,
+      "accuracy": 0.8892857142857142
+    },
+    {
+      "class_id": 5,
+      "class_name": "train",
+      "size_bucket": "small",
+      "expected": 12,
+      "matched": 1,
+      "accuracy": 0.08333333333333333
+    },
+    {
+      "class_id": 5,
+      "class_name": "train",
+      "size_bucket": "medium",
+      "expected": 10,
+      "matched": 3,
+      "accuracy": 0.3
+    },
+    {
+      "class_id": 5,
+      "class_name": "train",
+      "size_bucket": "large",
+      "expected": 6,
+      "matched": 2,
+      "accuracy": 0.3333333333333333
+    },
+    {
+      "class_id": 6,
+      "class_name": "motor",
+      "size_bucket": "small",
+      "expected": 669,
+      "matched": 402,
+      "accuracy": 0.600896860986547
+    },
+    {
+      "class_id": 6,
+      "class_name": "motor",
+      "size_bucket": "medium",
+      "expected": 151,
+      "matched": 134,
+      "accuracy": 0.8874172185430463
+    },
+    {
+      "class_id": 6,
+      "class_name": "motor",
+      "size_bucket": "large",
+      "expected": 21,
+      "matched": 20,
+      "accuracy": 0.9523809523809523
+    },
+    {
+      "class_id": 7,
+      "class_name": "bike",
+      "size_bucket": "small",
+      "expected": 1719,
+      "matched": 1154,
+      "accuracy": 0.6713205351948808
+    },
+    {
+      "class_id": 7,
+      "class_name": "bike",
+      "size_bucket": "medium",
+      "expected": 251,
+      "matched": 225,
+      "accuracy": 0.896414342629482
+    },
+    {
+      "class_id": 7,
+      "class_name": "bike",
+      "size_bucket": "large",
+      "expected": 28,
+      "matched": 23,
+      "accuracy": 0.8214285714285714
+    },
+    {
+      "class_id": 8,
+      "class_name": "traffic light",
+      "size_bucket": "small",
+      "expected": 52806,
+      "matched": 39412,
+      "accuracy": 0.746354580918835
+    },
+    {
+      "class_id": 8,
+      "class_name": "traffic light",
+      "size_bucket": "medium",
+      "expected": 31,
+      "matched": 17,
+      "accuracy": 0.5483870967741935
+    },
+    {
+      "class_id": 8,
+      "class_name": "traffic light",
+      "size_bucket": "large",
+      "expected": 3,
+      "matched": 0,
+      "accuracy": 0.0
+    },
+    {
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "size_bucket": "small",
+      "expected": 67791,
+      "matched": 55969,
+      "accuracy": 0.8256110693159859
+    },
+    {
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "size_bucket": "medium",
+      "expected": 1161,
+      "matched": 1101,
+      "accuracy": 0.9483204134366925
+    },
+    {
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "size_bucket": "large",
+      "expected": 54,
+      "matched": 43,
+      "accuracy": 0.7962962962962963
+    }
+  ],
+  "by_class_and_weather": [
+    {
+      "weather": "clear",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 36254,
+      "matched": 30193,
+      "accuracy": 0.832818447619573
+    },
+    {
+      "weather": "clear",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 106935,
+      "matched": 90110,
+      "accuracy": 0.8426614298405574
+    },
+    {
+      "weather": "clear",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 8808,
+      "matched": 6824,
+      "accuracy": 0.7747502270663034
+    },
+    {
+      "weather": "clear",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 3830,
+      "matched": 2880,
+      "accuracy": 0.7519582245430809
+    },
+    {
+      "weather": "clear",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 434,
+      "matched": 286,
+      "accuracy": 0.6589861751152074
+    },
+    {
+      "weather": "clear",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 569,
+      "matched": 341,
+      "accuracy": 0.5992970123022847
+    },
+    {
+      "weather": "clear",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 28189,
+      "matched": 20988,
+      "accuracy": 0.7445457447940687
+    },
+    {
+      "weather": "clear",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 1343,
+      "matched": 897,
+      "accuracy": 0.6679076693968726
+    },
+    {
+      "weather": "clear",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 774,
+      "matched": 540,
+      "accuracy": 0.6976744186046512
+    },
+    {
+      "weather": "clear",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 12,
+      "matched": 4,
+      "accuracy": 0.3333333333333333
+    },
+    {
+      "weather": "rainy",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 3904,
+      "matched": 2950,
+      "accuracy": 0.7556352459016393
+    },
+    {
+      "weather": "rainy",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 4128,
+      "matched": 3460,
+      "accuracy": 0.8381782945736435
+    },
+    {
+      "weather": "rainy",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 12277,
+      "matched": 10557,
+      "accuracy": 0.8599006271890527
+    },
+    {
+      "weather": "rainy",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 1193,
+      "matched": 934,
+      "accuracy": 0.7829002514668902
+    },
+    {
+      "weather": "rainy",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 502,
+      "matched": 374,
+      "accuracy": 0.7450199203187251
+    },
+    {
+      "weather": "rainy",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 70,
+      "matched": 54,
+      "accuracy": 0.7714285714285715
+    },
+    {
+      "weather": "rainy",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 194,
+      "matched": 133,
+      "accuracy": 0.6855670103092784
+    },
+    {
+      "weather": "rainy",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 30,
+      "matched": 21,
+      "accuracy": 0.7
+    },
+    {
+      "weather": "rainy",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 47,
+      "matched": 32,
+      "accuracy": 0.6808510638297872
+    },
+    {
+      "weather": "rainy",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 3,
+      "matched": 0,
+      "accuracy": 0.0
+    },
+    {
+      "weather": "snowy",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 5225,
+      "matched": 4384,
+      "accuracy": 0.8390430622009569
+    },
+    {
+      "weather": "snowy",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 14704,
+      "matched": 12645,
+      "accuracy": 0.8599700761697497
+    },
+    {
+      "weather": "snowy",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 707,
+      "matched": 534,
+      "accuracy": 0.7553041018387553
+    },
+    {
+      "weather": "snowy",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 277,
+      "matched": 178,
+      "accuracy": 0.6425992779783394
+    },
+    {
+      "weather": "snowy",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 4900,
+      "matched": 3686,
+      "accuracy": 0.7522448979591837
+    },
+    {
+      "weather": "snowy",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 2195,
+      "matched": 1791,
+      "accuracy": 0.8159453302961276
+    },
+    {
+      "weather": "snowy",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 51,
+      "matched": 28,
+      "accuracy": 0.5490196078431373
+    },
+    {
+      "weather": "snowy",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 22,
+      "matched": 9,
+      "accuracy": 0.4090909090909091
+    },
+    {
+      "weather": "snowy",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 156,
+      "matched": 106,
+      "accuracy": 0.6794871794871795
+    },
+    {
+      "weather": "snowy",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 3101,
+      "matched": 2275,
+      "accuracy": 0.7336343115124153
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 5324,
+      "matched": 4343,
+      "accuracy": 0.8157400450788881
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 1652,
+      "matched": 1298,
+      "accuracy": 0.7857142857142857
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 16494,
+      "matched": 13894,
+      "accuracy": 0.8423669213047169
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 319,
+      "matched": 203,
+      "accuracy": 0.6363636363636364
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 139,
+      "matched": 69,
+      "accuracy": 0.49640287769784175
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 183,
+      "matched": 105,
+      "accuracy": 0.5737704918032787
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 833,
+      "matched": 617,
+      "accuracy": 0.7406962785114045
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 65,
+      "matched": 47,
+      "accuracy": 0.7230769230769231
+    },
+    {
+      "weather": "partly cloudy",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 2,
+      "matched": 0,
+      "accuracy": 0.0
+    },
+    {
+      "weather": "undefined",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 8103,
+      "matched": 6684,
+      "accuracy": 0.8248796741947427
+    },
+    {
+      "weather": "undefined",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 5923,
+      "matched": 4471,
+      "accuracy": 0.7548539591423266
+    },
+    {
+      "weather": "undefined",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 23799,
+      "matched": 20476,
+      "accuracy": 0.860372284549771
+    },
+    {
+      "weather": "undefined",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 6574,
+      "matched": 5322,
+      "accuracy": 0.8095527836933374
+    },
+    {
+      "weather": "undefined",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 149,
+      "matched": 98,
+      "accuracy": 0.6577181208053692
+    },
+    {
+      "weather": "undefined",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 233,
+      "matched": 151,
+      "accuracy": 0.648068669527897
+    },
+    {
+      "weather": "undefined",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 515,
+      "matched": 334,
+      "accuracy": 0.6485436893203883
+    },
+    {
+      "weather": "undefined",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 482,
+      "matched": 371,
+      "accuracy": 0.7697095435684648
+    },
+    {
+      "weather": "undefined",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 1214,
+      "matched": 918,
+      "accuracy": 0.7561779242174629
+    },
+    {
+      "weather": "undefined",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 1,
+      "matched": 0,
+      "accuracy": 0.0
+    },
+    {
+      "weather": "overcast",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 9870,
+      "matched": 7964,
+      "accuracy": 0.8068895643363728
+    },
+    {
+      "weather": "overcast",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 4176,
+      "matched": 3270,
+      "accuracy": 0.7830459770114943
+    },
+    {
+      "weather": "overcast",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 30641,
+      "matched": 25561,
+      "accuracy": 0.8342090662837375
+    },
+    {
+      "weather": "overcast",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 1605,
+      "matched": 1187,
+      "accuracy": 0.7395638629283489
+    },
+    {
+      "weather": "overcast",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 566,
+      "matched": 390,
+      "accuracy": 0.6890459363957597
+    },
+    {
+      "weather": "overcast",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 6752,
+      "matched": 5007,
+      "accuracy": 0.7415580568720379
+    },
+    {
+      "weather": "overcast",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 253,
+      "matched": 156,
+      "accuracy": 0.616600790513834
+    },
+    {
+      "weather": "overcast",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 140,
+      "matched": 94,
+      "accuracy": 0.6714285714285714
+    },
+    {
+      "weather": "overcast",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 332,
+      "matched": 225,
+      "accuracy": 0.677710843373494
+    },
+    {
+      "weather": "overcast",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 9,
+      "matched": 1,
+      "accuracy": 0.1111111111111111
+    },
+    {
+      "weather": "foggy",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 71,
+      "matched": 52,
+      "accuracy": 0.7323943661971831
+    },
+    {
+      "weather": "foggy",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 300,
+      "matched": 265,
+      "accuracy": 0.8833333333333333
+    },
+    {
+      "weather": "foggy",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 52,
+      "matched": 37,
+      "accuracy": 0.7115384615384616
+    },
+    {
+      "weather": "foggy",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 13,
+      "matched": 10,
+      "accuracy": 0.7692307692307693
+    },
+    {
+      "weather": "foggy",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 102,
+      "matched": 85,
+      "accuracy": 0.8333333333333334
+    },
+    {
+      "weather": "foggy",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 3,
+      "matched": 2,
+      "accuracy": 0.6666666666666666
+    },
+    {
+      "weather": "foggy",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    },
+    {
+      "weather": "foggy",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 2,
+      "matched": 2,
+      "accuracy": 1.0
+    },
+    {
+      "weather": "foggy",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    }
+  ],
+  "by_class_and_scene": [
+    {
+      "scene": "city street",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 45310,
+      "matched": 37244,
+      "accuracy": 0.8219819024497903
+    },
+    {
+      "scene": "city street",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 128256,
+      "matched": 109180,
+      "accuracy": 0.8512662175648703
+    },
+    {
+      "scene": "city street",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 22559,
+      "matched": 17989,
+      "accuracy": 0.7974200984086174
+    },
+    {
+      "scene": "city street",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 5860,
+      "matched": 4471,
+      "accuracy": 0.7629692832764505
+    },
+    {
+      "scene": "city street",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 627,
+      "matched": 404,
+      "accuracy": 0.6443381180223285
+    },
+    {
+      "scene": "city street",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 1090,
+      "matched": 682,
+      "accuracy": 0.6256880733944954
+    },
+    {
+      "scene": "city street",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 44316,
+      "matched": 33376,
+      "accuracy": 0.7531365646719018
+    },
+    {
+      "scene": "city street",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 2405,
+      "matched": 1671,
+      "accuracy": 0.6948024948024948
+    },
+    {
+      "scene": "city street",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 1770,
+      "matched": 1253,
+      "accuracy": 0.707909604519774
+    },
+    {
+      "scene": "city street",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 19,
+      "matched": 4,
+      "accuracy": 0.21052631578947367
+    },
+    {
+      "scene": "highway",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 45877,
+      "matched": 37516,
+      "accuracy": 0.8177518146347843
+    },
+    {
+      "scene": "highway",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 2190,
+      "matched": 1588,
+      "accuracy": 0.7251141552511415
+    },
+    {
+      "scene": "highway",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 18145,
+      "matched": 15184,
+      "accuracy": 0.8368145494626619
+    },
+    {
+      "scene": "highway",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 5518,
+      "matched": 3844,
+      "accuracy": 0.6966292134831461
+    },
+    {
+      "scene": "highway",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 906,
+      "matched": 596,
+      "accuracy": 0.6578366445916115
+    },
+    {
+      "scene": "highway",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 621,
+      "matched": 360,
+      "accuracy": 0.5797101449275363
+    },
+    {
+      "scene": "highway",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 118,
+      "matched": 57,
+      "accuracy": 0.4830508474576271
+    },
+    {
+      "scene": "highway",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 85,
+      "matched": 57,
+      "accuracy": 0.6705882352941176
+    },
+    {
+      "scene": "highway",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 80,
+      "matched": 49,
+      "accuracy": 0.6125
+    },
+    {
+      "scene": "highway",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 9,
+      "matched": 2,
+      "accuracy": 0.2222222222222222
+    },
+    {
+      "scene": "residential",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 28682,
+      "matched": 24777,
+      "accuracy": 0.8638518931734188
+    },
+    {
+      "scene": "residential",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 5237,
+      "matched": 4425,
+      "accuracy": 0.8449493985105977
+    },
+    {
+      "scene": "residential",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 2829,
+      "matched": 2074,
+      "accuracy": 0.7331212442559208
+    },
+    {
+      "scene": "residential",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 593,
+      "matched": 420,
+      "accuracy": 0.7082630691399663
+    },
+    {
+      "scene": "residential",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 1117,
+      "matched": 842,
+      "accuracy": 0.7538048343777977
+    },
+    {
+      "scene": "residential",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 177,
+      "matched": 97,
+      "accuracy": 0.5480225988700564
+    },
+    {
+      "scene": "residential",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 85,
+      "matched": 39,
+      "accuracy": 0.4588235294117647
+    },
+    {
+      "scene": "residential",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 114,
+      "matched": 83,
+      "accuracy": 0.7280701754385965
+    },
+    {
+      "scene": "residential",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 146,
+      "matched": 98,
+      "accuracy": 0.6712328767123288
+    },
+    {
+      "scene": "undefined",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 773,
+      "matched": 652,
+      "accuracy": 0.8434670116429496
+    },
+    {
+      "scene": "undefined",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 134,
+      "matched": 113,
+      "accuracy": 0.8432835820895522
+    },
+    {
+      "scene": "undefined",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 21,
+      "matched": 15,
+      "accuracy": 0.7142857142857143
+    },
+    {
+      "scene": "undefined",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 2,
+      "matched": 1,
+      "accuracy": 0.5
+    },
+    {
+      "scene": "undefined",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 121,
+      "matched": 99,
+      "accuracy": 0.8181818181818182
+    },
+    {
+      "scene": "undefined",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 18,
+      "matched": 14,
+      "accuracy": 0.7777777777777778
+    },
+    {
+      "scene": "undefined",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 6,
+      "matched": 4,
+      "accuracy": 0.6666666666666666
+    },
+    {
+      "scene": "undefined",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 1269,
+      "matched": 1117,
+      "accuracy": 0.880220646178093
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 31,
+      "matched": 28,
+      "accuracy": 0.9032258064516129
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 137,
+      "matched": 111,
+      "accuracy": 0.8102189781021898
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 37,
+      "matched": 26,
+      "accuracy": 0.7027027027027027
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 9,
+      "matched": 5,
+      "accuracy": 0.5555555555555556
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 26,
+      "matched": 16,
+      "accuracy": 0.6153846153846154
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 8,
+      "matched": 7,
+      "accuracy": 0.875
+    },
+    {
+      "scene": "parking lot",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 247,
+      "matched": 221,
+      "accuracy": 0.8947368421052632
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 12,
+      "matched": 9,
+      "accuracy": 0.75
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 40,
+      "matched": 33,
+      "accuracy": 0.825
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 21,
+      "matched": 8,
+      "accuracy": 0.38095238095238093
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 2,
+      "matched": 2,
+      "accuracy": 1.0
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    },
+    {
+      "scene": "tunnel",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 1,
+      "matched": 0,
+      "accuracy": 0.0
+    },
+    {
+      "scene": "gas stations",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 12,
+      "matched": 9,
+      "accuracy": 0.75
+    },
+    {
+      "scene": "gas stations",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 46,
+      "matched": 45,
+      "accuracy": 0.9782608695652174
+    },
+    {
+      "scene": "gas stations",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 3,
+      "matched": 3,
+      "accuracy": 1.0
+    },
+    {
+      "scene": "gas stations",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 1,
+      "matched": 1,
+      "accuracy": 1.0
+    },
+    {
+      "scene": "gas stations",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 4,
+      "matched": 0,
+      "accuracy": 0.0
+    },
+    {
+      "scene": "gas stations",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 2,
+      "matched": 1,
+      "accuracy": 0.5
+    }
+  ],
+  "by_class_and_timeofday": [
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 5227,
+      "matched": 4235,
+      "accuracy": 0.8102161851922709
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 16421,
+      "matched": 13881,
+      "accuracy": 0.8453200170513367
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 1945,
+      "matched": 1567,
+      "accuracy": 0.8056555269922879
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 718,
+      "matched": 530,
+      "accuracy": 0.7381615598885793
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 64,
+      "matched": 43,
+      "accuracy": 0.671875
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 105,
+      "matched": 63,
+      "accuracy": 0.6
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 3939,
+      "matched": 2877,
+      "accuracy": 0.7303884234577304
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 335,
+      "matched": 225,
+      "accuracy": 0.6716417910447762
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 126,
+      "matched": 84,
+      "accuracy": 0.6666666666666666
+    },
+    {
+      "timeofday": "dawn/dusk",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 4,
+      "matched": 2,
+      "accuracy": 0.5
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 115367,
+      "matched": 97488,
+      "accuracy": 0.8450250071510917
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 6304,
+      "matched": 4722,
+      "accuracy": 0.7490482233502538
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 37705,
+      "matched": 30800,
+      "accuracy": 0.8168677894178491
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 24617,
+      "matched": 18440,
+      "accuracy": 0.7490758418978755
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 17544,
+      "matched": 13890,
+      "accuracy": 0.7917236662106704
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 2281,
+      "matched": 1526,
+      "accuracy": 0.6690048224462954
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 1464,
+      "matched": 1019,
+      "accuracy": 0.6960382513661202
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 939,
+      "matched": 564,
+      "accuracy": 0.6006389776357828
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 596,
+      "matched": 418,
+      "accuracy": 0.7013422818791947
+    },
+    {
+      "timeofday": "daytime",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 18,
+      "matched": 3,
+      "accuracy": 0.16666666666666666
+    },
+    {
+      "timeofday": "night",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 73145,
+      "matched": 61947,
+      "accuracy": 0.846906828901497
+    },
+    {
+      "timeofday": "night",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 24258,
+      "matched": 18101,
+      "accuracy": 0.74618682496496
+    },
+    {
+      "timeofday": "night",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 26042,
+      "matched": 22050,
+      "accuracy": 0.8467091621227248
+    },
+    {
+      "timeofday": "night",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 1670,
+      "matched": 1259,
+      "accuracy": 0.7538922155688623
+    },
+    {
+      "timeofday": "night",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 599,
+      "matched": 384,
+      "accuracy": 0.6410684474123539
+    },
+    {
+      "timeofday": "night",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 5158,
+      "matched": 4017,
+      "accuracy": 0.7787902287708414
+    },
+    {
+      "timeofday": "night",
+      "class_id": 7,
+      "class_name": "bike",
+      "expected": 408,
+      "matched": 299,
+      "accuracy": 0.7328431372549019
+    },
+    {
+      "timeofday": "night",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 248,
+      "matched": 150,
+      "accuracy": 0.6048387096774194
+    },
+    {
+      "timeofday": "night",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 173,
+      "matched": 88,
+      "accuracy": 0.5086705202312138
+    },
+    {
+      "timeofday": "night",
+      "class_id": 5,
+      "class_name": "train",
+      "expected": 6,
+      "matched": 1,
+      "accuracy": 0.16666666666666666
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 2,
+      "class_name": "car",
+      "expected": 217,
+      "matched": 192,
+      "accuracy": 0.8847926267281107
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 3,
+      "class_name": "truck",
+      "expected": 12,
+      "matched": 9,
+      "accuracy": 0.75
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "expected": 32,
+      "matched": 28,
+      "accuracy": 0.875
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 8,
+      "class_name": "traffic light",
+      "expected": 26,
+      "matched": 11,
+      "accuracy": 0.4230769230769231
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 4,
+      "class_name": "bus",
+      "expected": 2,
+      "matched": 2,
+      "accuracy": 1.0
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 1,
+      "class_name": "rider",
+      "expected": 2,
+      "matched": 2,
+      "accuracy": 1.0
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 6,
+      "class_name": "motor",
+      "expected": 8,
+      "matched": 7,
+      "accuracy": 0.875
+    },
+    {
+      "timeofday": "undefined",
+      "class_id": 0,
+      "class_name": "person",
+      "expected": 3,
+      "matched": 2,
+      "accuracy": 0.6666666666666666
+    }
+  ],
+  "train_test_comparison": [
+    {
+      "class_id": 0,
+      "class_name": "person",
+      "train_count": 56706,
+      "test_count": 24650,
+      "test_accuracy": 0.7894523326572008,
+      "train_test_ratio": 2.300446247464503
+    },
+    {
+      "class_id": 1,
+      "class_name": "rider",
+      "train_count": 4346,
+      "test_count": 1294,
+      "test_accuracy": 0.6020092735703245,
+      "train_test_ratio": 3.358578052550232
+    },
+    {
+      "class_id": 2,
+      "class_name": "car",
+      "train_count": 327554,
+      "test_count": 205150,
+      "test_accuracy": 0.844781866926639,
+      "train_test_ratio": 1.596656105288813
+    },
+    {
+      "class_id": 3,
+      "class_name": "truck",
+      "train_count": 16965,
+      "test_count": 8704,
+      "test_accuracy": 0.7490808823529411,
+      "train_test_ratio": 1.9491038602941178
+    },
+    {
+      "class_id": 4,
+      "class_name": "bus",
+      "train_count": 8059,
+      "test_count": 3217,
+      "test_accuracy": 0.6639726453217283,
+      "train_test_ratio": 2.5051290021759405
+    },
+    {
+      "class_id": 5,
+      "class_name": "train",
+      "train_count": 136,
+      "test_count": 28,
+      "test_accuracy": 0.21428571428571427,
+      "train_test_ratio": 4.857142857142857
+    },
+    {
+      "class_id": 6,
+      "class_name": "motor",
+      "train_count": 3002,
+      "test_count": 841,
+      "test_accuracy": 0.6599286563614745,
+      "train_test_ratio": 3.5695600475624256
+    },
+    {
+      "class_id": 7,
+      "class_name": "bike",
+      "train_count": 6784,
+      "test_count": 1998,
+      "test_accuracy": 0.6976976976976977,
+      "train_test_ratio": 3.3953953953953953
+    },
+    {
+      "class_id": 8,
+      "class_name": "traffic light",
+      "train_count": 91122,
+      "test_count": 52840,
+      "test_accuracy": 0.7461960635881908,
+      "train_test_ratio": 1.7244890234670704
+    },
+    {
+      "class_id": 9,
+      "class_name": "traffic sign",
+      "train_count": 114390,
+      "test_count": 69006,
+      "test_accuracy": 0.8276381763904588,
+      "train_test_ratio": 1.6576819407008085
+    }
+  ],
+  "charts": {
+    "accuracy_by_weather": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_weather.png",
+    "accuracy_by_scene": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_scene.png",
+    "accuracy_by_timeofday": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_timeofday.png",
+    "accuracy_by_object_count": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_object_count.png",
+    "accuracy_by_size": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_size.png",
+    "accuracy_by_class_and_size": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_class_and_size.png",
+    "accuracy_by_class_and_weather": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_class_and_weather.png",
+    "accuracy_by_class_and_scene": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_class_and_scene.png",
+    "accuracy_by_class_and_timeofday": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_by_class_and_timeofday.png",
+    "accuracy_vs_training_exposure": "/computer_vision_yolo/yolo_test/analysis_runs/yolov8m_finetuned_1_testing_20251127_210146/performance_analysis/accuracy_vs_training_exposure.png"
+  }
+}
