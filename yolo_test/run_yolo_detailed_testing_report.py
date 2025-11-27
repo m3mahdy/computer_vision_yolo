@@ -1174,7 +1174,7 @@ def generate_failure_analysis(
             ax.set_xlabel("Object Size (bbox area relative to image)", fontweight="bold", fontsize=20)
             ax.set_ylabel("Accuracy", fontweight="bold", fontsize=20)
             ax.set_title("Prediction Accuracy by Object Size\n(small: <1%, medium: 1-5%, large: >5% of image)", 
-                        fontweight="bold", fontsize=22)
+                        fontweight="bold", fontsize=18, pad=20)
             ax.set_ylim(0, 1)
             for i, row in df_size_valid.iterrows():
                 ax.text(i, row["accuracy"] + 0.02, 

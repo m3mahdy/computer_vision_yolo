@@ -1,0 +1,60 @@
+scene,class_id,class_name,expected,matched,accuracy
+city street,9,traffic sign,45310,37244,0.8219819024497903
+city street,2,car,128256,109180,0.8512662175648703
+city street,0,person,22559,17989,0.7974200984086174
+city street,3,truck,5860,4471,0.7629692832764505
+city street,6,motor,627,404,0.6443381180223285
+city street,1,rider,1090,682,0.6256880733944954
+city street,8,traffic light,44316,33376,0.7531365646719018
+city street,4,bus,2405,1671,0.6948024948024948
+city street,7,bike,1770,1253,0.707909604519774
+city street,5,train,19,4,0.21052631578947367
+highway,2,car,45877,37516,0.8177518146347843
+highway,3,truck,2190,1588,0.7251141552511415
+highway,9,traffic sign,18145,15184,0.8368145494626619
+highway,8,traffic light,5518,3844,0.6966292134831461
+highway,0,person,906,596,0.6578366445916115
+highway,4,bus,621,360,0.5797101449275363
+highway,1,rider,118,57,0.4830508474576271
+highway,6,motor,85,57,0.6705882352941176
+highway,7,bike,80,49,0.6125
+highway,5,train,9,2,0.2222222222222222
+residential,2,car,28682,24777,0.8638518931734188
+residential,9,traffic sign,5237,4425,0.8449493985105977
+residential,8,traffic light,2829,2074,0.7331212442559208
+residential,3,truck,593,420,0.7082630691399663
+residential,0,person,1117,842,0.7538048343777977
+residential,4,bus,177,97,0.5480225988700564
+residential,1,rider,85,39,0.4588235294117647
+residential,6,motor,114,83,0.7280701754385965
+residential,7,bike,146,98,0.6712328767123288
+undefined,2,car,773,652,0.8434670116429496
+undefined,9,traffic sign,134,113,0.8432835820895522
+undefined,3,truck,21,15,0.7142857142857143
+undefined,4,bus,2,1,0.5
+undefined,8,traffic light,121,99,0.8181818181818182
+undefined,0,person,18,14,0.7777777777777778
+undefined,6,motor,6,4,0.6666666666666666
+undefined,7,bike,1,1,1.0
+parking lot,2,car,1269,1117,0.880220646178093
+parking lot,8,traffic light,31,28,0.9032258064516129
+parking lot,9,traffic sign,137,111,0.8102189781021898
+parking lot,0,person,37,26,0.7027027027027027
+parking lot,4,bus,9,5,0.5555555555555556
+parking lot,3,truck,26,16,0.6153846153846154
+parking lot,6,motor,8,7,0.875
+parking lot,7,bike,1,1,1.0
+tunnel,2,car,247,221,0.8947368421052632
+tunnel,3,truck,12,9,0.75
+tunnel,9,traffic sign,40,33,0.825
+tunnel,8,traffic light,21,8,0.38095238095238093
+tunnel,4,bus,2,2,1.0
+tunnel,1,rider,1,1,1.0
+tunnel,6,motor,1,1,1.0
+tunnel,0,person,1,0,0.0
+gas stations,0,person,12,9,0.75
+gas stations,2,car,46,45,0.9782608695652174
+gas stations,9,traffic sign,3,3,1.0
+gas stations,4,bus,1,1,1.0
+gas stations,8,traffic light,4,0,0.0
+gas stations,3,truck,2,1,0.5

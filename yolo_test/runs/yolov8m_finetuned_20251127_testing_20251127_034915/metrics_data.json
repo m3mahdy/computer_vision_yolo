@@ -3,7 +3,7 @@
     "model_name": "yolov8m_finetuned_20251127",
     "run_name": "yolov8m_finetuned_20251127_testing_20251127_034915",
     "wb_run_name": "yolov8m_finetuned_20251127_bdd100k_yolo_limited_test_20251127_034915",
-    "timestamp": "2025-11-27T03:52:37.835719",
+    "timestamp": "2025-11-27T15:56:55.703825",
     "dataset": "bdd100k_yolo_limited",
     "data_split": "test",
     "images_processed": 20000,
@@ -11,9 +11,9 @@
     "num_classes": 10
   },
   "model_info": {
-    "parameters": 25862110,
-    "model_size_mb": 49.609575271606445,
-    "flops_gflops": 79.0946304
+    "parameters": 0,
+    "model_size_mb": 0.0,
+    "flops_gflops": 0.0
   },
   "performance": {
     "total_time_seconds": 124.67168593406677,
