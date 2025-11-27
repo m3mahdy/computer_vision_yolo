@@ -795,8 +795,8 @@ def plot_core_and_map_metrics(
     # Overall detection outcomes
     fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
     bars = ax.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
-    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=28)
-    ax.set_ylabel("Count", fontweight="bold", fontsize=22)
+    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=24)
+    ax.set_ylabel("Count", fontweight="bold", fontsize=18)
     ax.grid(axis="y", alpha=0.3)
     ax.tick_params(axis="both", labelsize=16)
     for bar in bars:
@@ -909,7 +909,7 @@ def plot_confusion_matrix(
                     j, i, str(int(value)),
                     ha='center', va='center',
                     color=text_color,
-                    fontsize=14,
+                    fontsize=10,
                     fontweight='bold'
                 )
 
@@ -924,9 +924,9 @@ def plot_confusion_matrix(
     ax.set_yticks(np.arange(num_classes))
     ax.set_xticklabels(class_labels, fontsize=14, fontweight='bold', rotation=45, ha='right')
     ax.set_yticklabels(class_labels, fontsize=14, fontweight='bold')
-    ax.set_xlabel('Predicted Class', fontweight='bold', fontsize=18)
-    ax.set_ylabel('True Class', fontweight='bold', fontsize=18)
-    ax.set_title(f'Confusion Matrix ({model_name} validation)', fontweight='bold', fontsize=22)
+    ax.set_xlabel('Predicted Class', fontweight='bold', fontsize=16)
+    ax.set_ylabel('True Class', fontweight='bold', fontsize=16)
+    ax.set_title(f'Confusion Matrix ({model_name} validation)', fontweight='bold', fontsize=18)
     ax.grid(False)
 
     # Center the confusion matrix in the figure
@@ -939,6 +939,30 @@ def plot_confusion_matrix(
     print("(Green = Correct Predictions, Red = Incorrect Predictions, White = No Predictions)")
     
     return confusion_matrix_path
+
+
+def copy_normalized_confusion_matrix(
+    test_run_dir: Path,
+) -> Path | None:
+    """Copy the normalized confusion matrix from YOLO validation output.
+    
+    YOLO's validation automatically generates a normalized confusion matrix.
+    This function copies it to the main test directory for inclusion in the report.
+    
+    Returns:
+        Path to the copied normalized confusion matrix, or None if not found.
+    """
+    yolo_val_dir = test_run_dir / "yolo_validation"
+    normalized_cm_source = yolo_val_dir / "confusion_matrix_normalized.png"
+    
+    if normalized_cm_source.exists():
+        normalized_cm_dest = test_run_dir / "confusion_matrix_normalized.png"
+        shutil.copy2(normalized_cm_source, normalized_cm_dest)
+        print(f"✓ Copied normalized confusion matrix from YOLO validation")
+        return normalized_cm_dest
+    else:
+        print(f"⚠️  Normalized confusion matrix not found in YOLO validation output")
+        return None
 
 
 def generate_failure_analysis(
@@ -1654,6 +1678,21 @@ def generate_pdf_and_json_report(
 
     story.append(Paragraph(f"Correct Predictions (Diagonal Sum): {int(np.trace(confusion_matrix))}", styles["Normal"]))
     story.append(Paragraph(f"Total Matched Predictions: {int(confusion_matrix.sum())}", styles["Normal"]))
+    
+    # Add normalized confusion matrix from YOLO validation
+    story.append(Spacer(1, 20))
+    story.append(Paragraph("Confusion Matrix (Normalized)", heading_style))
+    normalized_confusion_matrix_img_path = test_run_dir / "confusion_matrix_normalized.png"
+    if normalized_confusion_matrix_img_path.exists():
+        with PILImage.open(normalized_confusion_matrix_img_path) as img:
+            w, h = img.size
+            ratio = h / w
+            pdf_w = 6.5 * inch
+            pdf_h = pdf_w * ratio
+            story.append(Image(str(normalized_confusion_matrix_img_path), width=pdf_w, height=pdf_h))
+        story.append(Paragraph("Note: Values are normalized by the number of ground truth instances per class.", styles["Normal"]))
+    else:
+        story.append(Paragraph("Normalized confusion matrix not available.", styles["Normal"]))
 
 
     story.append(PageBreak())
@@ -2148,6 +2187,11 @@ def run_validation_pipeline(
         test_run_dir=test_run_dir,
     )
 
+    # Copy normalized confusion matrix from YOLO validation output
+    normalized_confusion_matrix_path = copy_normalized_confusion_matrix(
+        test_run_dir=test_run_dir,
+    )
+
     # Generate sample comparison images
     print("\n" + "=" * 80)
     print("GENERATING SAMPLE COMPARISONS")
@@ -2220,6 +2264,7 @@ def run_validation_pipeline(
         "figures": {
             **figure_paths,
             "confusion_matrix": confusion_matrix_path,
+            "confusion_matrix_normalized": normalized_confusion_matrix_path,
         },
         "comparison_data": comparison_data,
         "failure_analysis_summary": failure_analysis_summary,
