@@ -338,7 +338,7 @@ def visualize_predictions(
         
         ax = axes[idx] if num_images > 1 else axes
         ax.imshow(img_rgb)
-        ax.set_title(f"{img_path.name}", fontsize=10)
+        ax.set_title(f"{img_path.name}", fontsize=14)
         ax.axis('off')
     
     for idx in range(num_images, len(axes) if isinstance(axes, np.ndarray) else 1):
@@ -698,14 +698,14 @@ def plot_core_and_map_metrics(
     precision_sorted = df_metrics.sort_values("Precision")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
-    ax.set_title("Precision by Class", fontweight="bold", fontsize=22)
-    ax.set_xlabel("Precision", fontweight="bold", fontsize=18)
+    ax.set_title("Precision by Class", fontweight="bold", fontsize=28)
+    ax.set_xlabel("Precision", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     # Add value labels
     for idx, (bar, value) in enumerate(zip(bars, precision_sorted["Precision"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
     plt.tight_layout()
     fig_paths["precision_by_class"] = test_run_dir / "precision_by_class.png"
     plt.savefig(fig_paths["precision_by_class"], dpi=300, bbox_inches="tight")
@@ -715,14 +715,14 @@ def plot_core_and_map_metrics(
     recall_sorted = df_metrics.sort_values("Recall")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
-    ax.set_title("Recall by Class", fontweight="bold", fontsize=22)
-    ax.set_xlabel("Recall", fontweight="bold", fontsize=18)
+    ax.set_title("Recall by Class", fontweight="bold", fontsize=28)
+    ax.set_xlabel("Recall", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     # Add value labels
     for idx, (bar, value) in enumerate(zip(bars, recall_sorted["Recall"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
     plt.tight_layout()
     fig_paths["recall_by_class"] = test_run_dir / "recall_by_class.png"
     plt.savefig(fig_paths["recall_by_class"], dpi=300, bbox_inches="tight")
@@ -732,14 +732,14 @@ def plot_core_and_map_metrics(
     f1_sorted = df_metrics.sort_values("F1-Score")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
-    ax.set_title("F1-Score by Class", fontweight="bold", fontsize=22)
-    ax.set_xlabel("F1-Score", fontweight="bold", fontsize=18)
+    ax.set_title("F1-Score by Class", fontweight="bold", fontsize=28)
+    ax.set_xlabel("F1-Score", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     # Add value labels
     for idx, (bar, value) in enumerate(zip(bars, f1_sorted["F1-Score"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
     plt.tight_layout()
     fig_paths["f1_by_class"] = test_run_dir / "f1_by_class.png"
     plt.savefig(fig_paths["f1_by_class"], dpi=300, bbox_inches="tight")
@@ -748,10 +748,10 @@ def plot_core_and_map_metrics(
     # Overall detection outcomes
     fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
     bars = ax.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
-    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=22)
-    ax.set_ylabel("Count", fontweight="bold", fontsize=18)
+    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=28)
+    ax.set_ylabel("Count", fontweight="bold", fontsize=22)
     ax.grid(axis="y", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     for bar in bars:
         height = bar.get_height()
         ax.text(
@@ -771,14 +771,14 @@ def plot_core_and_map_metrics(
     map_sorted = df_metrics.sort_values("mAP@0.5")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
-    ax.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=22)
-    ax.set_xlabel("mAP@0.5", fontweight="bold", fontsize=18)
+    ax.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=28)
+    ax.set_xlabel("mAP@0.5", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     # Add value labels
     for idx, (bar, value) in enumerate(zip(bars, map_sorted["mAP@0.5"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
     plt.tight_layout()
     fig_paths["map50_by_class"] = test_run_dir / "map50_by_class.png"
     plt.savefig(fig_paths["map50_by_class"], dpi=300, bbox_inches="tight")
@@ -795,10 +795,10 @@ def plot_core_and_map_metrics(
     fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
     bars = ax.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
     ax.set_ylim(0, 1)
-    ax.set_title("Overall Metrics", fontweight="bold", fontsize=22)
-    ax.set_ylabel("Score", fontweight="bold", fontsize=18)
+    ax.set_title("Overall Metrics", fontweight="bold", fontsize=28)
+    ax.set_ylabel("Score", fontweight="bold", fontsize=22)
     ax.grid(axis="y", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     for idx, (bar, value) in enumerate(zip(bars, overall_plot_values.values())):
         ax.text(
             idx,
@@ -806,7 +806,7 @@ def plot_core_and_map_metrics(
             f"{value:.3f}",
             ha="center",
             fontweight="bold",
-            fontsize=14,
+            fontsize=18,
         )
     plt.tight_layout()
     fig_paths["overall_metrics"] = test_run_dir / "overall_metrics.png"
@@ -862,7 +862,7 @@ def plot_confusion_matrix(
                     j, i, str(int(value)),
                     ha='center', va='center',
                     color=text_color,
-                    fontsize=9,
+                    fontsize=14,
                     fontweight='bold'
                 )
 
@@ -875,11 +875,11 @@ def plot_confusion_matrix(
     class_labels = [class_names[i] for i in range(num_classes)]
     ax.set_xticks(np.arange(num_classes))
     ax.set_yticks(np.arange(num_classes))
-    ax.set_xticklabels(class_labels, fontsize=8, fontweight='bold', rotation=45, ha='right')
-    ax.set_yticklabels(class_labels, fontsize=8, fontweight='bold')
-    ax.set_xlabel('Predicted Class', fontweight='bold', fontsize=11)
-    ax.set_ylabel('True Class', fontweight='bold', fontsize=11)
-    ax.set_title(f'Confusion Matrix ({model_name} validation)', fontweight='bold', fontsize=13)
+    ax.set_xticklabels(class_labels, fontsize=14, fontweight='bold', rotation=45, ha='right')
+    ax.set_yticklabels(class_labels, fontsize=14, fontweight='bold')
+    ax.set_xlabel('Predicted Class', fontweight='bold', fontsize=18)
+    ax.set_ylabel('True Class', fontweight='bold', fontsize=18)
+    ax.set_title(f'Confusion Matrix ({model_name} validation)', fontweight='bold', fontsize=22)
     ax.grid(False)
 
     # Center the confusion matrix in the figure
@@ -926,7 +926,7 @@ def generate_pdf_and_json_report(
     title_style = ParagraphStyle(
         "CustomTitle",
         parent=styles["Heading1"],
-        fontSize=24,
+        fontSize=30,
         textColor=colors.HexColor("#2c3e50"),
         spaceAfter=30,
         alignment=TA_CENTER,
@@ -934,7 +934,7 @@ def generate_pdf_and_json_report(
     heading_style = ParagraphStyle(
         "CustomHeading",
         parent=styles["Heading2"],
-        fontSize=16,
+        fontSize=20,
         textColor=colors.HexColor("#34495e"),
         spaceAfter=12,
         spaceBefore=20,

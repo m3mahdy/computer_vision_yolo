@@ -1,0 +1,28 @@
+{
+  "model_name": "yolov8m",
+  "finetuned_name": "yolov8m_finetuned_20251127",
+  "model_path": "/content/Drive/MyDrive/ksu_yolo_2025/computer_vision_yolo/models/yolov8m_finetuned_20251127/yolov8m_finetuned_20251127.pt",
+  "dataset": "/computer_vision_yolo/bdd100k_yolo_limited",
+  "training_date": "2025-11-27T03:49:15.906279",
+  "training_run": "yolov8m_train_20251126_231411",
+  "training_run_path": "/content/Drive/MyDrive/ksu_yolo_2025/computer_vision_yolo/tune_train/training/yolov8m_train_20251126_231411",
+  "optimization": {
+    "tuning_run": null,
+    "tuning_run_path": "None"
+  },
+  "best_hyperparameters": {},
+  "training_params": {
+    "epochs": 100,
+    "batch_size": 96,
+    "image_size": 640,
+    "patience": 10,
+    "save_period": 1
+  },
+  "final_metrics": {
+    "map50": 0.5563613362160877,
+    "map50_95": 0.3203898907944431,
+    "precision": 0.6334704309236476,
+    "recall": 0.5234218960076481
+  },
+  "improvement_vs_tuning": 0
+}

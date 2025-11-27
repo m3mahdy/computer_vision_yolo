@@ -23,6 +23,9 @@ import glob
 from ultralytics import YOLO
 import wandb
 
+# Import the detailed analysis module
+from detailed_analysis import collect_per_image_predictions, analyze_failures_by_attributes
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -236,7 +239,7 @@ def generate_sample_comparisons(
         ax1.set_title(
             f"Ground Truth ({gt_count} objects)",
             fontweight="bold",
-            fontsize=16,
+            fontsize=22,
         )
         
         ax1.axis('off')
@@ -245,7 +248,7 @@ def generate_sample_comparisons(
         ax2.set_title(
             f"Prediction ({pred_count} objects)",
             fontweight="bold",
-            fontsize=16,
+            fontsize=22,
         )
 
         ax2.axis('off')
@@ -321,7 +324,7 @@ def visualize_predictions(
         img = cv2.imread(str(img_path))
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
-        results = model.predict(img_path, conf=conf_threshold, verbose=False)
+        results = model.predict(img_path, conf=conf_threshold, verbose=True)
         
         for result in results:
             boxes = result.boxes
@@ -339,7 +342,7 @@ def visualize_predictions(
         
         ax = axes[idx] if num_images > 1 else axes
         ax.imshow(img_rgb)
-        ax.set_title(f"{img_path.name}", fontsize=10)
+        ax.set_title(f"{img_path.name}", fontsize=14)
         ax.axis('off')
     
     for idx in range(num_images, len(axes) if isinstance(axes, np.ndarray) else 1):
@@ -498,215 +501,73 @@ def run_yolo_validation(
     device: str,
     iou_threshold: float,
     test_run_dir: Path,
+    labels_dir: Path,
     batch_size: int = 16,
 ) -> Tuple[Any, float]:
     """
-    Run per-image prediction using `model.predict` and compute simple detection metrics
-    (TP/FP/FN per class) by IoU matching. This replaces the coarse `model.val` call
-    so we can attach per-image metadata and produce richer failure analysis.
+    HYBRID APPROACH:
+    1. Run official model.val() for accurate metrics (matches standard YOLO validation)
+    2. Run model.predict() per-image to collect detailed per-image results for attribute analysis
+    
+    This ensures metrics match official YOLO while still enabling rich failure analysis.
 
-    Returns a lightweight object similar to ultralytics' validation result containing
-    basic timing and box-level aggregated metrics, plus the total_time.
+    Returns the official validation result object and total_time.
     """
-    print("\nRunning per-image YOLO evaluation (model.predict)...")
-
-    images_dir = None
-    # try to infer images dir from data_yaml
-    try:
-        with open(data_yaml_path, 'r') as f:
-            data_cfg = yaml.safe_load(f)
-        images_dir = Path(data_cfg.get('path', '.')) / 'images' / used_split
-    except Exception:
-        images_dir = None
-
-    # collect image files
-    if images_dir and images_dir.exists():
-        image_files = sorted(list(images_dir.glob('*.jpg')) + list(images_dir.glob('*.png')))
-    else:
-        # fallback: try to find images under current working dir
-        image_files = []
-
+    print("\n" + "=" * 80)
+    print("PHASE 1: OFFICIAL YOLO VALIDATION (for accurate metrics)")
+    print("=" * 80)
+    
+    # Run official YOLO validation - this gives us the correct confusion matrix and metrics
     start_time = time.time()
+    validation_results = model.val(
+        data=str(data_yaml_path),
+        split=used_split,
+        batch=batch_size,
+        device=device,
+        iou=iou_threshold,
+        conf=0.001,  # Very low conf threshold for evaluation (standard for mAP calculation)
+                     # This captures ALL predictions; confidence filtering happens during metric computation
+                     # Default for val() is 0.001, NOT 0.25 (which is for predict() inference)
+        save_json=False,
+        save_hybrid=False,
+        plots=True,
+        verbose=True,
+        project=str(test_run_dir),
+        name="yolo_validation",
+    )
+    val_time = time.time() - start_time
+    
+    print(f"\n✓ Official validation complete in {val_time:.2f}s")
+    print(f"✓ Confusion matrix shape: {validation_results.confusion_matrix.matrix.shape if hasattr(validation_results, 'confusion_matrix') else 'N/A'}")
+    
+    # Extract official metrics
+    if hasattr(validation_results, 'box'):
+        box_metrics = validation_results.box
+        print(f"\n✓ Official Metrics:")
+        print(f"  - Precision: {box_metrics.mp:.4f}")
+        print(f"  - Recall: {box_metrics.mr:.4f}")
+        print(f"  - mAP@0.5: {box_metrics.map50:.4f}")
+        print(f"  - mAP@0.5:0.95: {box_metrics.map:.4f}")
+    
+    print("\n" + "=" * 80)
+    print("PHASE 2: PER-IMAGE PREDICTION (for attribute-based analysis)")
+    print("=" * 80)
+    
+    # Collect per-image predictions using the detailed_analysis module
+    per_image_records, predict_time = collect_per_image_predictions(
+        model=model,
+        data_yaml_path=data_yaml_path,
+        used_split=used_split,
+        device=device,
+        iou_threshold=iou_threshold,
+        labels_dir=labels_dir,
+    )
 
-    # Helper functions
-    def iou_xyxy(box_a, box_b):
-        # boxes are [x1,y1,x2,y2]
-        xa1, ya1, xa2, ya2 = box_a
-        xb1, yb1, xb2, yb2 = box_b
-        xi1 = max(xa1, xb1)
-        yi1 = max(ya1, yb1)
-        xi2 = min(xa2, xb2)
-        yi2 = min(ya2, yb2)
-        inter_w = max(0, xi2 - xi1)
-        inter_h = max(0, yi2 - yi1)
-        inter_area = inter_w * inter_h
-        area_a = max(0, xa2 - xa1) * max(0, ya2 - ya1)
-        area_b = max(0, xb2 - xb1) * max(0, yb2 - yb1)
-        union = area_a + area_b - inter_area
-        return inter_area / union if union > 0 else 0.0
-
-    # Initialize accumulators
-    per_image_records = []
-    num_images = len(image_files)
-    total_infer_time = 0.0
-
-    # prepare confusion matrix counts
-    num_classes = len(model.names)
-    confusion = np.zeros((num_classes, num_classes), dtype=int)
-    class_tp = {i: 0 for i in range(num_classes)}
-    class_fp = {i: 0 for i in range(num_classes)}
-    class_fn = {i: 0 for i in range(num_classes)}
-
-    for img_path in tqdm(image_files, desc="Evaluating images", unit="img"):
-        t0 = time.time()
-        results = model.predict(str(img_path), device=device, verbose=False)
-        infer_time = time.time() - t0
-        total_infer_time += infer_time
-
-        # take first result
-        res = results[0]
-
-        # predicted boxes: list of [x1,y1,x2,y2], cls, conf
-        preds = []
-        for b in res.boxes:
-            try:
-                xyxy = b.xyxy[0].cpu().numpy().tolist()
-                conf = float(b.conf[0].cpu().numpy())
-                cls = int(b.cls[0].cpu().numpy())
-            except Exception:
-                # fallback for non-tensor boxes
-                xyxy = b.xyxy[0].tolist()
-                conf = float(b.conf[0])
-                cls = int(b.cls[0])
-            preds.append({'xyxy': xyxy, 'conf': conf, 'cls': cls})
-
-        # load GT boxes
-        label_path = img_path.with_suffix('.txt')
-        gts = []
-        if label_path.exists():
-            h_w = PILImage.open(img_path).size  # (w,h)
-            w_img, h_img = h_w
-            with open(label_path, 'r') as lf:
-                for line in lf:
-                    parts = line.strip().split()
-                    if len(parts) >= 5:
-                        cls = int(parts[0])
-                        x_center, y_center, bw, bh = map(float, parts[1:5])
-                        x1 = (x_center - bw / 2) * w_img
-                        y1 = (y_center - bh / 2) * h_img
-                        x2 = (x_center + bw / 2) * w_img
-                        y2 = (y_center + bh / 2) * h_img
-                        gts.append({'xyxy': [x1, y1, x2, y2], 'cls': cls})
-
-        # match preds to gts by IoU and class
-        matched_gt = set()
-        matched_pred = set()
-
-        for pi, p in enumerate(preds):
-            best_iou = 0.0
-            best_gi = None
-            for gi, g in enumerate(gts):
-                if gi in matched_gt:
-                    continue
-                if p['cls'] != g['cls']:
-                    continue
-                iou_val = iou_xyxy(p['xyxy'], g['xyxy'])
-                if iou_val > best_iou:
-                    best_iou = iou_val
-                    best_gi = gi
-
-            if best_gi is not None and best_iou >= iou_threshold:
-                # true positive
-                class_tp[p['cls']] += 1
-                matched_gt.add(best_gi)
-                matched_pred.add(pi)
-                # mark confusion: correctly predicted class
-                confusion[gts[best_gi]['cls'], p['cls']] += 1
-            else:
-                # false positive (either no gt or class mismatch)
-                class_fp[p['cls']] += 1
-                # if there is a closest gt but different class, count confusion
-                best_iou_any = 0.0
-                best_gi_any = None
-                for gi, g in enumerate(gts):
-                    if gi in matched_gt:
-                        continue
-                    iou_val = iou_xyxy(p['xyxy'], g['xyxy'])
-                    if iou_val > best_iou_any:
-                        best_iou_any = iou_val
-                        best_gi_any = gi
-                if best_gi_any is not None and best_iou_any >= iou_threshold:
-                    # predicted wrong class for an existing GT
-                    confusion[gts[best_gi_any]['cls'], p['cls']] += 1
-
-        # any unmatched gts are false negatives
-        for gi, g in enumerate(gts):
-            if gi not in matched_gt:
-                class_fn[g['cls']] += 1
-
-        per_image_records.append({
-            'image': str(img_path),
-            'n_preds': len(preds),
-            'n_gts': len(gts),
-            'preds': preds,
-            'gts': gts,
-            'infer_time': infer_time,
-        })
-
-    end_time = time.time()
-    total_time = end_time - start_time
-
-    # compute per-class metrics
-    yolo_class_metrics = {}
-    p_list = []
-    r_list = []
-    for cls_idx in range(num_classes):
-        tp = class_tp.get(cls_idx, 0)
-        fp = class_fp.get(cls_idx, 0)
-        fn = class_fn.get(cls_idx, 0)
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        ap50 = precision  # approximate AP@0.5 with precision (not exact)
-        yolo_class_metrics[cls_idx] = {'precision': precision, 'recall': recall, 'ap50': ap50}
-        p_list.append(precision)
-        r_list.append(recall)
-
-    # aggregate metrics
-    mean_precision = float(np.mean(p_list)) if p_list else 0.0
-    mean_recall = float(np.mean(r_list)) if r_list else 0.0
-    map50 = float(np.mean([v['ap50'] for v in yolo_class_metrics.values()])) if yolo_class_metrics else 0.0
-
-    # prepare lightweight result object
-    class BoxStats:
-        pass
-
-    box = BoxStats()
-    box.mp = mean_precision
-    box.mr = mean_recall
-    box.map50 = map50
-    box.map = map50
-    box.ap_class_index = list(yolo_class_metrics.keys())
-    box.p = [yolo_class_metrics[i]['precision'] for i in sorted(yolo_class_metrics.keys())]
-    box.r = [yolo_class_metrics[i]['recall'] for i in sorted(yolo_class_metrics.keys())]
-    box.ap50 = [yolo_class_metrics[i]['ap50'] for i in sorted(yolo_class_metrics.keys())]
-    box.ap = box.ap50
-
-    speed = {'preprocess': 0.0, 'inference': total_infer_time / max(1, num_images) * 1000.0, 'loss': 0.0, 'postprocess': 0.0}
-
-    class ValRes:
-        pass
-
-    results_obj = ValRes()
-    results_obj.speed = speed
-    results_obj.box = box
-    results_obj.fitness = (box.mp + box.mr + box.map50) / 3.0
-    results_obj.confusion_matrix = type('C', (), {'matrix': confusion})
-    # attach per-image records for deeper analysis
-    results_obj.per_image = per_image_records
-
-    print(f"\n✓ Per-image evaluation completed: {len(per_image_records)} images, total_time={total_time:.2f}s")
-
-    return results_obj, total_time
+    # Attach per_image_records to official validation_results for attribute-based analysis
+    validation_results.per_image_records = per_image_records
+    
+    print(f"\n✓ Hybrid validation complete. Official validation time: {val_time:.2f}s")
+    return validation_results, val_time
 
 
 def extract_core_metrics(
@@ -741,9 +602,6 @@ def extract_core_metrics(
     }
 
     yolo_class_metrics: Dict[str, Dict[str, float]] = {}
-    class_tp: Dict[int, int] = {}
-    class_fp: Dict[int, int] = {}
-    class_fn: Dict[int, int] = {}
 
     if hasattr(validation_results.box, "ap_class_index") and len(validation_results.box.ap_class_index) > 0:
         for i, class_idx in enumerate(validation_results.box.ap_class_index):
@@ -759,33 +617,34 @@ def extract_core_metrics(
                 "ap50": ap50,
                 "ap50_95": ap50_95,
             }
-            class_tp[idx] = 0
-            class_fp[idx] = 0
-            class_fn[idx] = 0
 
-    # Build confusion-matrix-derived TP/FP/FN using the YOLO confusion matrix
-    # when available, but store both the original matrix and aggregated counts
-    # so that downstream visualizations use this script's definition.
+    # Get confusion matrix from validation results
     if hasattr(validation_results, "confusion_matrix") and hasattr(validation_results.confusion_matrix, "matrix"):
-        confusion_matrix_raw = validation_results.confusion_matrix.matrix
+        confusion_matrix = np.array(validation_results.confusion_matrix.matrix, copy=True)
     else:
-        confusion_matrix_raw = np.zeros((num_classes, num_classes), dtype=int)
+        confusion_matrix = np.zeros((num_classes, num_classes), dtype=int)
 
-    confusion_matrix = np.array(confusion_matrix_raw, copy=True)
-
-    for i in range(num_classes):
-        tp_val = 0
-        fp_val = 0
-        fn_val = 0
-        if i < confusion_matrix.shape[0] and i < confusion_matrix.shape[1]:
-            tp_val = int(confusion_matrix[i, i])
-        if i < confusion_matrix.shape[1]:
-            fp_val = int(confusion_matrix[:, i].sum() - confusion_matrix[i, i])
-        if i < confusion_matrix.shape[0]:
-            fn_val = int(confusion_matrix[i, :].sum() - confusion_matrix[i, i])
-        class_tp[i] = tp_val
-        class_fp[i] = fp_val
-        class_fn[i] = fn_val
+    # Use TP/FP/FN counts that were calculated correctly during prediction matching
+    class_tp: Dict[int, int] = {}
+    class_fp: Dict[int, int] = {}
+    class_fn: Dict[int, int] = {}
+    
+    if hasattr(validation_results, "class_tp"):
+        class_tp = validation_results.class_tp
+        class_fp = validation_results.class_fp
+        class_fn = validation_results.class_fn
+        print(f"\n✓ Using accurate TP/FP/FN counts from validation:")
+        print(f"  Total TP: {sum(class_tp.values())}, FP: {sum(class_fp.values())}, FN: {sum(class_fn.values())}")
+    else:
+        # Fallback: calculate from confusion matrix (less accurate)
+        print(f"\n⚠️  Warning: Using fallback TP/FP/FN calculation from confusion matrix")
+        for i in range(num_classes):
+            tp_val = int(confusion_matrix[i, i]) if i < confusion_matrix.shape[0] and i < confusion_matrix.shape[1] else 0
+            fp_val = int(confusion_matrix[:, i].sum() - confusion_matrix[i, i]) if i < confusion_matrix.shape[1] else 0
+            fn_val = int(confusion_matrix[i, :].sum() - confusion_matrix[i, i]) if i < confusion_matrix.shape[0] else 0
+            class_tp[i] = tp_val
+            class_fp[i] = fp_val
+            class_fn[i] = fn_val
 
     print("\n" + "=" * 80)
     print("OFFICIAL YOLO VALIDATION RESULTS")
@@ -886,14 +745,14 @@ def plot_core_and_map_metrics(
     precision_sorted = df_metrics.sort_values("Precision")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
-    ax.set_title("Precision by Class", fontweight="bold", fontsize=22)
-    ax.set_xlabel("Precision", fontweight="bold", fontsize=18)
+    ax.set_title("Precision by Class", fontweight="bold", fontsize=28)
+    ax.set_xlabel("Precision", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     # Add value labels
     for idx, (bar, value) in enumerate(zip(bars, precision_sorted["Precision"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
     plt.tight_layout()
     fig_paths["precision_by_class"] = test_run_dir / "precision_by_class.png"
     plt.savefig(fig_paths["precision_by_class"], dpi=300, bbox_inches="tight")
@@ -903,14 +762,14 @@ def plot_core_and_map_metrics(
     recall_sorted = df_metrics.sort_values("Recall")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
-    ax.set_title("Recall by Class", fontweight="bold", fontsize=22)
-    ax.set_xlabel("Recall", fontweight="bold", fontsize=18)
+    ax.set_title("Recall by Class", fontweight="bold", fontsize=28)
+    ax.set_xlabel("Recall", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     # Add value labels
     for idx, (bar, value) in enumerate(zip(bars, recall_sorted["Recall"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
     plt.tight_layout()
     fig_paths["recall_by_class"] = test_run_dir / "recall_by_class.png"
     plt.savefig(fig_paths["recall_by_class"], dpi=300, bbox_inches="tight")
@@ -920,14 +779,14 @@ def plot_core_and_map_metrics(
     f1_sorted = df_metrics.sort_values("F1-Score")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
-    ax.set_title("F1-Score by Class", fontweight="bold", fontsize=22)
-    ax.set_xlabel("F1-Score", fontweight="bold", fontsize=18)
+    ax.set_title("F1-Score by Class", fontweight="bold", fontsize=28)
+    ax.set_xlabel("F1-Score", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     # Add value labels
     for idx, (bar, value) in enumerate(zip(bars, f1_sorted["F1-Score"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
     plt.tight_layout()
     fig_paths["f1_by_class"] = test_run_dir / "f1_by_class.png"
     plt.savefig(fig_paths["f1_by_class"], dpi=300, bbox_inches="tight")
@@ -936,10 +795,10 @@ def plot_core_and_map_metrics(
     # Overall detection outcomes
     fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
     bars = ax.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
-    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=22)
-    ax.set_ylabel("Count", fontweight="bold", fontsize=18)
+    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=28)
+    ax.set_ylabel("Count", fontweight="bold", fontsize=22)
     ax.grid(axis="y", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     for bar in bars:
         height = bar.get_height()
         ax.text(
@@ -948,7 +807,7 @@ def plot_core_and_map_metrics(
             f"{int(height)}",
             ha="center",
             fontweight="bold",
-            fontsize=14,
+            fontsize=18,
         )
     plt.tight_layout()
     fig_paths["detection_outcomes"] = test_run_dir / "detection_outcomes.png"
@@ -983,10 +842,10 @@ def plot_core_and_map_metrics(
     fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
     bars = ax.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
     ax.set_ylim(0, 1)
-    ax.set_title("Overall Metrics", fontweight="bold", fontsize=22)
-    ax.set_ylabel("Score", fontweight="bold", fontsize=18)
+    ax.set_title("Overall Metrics", fontweight="bold", fontsize=28)
+    ax.set_ylabel("Score", fontweight="bold", fontsize=22)
     ax.grid(axis="y", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     for idx, (bar, value) in enumerate(zip(bars, overall_plot_values.values())):
         ax.text(
             idx,
@@ -994,7 +853,7 @@ def plot_core_and_map_metrics(
             f"{value:.3f}",
             ha="center",
             fontweight="bold",
-            fontsize=14,
+            fontsize=18,
         )
     plt.tight_layout()
     fig_paths["overall_metrics"] = test_run_dir / "overall_metrics.png"
@@ -1050,7 +909,7 @@ def plot_confusion_matrix(
                     j, i, str(int(value)),
                     ha='center', va='center',
                     color=text_color,
-                    fontsize=9,
+                    fontsize=14,
                     fontweight='bold'
                 )
 
@@ -1063,11 +922,11 @@ def plot_confusion_matrix(
     class_labels = [class_names[i] for i in range(num_classes)]
     ax.set_xticks(np.arange(num_classes))
     ax.set_yticks(np.arange(num_classes))
-    ax.set_xticklabels(class_labels, fontsize=8, fontweight='bold', rotation=45, ha='right')
-    ax.set_yticklabels(class_labels, fontsize=8, fontweight='bold')
-    ax.set_xlabel('Predicted Class', fontweight='bold', fontsize=11)
-    ax.set_ylabel('True Class', fontweight='bold', fontsize=11)
-    ax.set_title(f'Confusion Matrix ({model_name} validation)', fontweight='bold', fontsize=13)
+    ax.set_xticklabels(class_labels, fontsize=14, fontweight='bold', rotation=45, ha='right')
+    ax.set_yticklabels(class_labels, fontsize=14, fontweight='bold')
+    ax.set_xlabel('Predicted Class', fontweight='bold', fontsize=18)
+    ax.set_ylabel('True Class', fontweight='bold', fontsize=18)
+    ax.set_title(f'Confusion Matrix ({model_name} validation)', fontweight='bold', fontsize=22)
     ax.grid(False)
 
     # Center the confusion matrix in the figure
@@ -1141,7 +1000,45 @@ def generate_failure_analysis(
         print(f"⚠️  Training metadata not found: {train_metadata_path}")
         train_class_counts = {}
 
-    # Helper IoU function
+    # Call detailed analysis module to compute accuracy by attributes
+    # Prepare training metadata for analysis
+    train_metadata_dict = {
+        "class_counts": train_class_counts,
+        "total_images": train_total_images,
+    }
+    
+    analysis_summary, analysis_dfs, _ = analyze_failures_by_attributes(
+        per_image_records=per_image_records,
+        image_attributes=image_attributes,
+        class_names=class_names,
+        class_name_to_id=class_name_to_id,
+        iou_threshold=iou_threshold,
+        test_run_dir=test_run_dir,
+        train_metadata_data=train_metadata_dict,
+    )
+    
+    # Extract DataFrames from analysis results with backward-compatible names
+    df_images = analysis_dfs["per_image"]
+    attr_summary_dfs = {
+        "weather": analysis_dfs["weather"],
+        "scene": analysis_dfs["scene"],
+        "timeofday": analysis_dfs["timeofday"],
+    }
+    df_count_buckets = analysis_dfs["object_count"]
+    df_size_buckets = analysis_dfs["object_size"]
+    df_class_size = analysis_dfs["class_size"]
+    df_class_weather = analysis_dfs["class_weather"]
+    df_class_scene = analysis_dfs["class_scene"]
+    df_class_time = analysis_dfs["class_time"]
+    
+    # df_train_test will be created later after computing test_class_stats
+    df_train_test = pd.DataFrame()
+    
+    print(f"\n✓ Attribute-based analysis complete")
+    print(f"  Total images analyzed: {analysis_summary['total_images']}")
+    print(f"  Overall accuracy: {analysis_summary['overall_accuracy']:.2%}")
+    
+    # Helper IoU function (needed for subsequent test_class_stats computation)
     def iou_xyxy(a, b):
         xa1, ya1, xa2, ya2 = a
         xb1, yb1, xb2, yb2 = b
@@ -1157,292 +1054,10 @@ def generate_failure_analysis(
         union = area_a + area_b - inter_area
         return inter_area / union if union > 0 else 0.0
 
-    # Accumulators
-    per_image_summary_rows = []
-    
-    # Aggregate by attributes
-    attr_aggregates = {
-        "weather": {},
-        "scene": {},
-        "timeofday": {}
-    }
-    
-    # Per-class accuracy within each attribute
-    class_attr_stats = {
-        "weather": {},
-        "scene": {},
-        "timeofday": {}
-    }
-    
-    # Object count buckets
-    count_buckets = ["1-5", "6-10", "11-20", "21-50", "50+"]
-    count_bucket_stats = {bucket: {"expected": 0, "matched": 0, "images": 0} for bucket in count_buckets}
-    
-    # Object size buckets (based on bbox area ratio)
-    size_buckets = ["small", "medium", "large"]
-    size_bucket_stats = {bucket: {"expected": 0, "matched": 0} for bucket in size_buckets}
-    
-    # Per-class stats for each size bucket
-    class_size_stats = {}
-    for cid in class_names.keys():
-        class_size_stats[cid] = {bucket: {"expected": 0, "matched": 0} for bucket in size_buckets}
-    
-    def get_count_bucket(count: int) -> str:
-        if count <= 5:
-            return "1-5"
-        elif count <= 10:
-            return "6-10"
-        elif count <= 20:
-            return "11-20"
-        elif count <= 50:
-            return "21-50"
-        else:
-            return "50+"
-    
-    def get_size_bucket(area_ratio: float) -> str:
-        """Categorize object by bbox area ratio to image size"""
-        if area_ratio < 0.01:  # < 1% of image
-            return "small"
-        elif area_ratio < 0.05:  # 1-5% of image
-            return "medium"
-        else:  # > 5% of image
-            return "large"
-
-    # Process each image
-    for rec in per_image_records:
-        img_path = Path(rec["image"])
-        basename = img_path.stem
-        attrs = image_attributes.get(basename, {}) if image_attributes else {}
-
-        weather = attrs.get("weather", "unknown")
-        scene = attrs.get("scene", "unknown")
-        timeofday = attrs.get("timeofday", "unknown")
-        
-        # New metadata structure uses 'class_counts' and 'object_count'
-        expected_objects_map = attrs.get("class_counts", {}) if isinstance(attrs.get("class_counts", {}), dict) else {}
-        expected_total = int(attrs.get("object_count", rec.get("n_gts", 0)))
-
-        # Match predictions to ground truth
-        preds = rec.get("preds", [])
-        gts = rec.get("gts", [])
-
-        matched_gt = set()
-        matched_per_class = {}
-        
-        # Get image dimensions for size calculation
-        try:
-            img = PILImage.open(img_path)
-            img_width, img_height = img.size
-            img_area = img_width * img_height
-        except Exception:
-            img_area = 1280 * 720  # fallback
-        
-        # Match predictions to ground truth and track sizes
-        for pi, p in enumerate(preds):
-            best_iou = 0.0
-            best_gi = None
-            for gi, g in enumerate(gts):
-                if gi in matched_gt:
-                    continue
-                if p["cls"] != g["cls"]:
-                    continue
-                iou_val = iou_xyxy(p["xyxy"], g["xyxy"])
-                if iou_val > best_iou:
-                    best_iou = iou_val
-                    best_gi = gi
-            if best_gi is not None and best_iou >= iou_threshold:
-                matched_gt.add(best_gi)
-                cls_id = p["cls"]
-                matched_per_class[cls_id] = matched_per_class.get(cls_id, 0) + 1
-                
-                # Calculate size for matched object
-                gt_box = gts[best_gi]["xyxy"]
-                box_area = max(0, gt_box[2] - gt_box[0]) * max(0, gt_box[3] - gt_box[1])
-                area_ratio = box_area / img_area if img_area > 0 else 0
-                size_bucket = get_size_bucket(area_ratio)
-                size_bucket_stats[size_bucket]["matched"] += 1
-                class_size_stats[cls_id][size_bucket]["matched"] += 1
-        
-        # Track all ground truth objects by size (including unmatched)
-        for gi, g in enumerate(gts):
-            gt_box = g["xyxy"]
-            box_area = max(0, gt_box[2] - gt_box[0]) * max(0, gt_box[3] - gt_box[1])
-            area_ratio = box_area / img_area if img_area > 0 else 0
-            size_bucket = get_size_bucket(area_ratio)
-            size_bucket_stats[size_bucket]["expected"] += 1
-            cls_id = g["cls"]
-            class_size_stats[cls_id][size_bucket]["expected"] += 1
-
-        matched_count = len(matched_gt)
-        accuracy = (matched_count / expected_total) if expected_total > 0 else None
-
-        # Store per-image data
-        per_image_summary_rows.append({
-            "image": basename,
-            "weather": weather,
-            "scene": scene,
-            "timeofday": timeofday,
-            "expected_total": expected_total,
-            "matched": matched_count,
-            "missed": expected_total - matched_count,
-            "accuracy": accuracy,
-        })
-
-        # Aggregate by attributes
-        for attr_key, attr_val in [("weather", weather), ("scene", scene), ("timeofday", timeofday)]:
-            if attr_val not in attr_aggregates[attr_key]:
-                attr_aggregates[attr_key][attr_val] = {"expected": 0, "matched": 0, "images": 0}
-            attr_aggregates[attr_key][attr_val]["expected"] += expected_total
-            attr_aggregates[attr_key][attr_val]["matched"] += matched_count
-            attr_aggregates[attr_key][attr_val]["images"] += 1
-            
-            # Per-class stats within this attribute
-            if attr_val not in class_attr_stats[attr_key]:
-                class_attr_stats[attr_key][attr_val] = {}
-            
-            for cname, cnt in expected_objects_map.items():
-                cid = class_name_to_id.get(cname)
-                if cid is None:
-                    continue
-                if cid not in class_attr_stats[attr_key][attr_val]:
-                    class_attr_stats[attr_key][attr_val][cid] = {"expected": 0, "matched": 0}
-                class_attr_stats[attr_key][attr_val][cid]["expected"] += int(cnt)
-                class_attr_stats[attr_key][attr_val][cid]["matched"] += matched_per_class.get(cid, 0)
-
-        # Aggregate by object count bucket
-        bucket = get_count_bucket(expected_total)
-        count_bucket_stats[bucket]["expected"] += expected_total
-        count_bucket_stats[bucket]["matched"] += matched_count
-        count_bucket_stats[bucket]["images"] += 1
-
-    # Create DataFrames
-    df_images = pd.DataFrame(per_image_summary_rows)
-    
-    # Attribute aggregates
-    attr_summary_dfs = {}
-    for attr_key, attr_vals in attr_aggregates.items():
-        rows = []
-        for val, stats in attr_vals.items():
-            accuracy = (stats["matched"] / stats["expected"]) if stats["expected"] > 0 else None
-            rows.append({
-                attr_key: val,
-                "images": stats["images"],
-                "expected": stats["expected"],
-                "matched": stats["matched"],
-                "missed": stats["expected"] - stats["matched"],
-                "accuracy": accuracy
-            })
-        df_temp = pd.DataFrame(rows) if rows else pd.DataFrame()
-        # Filter out rows with None accuracy before sorting
-        if not df_temp.empty:
-            df_temp = df_temp[df_temp["accuracy"].notna()]
-        attr_summary_dfs[attr_key] = df_temp.sort_values("accuracy") if not df_temp.empty else pd.DataFrame()
-
-    # Object count bucket summary
-    count_rows = []
-    for bucket, stats in count_bucket_stats.items():
-        accuracy = (stats["matched"] / stats["expected"]) if stats["expected"] > 0 else None
-        count_rows.append({
-            "object_count_range": bucket,
-            "images": stats["images"],
-            "expected": stats["expected"],
-            "matched": stats["matched"],
-            "missed": stats["expected"] - stats["matched"],
-            "accuracy": accuracy
-        })
-    df_count_buckets = pd.DataFrame(count_rows)
-    
-    # Object size bucket summary (overall)
-    size_rows = []
-    for bucket in size_buckets:
-        stats = size_bucket_stats[bucket]
-        accuracy = (stats["matched"] / stats["expected"]) if stats["expected"] > 0 else None
-        size_rows.append({
-            "size_bucket": bucket,
-            "expected": stats["expected"],
-            "matched": stats["matched"],
-            "missed": stats["expected"] - stats["matched"],
-            "accuracy": accuracy
-        })
-    df_size_buckets = pd.DataFrame(size_rows)
-    
-    # Per-class accuracy by size
-    class_size_rows = []
-    for cid, cname in class_names.items():
-        for bucket in size_buckets:
-            stats = class_size_stats[cid][bucket]
-            if stats["expected"] > 0:
-                accuracy = stats["matched"] / stats["expected"]
-                class_size_rows.append({
-                    "class_id": cid,
-                    "class_name": cname,
-                    "size_bucket": bucket,
-                    "expected": stats["expected"],
-                    "matched": stats["matched"],
-                    "accuracy": accuracy
-                })
-    df_class_size = pd.DataFrame(class_size_rows)
-    
-    # Per-class accuracy by weather/scene/timeofday
-    class_weather_rows = []
-    for weather_val, class_stats in class_attr_stats["weather"].items():
-        for cid, stats in class_stats.items():
-            if stats["expected"] > 0:
-                class_weather_rows.append({
-                    "weather": weather_val,
-                    "class_id": cid,
-                    "class_name": class_names[cid],
-                    "expected": stats["expected"],
-                    "matched": stats["matched"],
-                    "accuracy": stats["matched"] / stats["expected"]
-                })
-    df_class_weather = pd.DataFrame(class_weather_rows)
-    
-    class_scene_rows = []
-    for scene_val, class_stats in class_attr_stats["scene"].items():
-        for cid, stats in class_stats.items():
-            if stats["expected"] > 0:
-                class_scene_rows.append({
-                    "scene": scene_val,
-                    "class_id": cid,
-                    "class_name": class_names[cid],
-                    "expected": stats["expected"],
-                    "matched": stats["matched"],
-                    "accuracy": stats["matched"] / stats["expected"]
-                })
-    df_class_scene = pd.DataFrame(class_scene_rows)
-    
-    class_time_rows = []
-    for time_val, class_stats in class_attr_stats["timeofday"].items():
-        for cid, stats in class_stats.items():
-            if stats["expected"] > 0:
-                class_time_rows.append({
-                    "timeofday": time_val,
-                    "class_id": cid,
-                    "class_name": class_names[cid],
-                    "expected": stats["expected"],
-                    "matched": stats["matched"],
-                    "accuracy": stats["matched"] / stats["expected"]
-                })
-    df_class_time = pd.DataFrame(class_time_rows)
-
-    # Save CSVs
-    df_images.to_csv(test_run_dir / "per_image_accuracy.csv", index=False)
-    for attr_key, df in attr_summary_dfs.items():
-        if not df.empty:
-            df.to_csv(test_run_dir / f"accuracy_by_{attr_key}.csv", index=False)
-    df_count_buckets.to_csv(test_run_dir / "accuracy_by_object_count.csv", index=False)
-    df_size_buckets.to_csv(test_run_dir / "accuracy_by_size.csv", index=False)
-    if not df_class_size.empty:
-        df_class_size.to_csv(test_run_dir / "accuracy_by_class_and_size.csv", index=False)
-    if not df_class_weather.empty:
-        df_class_weather.to_csv(test_run_dir / "accuracy_by_class_and_weather.csv", index=False)
-    if not df_class_scene.empty:
-        df_class_scene.to_csv(test_run_dir / "accuracy_by_class_and_scene.csv", index=False)
-    if not df_class_time.empty:
-        df_class_time.to_csv(test_run_dir / "accuracy_by_class_and_timeofday.csv", index=False)
-    if not df_train_test.empty:
-        df_train_test.to_csv(test_run_dir / "train_test_class_comparison.csv", index=False)
+    # Create performance analysis subfolder for charts
+    analysis_dir = test_run_dir / "performance_analysis"
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    print(f"\n✓ Analysis charts will be saved to: {analysis_dir}")
 
     # Generate charts
     print("\nGenerating accuracy analysis charts...")
@@ -1455,15 +1070,15 @@ def generate_failure_analysis(
         df_weather = attr_summary_dfs["weather"].sort_values("accuracy")
         fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
         bars = ax.barh(df_weather["weather"], df_weather["accuracy"], color="#5BC0EB")
-        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=14)
-        ax.set_ylabel("Weather", fontweight="bold", fontsize=14)
-        ax.set_title("Prediction Accuracy by Weather Condition", fontweight="bold", fontsize=16)
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Weather", fontweight="bold", fontsize=20)
+        ax.set_title("Prediction Accuracy by Weather Condition", fontweight="bold", fontsize=22)
         ax.set_xlim(0, 1)
         for i, (idx, row) in enumerate(df_weather.iterrows()):
             ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
-                   va='center', fontsize=10)
+                   va='center', fontsize=14)
         plt.tight_layout()
-        chart_path = test_run_dir / "accuracy_by_weather.png"
+        chart_path = analysis_dir / "accuracy_by_weather.png"
         plt.savefig(chart_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         charts["accuracy_by_weather"] = str(chart_path)
@@ -1473,15 +1088,15 @@ def generate_failure_analysis(
         df_scene = attr_summary_dfs["scene"].sort_values("accuracy")
         fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
         bars = ax.barh(df_scene["scene"], df_scene["accuracy"], color="#F25F5C")
-        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=14)
-        ax.set_ylabel("Scene", fontweight="bold", fontsize=14)
-        ax.set_title("Prediction Accuracy by Scene Type", fontweight="bold", fontsize=16)
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Scene", fontweight="bold", fontsize=20)
+        ax.set_title("Prediction Accuracy by Scene Type", fontweight="bold", fontsize=22)
         ax.set_xlim(0, 1)
         for i, (idx, row) in enumerate(df_scene.iterrows()):
             ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
                    va='center', fontsize=10)
         plt.tight_layout()
-        chart_path = test_run_dir / "accuracy_by_scene.png"
+        chart_path = analysis_dir / "accuracy_by_scene.png"
         plt.savefig(chart_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         charts["accuracy_by_scene"] = str(chart_path)
@@ -1491,15 +1106,15 @@ def generate_failure_analysis(
         df_time = attr_summary_dfs["timeofday"].sort_values("accuracy")
         fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
         bars = ax.barh(df_time["timeofday"], df_time["accuracy"], color="#9BC53D")
-        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=14)
-        ax.set_ylabel("Time of Day", fontweight="bold", fontsize=14)
-        ax.set_title("Prediction Accuracy by Time of Day", fontweight="bold", fontsize=16)
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Time of Day", fontweight="bold", fontsize=20)
+        ax.set_title("Prediction Accuracy by Time of Day", fontweight="bold", fontsize=22)
         ax.set_xlim(0, 1)
         for i, (idx, row) in enumerate(df_time.iterrows()):
             ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
-                   va='center', fontsize=10)
+                   va='center', fontsize=14)
         plt.tight_layout()
-        chart_path = test_run_dir / "accuracy_by_timeofday.png"
+        chart_path = analysis_dir / "accuracy_by_timeofday.png"
         plt.savefig(chart_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         charts["accuracy_by_timeofday"] = str(chart_path)
@@ -1511,15 +1126,15 @@ def generate_failure_analysis(
         if not df_count_valid.empty:
             fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
             bars = ax.bar(df_count_valid["object_count_range"], df_count_valid["accuracy"], color="#FFA630")
-            ax.set_xlabel("Objects per Image", fontweight="bold", fontsize=14)
-            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=14)
-            ax.set_title("Prediction Accuracy by Object Count", fontweight="bold", fontsize=16)
+            ax.set_xlabel("Objects per Image", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=20)
+            ax.set_title("Prediction Accuracy by Object Count", fontweight="bold", fontsize=22)
             ax.set_ylim(0, 1)
             for i, row in df_count_valid.iterrows():
                 ax.text(i, row["accuracy"] + 0.02, f'{row["accuracy"]:.2%}\n({row["images"]} imgs)', 
                        ha='center', fontsize=9)
             plt.tight_layout()
-            chart_path = test_run_dir / "accuracy_by_object_count.png"
+            chart_path = analysis_dir / "accuracy_by_object_count.png"
             plt.savefig(chart_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             charts["accuracy_by_object_count"] = str(chart_path)
@@ -1532,18 +1147,18 @@ def generate_failure_analysis(
             fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
             bars = ax.bar(df_size_valid["size_bucket"], df_size_valid["accuracy"], 
                          color=["#E63946", "#F4A261", "#2A9D8F"][:len(df_size_valid)])
-            ax.set_xlabel("Object Size (bbox area relative to image)", fontweight="bold", fontsize=14)
-            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=14)
+            ax.set_xlabel("Object Size (bbox area relative to image)", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=20)
             ax.set_title("Prediction Accuracy by Object Size\n(small: <1%, medium: 1-5%, large: >5% of image)", 
-                        fontweight="bold", fontsize=16)
+                        fontweight="bold", fontsize=22)
             ax.set_ylim(0, 1)
             for i, row in df_size_valid.iterrows():
                 ax.text(i, row["accuracy"] + 0.02, 
                        f'{row["accuracy"]:.2%}\n({row["expected"]} objs)', 
-                       ha='center', fontsize=10, fontweight='bold')
+                       ha='center', fontsize=14, fontweight='bold')
             ax.grid(axis='y', alpha=0.3)
             plt.tight_layout()
-            chart_path = test_run_dir / "accuracy_by_size.png"
+            chart_path = analysis_dir / "accuracy_by_size.png"
             plt.savefig(chart_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             charts["accuracy_by_size"] = str(chart_path)
@@ -1556,11 +1171,11 @@ def generate_failure_analysis(
         fig, ax = plt.subplots(figsize=(10, 8), dpi=200)
         sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
                    vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-        ax.set_title("Per-Class Accuracy by Object Size", fontweight="bold", fontsize=16)
-        ax.set_xlabel("Object Size", fontweight="bold", fontsize=14)
-        ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+        ax.set_title("Per-Class Accuracy by Object Size", fontweight="bold", fontsize=22)
+        ax.set_xlabel("Object Size", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Class", fontweight="bold", fontsize=20)
         plt.tight_layout()
-        chart_path = test_run_dir / "accuracy_by_class_and_size.png"
+        chart_path = analysis_dir / "accuracy_by_class_and_size.png"
         plt.savefig(chart_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         charts["accuracy_by_class_and_size"] = str(chart_path)
@@ -1576,11 +1191,11 @@ def generate_failure_analysis(
             fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
             sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
                        vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-            ax.set_title("Per-Class Accuracy by Weather (Top 5 Classes)", fontweight="bold", fontsize=16)
-            ax.set_xlabel("Weather Condition", fontweight="bold", fontsize=14)
-            ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+            ax.set_title("Per-Class Accuracy by Weather (Top 5 Classes)", fontweight="bold", fontsize=22)
+            ax.set_xlabel("Weather Condition", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
             plt.tight_layout()
-            chart_path = test_run_dir / "accuracy_by_class_and_weather.png"
+            chart_path = analysis_dir / "accuracy_by_class_and_weather.png"
             plt.savefig(chart_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             charts["accuracy_by_class_and_weather"] = str(chart_path)
@@ -1595,11 +1210,11 @@ def generate_failure_analysis(
             fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
             sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
                        vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-            ax.set_title("Per-Class Accuracy by Scene (Top 5 Classes)", fontweight="bold", fontsize=16)
-            ax.set_xlabel("Scene Type", fontweight="bold", fontsize=14)
-            ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+            ax.set_title("Per-Class Accuracy by Scene (Top 5 Classes)", fontweight="bold", fontsize=22)
+            ax.set_xlabel("Scene Type", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
             plt.tight_layout()
-            chart_path = test_run_dir / "accuracy_by_class_and_scene.png"
+            chart_path = analysis_dir / "accuracy_by_class_and_scene.png"
             plt.savefig(chart_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             charts["accuracy_by_class_and_scene"] = str(chart_path)
@@ -1614,11 +1229,11 @@ def generate_failure_analysis(
             fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
             sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
                        vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-            ax.set_title("Per-Class Accuracy by Time of Day (Top 5 Classes)", fontweight="bold", fontsize=16)
-            ax.set_xlabel("Time of Day", fontweight="bold", fontsize=14)
-            ax.set_ylabel("Class", fontweight="bold", fontsize=14)
+            ax.set_title("Per-Class Accuracy by Time of Day (Top 5 Classes)", fontweight="bold", fontsize=22)
+            ax.set_xlabel("Time of Day", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
             plt.tight_layout()
-            chart_path = test_run_dir / "accuracy_by_class_and_timeofday.png"
+            chart_path = analysis_dir / "accuracy_by_class_and_timeofday.png"
             plt.savefig(chart_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             charts["accuracy_by_class_and_timeofday"] = str(chart_path)
@@ -1643,7 +1258,7 @@ def generate_failure_analysis(
         ax.grid(axis="y", alpha=0.3)
         
         plt.tight_layout()
-        chart_path = test_run_dir / "train_test_distribution.png"
+        chart_path = analysis_dir / "train_test_distribution.png"
         plt.savefig(chart_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         charts["train_test_distribution"] = str(chart_path)
@@ -1689,7 +1304,7 @@ def generate_failure_analysis(
                 ax.legend(fontsize=12)
             
             plt.tight_layout()
-            chart_path = test_run_dir / "accuracy_vs_training_exposure.png"
+            chart_path = analysis_dir / "accuracy_vs_training_exposure.png"
             plt.savefig(chart_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             charts["accuracy_vs_training_exposure"] = str(chart_path)
@@ -1738,14 +1353,14 @@ def generate_failure_analysis(
                            xytext=(5, 5), textcoords="offset points", 
                            fontsize=8, alpha=0.8)
             
-            ax2.set_xlabel("Train/Test Object Ratio", fontweight="bold", fontsize=14)
-            ax2.set_ylabel("Test Accuracy", fontweight="bold", fontsize=14)
-            ax2.set_title("Accuracy vs Train/Test Ratio", fontweight="bold", fontsize=14)
+            ax2.set_xlabel("Train/Test Object Ratio", fontweight="bold", fontsize=20)
+            ax2.set_ylabel("Test Accuracy", fontweight="bold", fontsize=20)
+            ax2.set_title("Accuracy vs Train/Test Ratio", fontweight="bold", fontsize=22)
             ax2.set_ylim(0, 1.05)
             ax2.grid(alpha=0.3)
             
             plt.tight_layout()
-            chart_path = test_run_dir / "accuracy_vs_train_test_ratio.png"
+            chart_path = analysis_dir / "accuracy_vs_train_test_ratio.png"
             plt.savefig(chart_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             charts["accuracy_vs_train_test_ratio"] = str(chart_path)
@@ -1915,7 +1530,7 @@ def generate_pdf_and_json_report(
     title_style = ParagraphStyle(
         "CustomTitle",
         parent=styles["Heading1"],
-        fontSize=24,
+        fontSize=30,
         textColor=colors.HexColor("#2c3e50"),
         spaceAfter=30,
         alignment=TA_CENTER,
@@ -1923,7 +1538,7 @@ def generate_pdf_and_json_report(
     heading_style = ParagraphStyle(
         "CustomHeading",
         parent=styles["Heading2"],
-        fontSize=16,
+        fontSize=20,
         textColor=colors.HexColor("#34495e"),
         spaceAfter=12,
         spaceBefore=20,
@@ -1954,7 +1569,7 @@ def generate_pdf_and_json_report(
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
                 ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                 ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("FONTSIZE", (0, 0), (-1, -1), 14),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),
                 ("GRID", (0, 0), (-1, -1), 1, colors.white),
@@ -1978,8 +1593,8 @@ def generate_pdf_and_json_report(
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 12),
-                ("FONTSIZE", (0, 1), (-1, -1), 10),
+                ("FONTSIZE", (0, 0), (-1, 0), 16),
+                ("FONTSIZE", (0, 1), (-1, -1), 14),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),
                 ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#d5f4e6")),
@@ -2014,8 +1629,8 @@ def generate_pdf_and_json_report(
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 12),
-                ("FONTSIZE", (0, 1), (-1, -1), 10),
+                ("FONTSIZE", (0, 0), (-1, 0), 16),
+                ("FONTSIZE", (0, 1), (-1, -1), 14),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),
                 ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
@@ -2137,8 +1752,8 @@ def generate_pdf_and_json_report(
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 12),
-                    ("FONTSIZE", (0, 1), (-1, -1), 10),
+                    ("FONTSIZE", (0, 0), (-1, 0), 16),
+                    ("FONTSIZE", (0, 1), (-1, -1), 14),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                     ("TOPPADDING", (0, 0), (-1, -1), 8),
                     ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#fdebd0")),
@@ -2205,8 +1820,8 @@ def generate_pdf_and_json_report(
                         ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                        ("FONTSIZE", (0, 0), (-1, 0), 12),
-                        ("FONTSIZE", (0, 1), (-1, -1), 10),
+                        ("FONTSIZE", (0, 0), (-1, 0), 16),
+                        ("FONTSIZE", (0, 1), (-1, -1), 14),
                         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                         ("TOPPADDING", (0, 0), (-1, -1), 8),
                         ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#e8daef")),
@@ -2474,6 +2089,7 @@ def run_validation_pipeline(
         device=device,
         iou_threshold=iou_threshold,
         test_run_dir=test_run_dir,
+        labels_dir=dataset_info["labels_dir"],
         batch_size=batch_size,
     )
 
@@ -2549,7 +2165,7 @@ def run_validation_pipeline(
 
     # Generate failure analysis using expected counts (class_counts & object_count)
     failure_analysis_summary = generate_failure_analysis(
-        per_image_records=validation_results.per_image,
+        per_image_records=validation_results.per_image_records,
         image_attributes=dataset_info.get("image_attributes", {}),
         class_names=dataset_info["class_names"],
         test_run_dir=test_run_dir,

@@ -58,7 +58,7 @@ DATASETS = {
         'description': 'Tuning dataset - 20% coverage (~14K train)',
         'files': [
             {
-                'gdrive_id': '',
+                'gdrive_id': '1QccaQ1tI_N3zXzp08Nemw13wl_02gUWG',
                 'filename': 'bdd100k_yolo_tuning.zip',
                 'size': '~1.58GB',
                 'extract_to': '/computer_vision_yolo' 
@@ -71,7 +71,7 @@ DATASETS = {
         'description': 'Tiny dataset - ~500 train, ~1K total (fast testing)',
         'files': [
             {
-                'gdrive_id': '',
+                'gdrive_id': '1ftz8FuBT9yTf4ygSViSzjXJpuve-Zs55',
                 'filename': 'bdd100k_yolo_tiny.zip',
                 'size': '~100MB',
                 'extract_to': '/computer_vision_yolo' 
@@ -84,7 +84,7 @@ DATASETS = {
         'description': 'Test split only for validation (20K images)',
         'files': [
             {
-                'gdrive_id': '',
+                'gdrive_id': '1OCrCDFHxQEKj3Y2Nm1PxWdCXMdEZp-YP',
                 'filename': 'bdd100k_yolo_test_split.zip',
                 'size': '~1.1GB',
                 'extract_to': '/computer_vision_yolo' 
