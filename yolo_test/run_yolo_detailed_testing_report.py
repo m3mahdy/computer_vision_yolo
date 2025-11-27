@@ -624,27 +624,22 @@ def extract_core_metrics(
     else:
         confusion_matrix = np.zeros((num_classes, num_classes), dtype=int)
 
-    # Use TP/FP/FN counts that were calculated correctly during prediction matching
+    # Calculate TP/FP/FN counts from confusion matrix
+    # This is the standard approach for extracting per-class metrics from YOLO validation
     class_tp: Dict[int, int] = {}
     class_fp: Dict[int, int] = {}
     class_fn: Dict[int, int] = {}
     
-    if hasattr(validation_results, "class_tp"):
-        class_tp = validation_results.class_tp
-        class_fp = validation_results.class_fp
-        class_fn = validation_results.class_fn
-        print(f"\n✓ Using accurate TP/FP/FN counts from validation:")
-        print(f"  Total TP: {sum(class_tp.values())}, FP: {sum(class_fp.values())}, FN: {sum(class_fn.values())}")
-    else:
-        # Fallback: calculate from confusion matrix (less accurate)
-        print(f"\n⚠️  Warning: Using fallback TP/FP/FN calculation from confusion matrix")
-        for i in range(num_classes):
-            tp_val = int(confusion_matrix[i, i]) if i < confusion_matrix.shape[0] and i < confusion_matrix.shape[1] else 0
-            fp_val = int(confusion_matrix[:, i].sum() - confusion_matrix[i, i]) if i < confusion_matrix.shape[1] else 0
-            fn_val = int(confusion_matrix[i, :].sum() - confusion_matrix[i, i]) if i < confusion_matrix.shape[0] else 0
-            class_tp[i] = tp_val
-            class_fp[i] = fp_val
-            class_fn[i] = fn_val
+    for i in range(num_classes):
+        tp_val = int(confusion_matrix[i, i]) if i < confusion_matrix.shape[0] and i < confusion_matrix.shape[1] else 0
+        fp_val = int(confusion_matrix[:, i].sum() - confusion_matrix[i, i]) if i < confusion_matrix.shape[1] else 0
+        fn_val = int(confusion_matrix[i, :].sum() - confusion_matrix[i, i]) if i < confusion_matrix.shape[0] else 0
+        class_tp[i] = tp_val
+        class_fp[i] = fp_val
+        class_fn[i] = fn_val
+    
+    print(f"\n✓ Calculated per-class metrics from confusion matrix:")
+    print(f"  Total TP: {sum(class_tp.values())}, FP: {sum(class_fp.values())}, FN: {sum(class_fn.values())}")
 
     print("\n" + "=" * 80)
     print("OFFICIAL YOLO VALIDATION RESULTS")
@@ -745,14 +740,23 @@ def plot_core_and_map_metrics(
     precision_sorted = df_metrics.sort_values("Precision")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(precision_sorted["Class"], precision_sorted["Precision"], color="#5BC0EB")
-    ax.set_title("Precision by Class", fontweight="bold", fontsize=28)
+    ax.set_title("Precision by Class", fontweight="bold", fontsize=24, pad=20)
     ax.set_xlabel("Precision", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=16)
-    # Add value labels
+    for label in ax.get_xticklabels():
+        label.set_fontweight('bold')
+    for label in ax.get_yticklabels():
+        label.set_fontweight('bold')
+    # Add value labels inside bars
     for idx, (bar, value) in enumerate(zip(bars, precision_sorted["Precision"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
+        if value > 0.15:  # Inside bar if there's space
+            ax.text(value - 0.05, idx, f'{value:.2f}', 
+                   ha='right', va='center', color='black', fontweight='bold', fontsize=18)
+        else:  # Outside bar if too small
+            ax.text(value + 0.02, idx, f'{value:.2f}', 
+                   ha='left', va='center', color='black', fontweight='bold', fontsize=18)
     plt.tight_layout()
     fig_paths["precision_by_class"] = test_run_dir / "precision_by_class.png"
     plt.savefig(fig_paths["precision_by_class"], dpi=300, bbox_inches="tight")
@@ -762,14 +766,23 @@ def plot_core_and_map_metrics(
     recall_sorted = df_metrics.sort_values("Recall")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(recall_sorted["Class"], recall_sorted["Recall"], color="#F25F5C")
-    ax.set_title("Recall by Class", fontweight="bold", fontsize=28)
+    ax.set_title("Recall by Class", fontweight="bold", fontsize=24, pad=20)
     ax.set_xlabel("Recall", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=16)
-    # Add value labels
+    for label in ax.get_xticklabels():
+        label.set_fontweight('bold')
+    for label in ax.get_yticklabels():
+        label.set_fontweight('bold')
+    # Add value labels inside bars
     for idx, (bar, value) in enumerate(zip(bars, recall_sorted["Recall"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
+        if value > 0.15:  # Inside bar if there's space
+            ax.text(value - 0.05, idx, f'{value:.2f}', 
+                   ha='right', va='center', color='black', fontweight='bold', fontsize=18)
+        else:  # Outside bar if too small
+            ax.text(value + 0.02, idx, f'{value:.2f}', 
+                   ha='left', va='center', color='black', fontweight='bold', fontsize=18)
     plt.tight_layout()
     fig_paths["recall_by_class"] = test_run_dir / "recall_by_class.png"
     plt.savefig(fig_paths["recall_by_class"], dpi=300, bbox_inches="tight")
@@ -779,14 +792,23 @@ def plot_core_and_map_metrics(
     f1_sorted = df_metrics.sort_values("F1-Score")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(f1_sorted["Class"], f1_sorted["F1-Score"], color="#9BC53D")
-    ax.set_title("F1-Score by Class", fontweight="bold", fontsize=28)
+    ax.set_title("F1-Score by Class", fontweight="bold", fontsize=24, pad=20)
     ax.set_xlabel("F1-Score", fontweight="bold", fontsize=22)
     ax.set_xlim(0, 1.1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=16)
-    # Add value labels
+    for label in ax.get_xticklabels():
+        label.set_fontweight('bold')
+    for label in ax.get_yticklabels():
+        label.set_fontweight('bold')
+    # Add value labels inside bars
     for idx, (bar, value) in enumerate(zip(bars, f1_sorted["F1-Score"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=16)
+        if value > 0.15:  # Inside bar if there's space
+            ax.text(value - 0.05, idx, f'{value:.2f}', 
+                   ha='right', va='center', color='black', fontweight='bold', fontsize=18)
+        else:  # Outside bar if too small
+            ax.text(value + 0.02, idx, f'{value:.2f}', 
+                   ha='left', va='center', color='black', fontweight='bold', fontsize=18)
     plt.tight_layout()
     fig_paths["f1_by_class"] = test_run_dir / "f1_by_class.png"
     plt.savefig(fig_paths["f1_by_class"], dpi=300, bbox_inches="tight")
@@ -795,19 +817,37 @@ def plot_core_and_map_metrics(
     # Overall detection outcomes
     fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
     bars = ax.bar(["TP", "FP", "FN"], [total_tp, total_fp, total_fn], color=["#177E89", "#ED6A5A", "#F4A259"])
-    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=24)
+    ax.set_title("Overall Detection Outcomes", fontweight="bold", fontsize=22, pad=20)
     ax.set_ylabel("Count", fontweight="bold", fontsize=18)
     ax.grid(axis="y", alpha=0.3)
-    ax.tick_params(axis="both", labelsize=16)
+    ax.tick_params(axis="both", labelsize=18)
+    for label in ax.get_xticklabels():
+        label.set_fontweight('bold')
+    for label in ax.get_yticklabels():
+        label.set_fontweight('bold')
+    
+    # Add value labels - place inside if value is large enough, otherwise outside
+    max_val = max(total_tp, total_fp, total_fn)
     for bar in bars:
         height = bar.get_height()
+        # Place inside if bar height is more than 15% of max value
+        if height > 0.15 * max_val:
+            y_pos = height - (0.05 * max_val)  # Slightly below top of bar
+            va = "center"
+        else:  # Place outside if bar is too short
+            y_pos = height + (0.02 * max_val)  # Slightly above bar
+            va = "bottom"
+        text_color = "black"
+        
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            height + max(total_tp, total_fp, total_fn) * 0.01,
+            y_pos,
             f"{int(height)}",
             ha="center",
+            va=va,
             fontweight="bold",
             fontsize=18,
+            color=text_color,
         )
     plt.tight_layout()
     fig_paths["detection_outcomes"] = test_run_dir / "detection_outcomes.png"
@@ -818,14 +858,23 @@ def plot_core_and_map_metrics(
     map_sorted = df_metrics.sort_values("mAP@0.5")
     fig, ax = plt.subplots(figsize=(10, 8), dpi=300)
     bars = ax.barh(map_sorted["Class"], map_sorted["mAP@0.5"], color="#B388EB")
-    ax.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=22)
+    ax.set_title("mAP@0.5 by Class", fontweight="bold", fontsize=24, pad=20)
     ax.set_xlabel("mAP@0.5", fontweight="bold", fontsize=18)
     ax.set_xlim(0, 1)
     ax.grid(axis="x", alpha=0.3)
     ax.tick_params(axis="both", labelsize=14)
-    # Add value labels
+    for label in ax.get_xticklabels():
+        label.set_fontweight('bold')
+    for label in ax.get_yticklabels():
+        label.set_fontweight('bold')
+    # Add value labels inside bars
     for idx, (bar, value) in enumerate(zip(bars, map_sorted["mAP@0.5"])):
-        ax.text(value + 0.02, idx, f"{value:.3f}", va="center", fontweight="bold", fontsize=12)
+        if value > 0.15:  # Inside bar if there's space
+            ax.text(value - 0.05, idx, f'{value:.2f}', 
+                   ha='right', va='center', color='black', fontweight='bold', fontsize=18)
+        else:  # Outside bar if too small
+            ax.text(value + 0.02, idx, f'{value:.2f}', 
+                   ha='left', va='center', color='black', fontweight='bold', fontsize=18)
     plt.tight_layout()
     fig_paths["map50_by_class"] = test_run_dir / "map50_by_class.png"
     plt.savefig(fig_paths["map50_by_class"], dpi=300, bbox_inches="tight")
@@ -842,18 +891,31 @@ def plot_core_and_map_metrics(
     fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
     bars = ax.bar(overall_plot_values.keys(), overall_plot_values.values(), color="#FFA630")
     ax.set_ylim(0, 1)
-    ax.set_title("Overall Metrics", fontweight="bold", fontsize=28)
+    ax.set_title("Overall Metrics", fontweight="bold", fontsize=24, pad=20)
     ax.set_ylabel("Score", fontweight="bold", fontsize=22)
     ax.grid(axis="y", alpha=0.3)
     ax.tick_params(axis="both", labelsize=16)
+    for label in ax.get_xticklabels():
+        label.set_fontweight('bold')
+    for label in ax.get_yticklabels():
+        label.set_fontweight('bold')
+    
+    # Add value labels inside bars (white text) if bar is tall enough, otherwise outside (black text)
     for idx, (bar, value) in enumerate(zip(bars, overall_plot_values.values())):
+        if value > 0.15:  # If bar is tall enough, place text inside
+            y_pos = value - 0.09
+        else:  # Otherwise place text above
+            y_pos = value + 0.02
+        text_color = "black"
+        
         ax.text(
             idx,
-            value + 0.02,
+            y_pos,
             f"{value:.3f}",
             ha="center",
             fontweight="bold",
             fontsize=18,
+            color=text_color,
         )
     plt.tight_layout()
     fig_paths["overall_metrics"] = test_run_dir / "overall_metrics.png"
@@ -943,26 +1005,38 @@ def plot_confusion_matrix(
 
 def copy_normalized_confusion_matrix(
     test_run_dir: Path,
-) -> Path | None:
-    """Copy the normalized confusion matrix from YOLO validation output.
+) -> Tuple[Path | None, Path | None]:
+    """Copy confusion matrices from YOLO validation output.
     
-    YOLO's validation automatically generates a normalized confusion matrix.
-    This function copies it to the main test directory for inclusion in the report.
+    YOLO's validation automatically generates both regular and normalized confusion matrices.
+    This function copies both to the main test directory for inclusion in the report.
     
     Returns:
-        Path to the copied normalized confusion matrix, or None if not found.
+        Tuple of (regular_cm_path, normalized_cm_path) or (None, None) if not found.
     """
     yolo_val_dir = test_run_dir / "yolo_validation"
-    normalized_cm_source = yolo_val_dir / "confusion_matrix_normalized.png"
     
+    # Copy regular confusion matrix
+    cm_source = yolo_val_dir / "confusion_matrix.png"
+    cm_dest = None
+    if cm_source.exists():
+        cm_dest = test_run_dir / "confusion_matrix_yolo.png"
+        shutil.copy2(cm_source, cm_dest)
+        print(f"✓ Copied confusion matrix from YOLO validation")
+    else:
+        print(f"⚠️  Confusion matrix not found in YOLO validation output")
+    
+    # Copy normalized confusion matrix
+    normalized_cm_source = yolo_val_dir / "confusion_matrix_normalized.png"
+    normalized_cm_dest = None
     if normalized_cm_source.exists():
         normalized_cm_dest = test_run_dir / "confusion_matrix_normalized.png"
         shutil.copy2(normalized_cm_source, normalized_cm_dest)
         print(f"✓ Copied normalized confusion matrix from YOLO validation")
-        return normalized_cm_dest
     else:
         print(f"⚠️  Normalized confusion matrix not found in YOLO validation output")
-        return None
+    
+    return cm_dest, normalized_cm_dest
 
 
 def generate_failure_analysis(
@@ -972,6 +1046,7 @@ def generate_failure_analysis(
     test_run_dir: Path,
     dataset_root: Path,
     iou_threshold: float = 0.5,
+    include_training_exposure_analysis: bool = True,
 ) -> Dict[str, Any]:
     """
     Comprehensive analysis of prediction accuracy in relation to:
@@ -983,6 +1058,7 @@ def generate_failure_analysis(
     - Charts showing accuracy by attribute values
     - Charts showing accuracy by object count ranges
     - Per-class accuracy breakdowns within each attribute
+    - Optional: Training exposure vs test performance charts (if include_training_exposure_analysis=True)
     """
     print("\n" + "=" * 80)
     print("GENERATING COMPREHENSIVE FAILURE ANALYSIS")
@@ -995,34 +1071,53 @@ def generate_failure_analysis(
     # Initialize train-test comparison DataFrame (will be populated later)
     df_train_test = pd.DataFrame()
     
-    # Load training split metadata to analyze training exposure
+    # Load training split metadata to analyze training exposure (only if requested)
     train_class_counts = {}
     train_total_images = 0
-    train_metadata_path = dataset_root / "representative_json" / "train_metadata.json"
     
-    if train_metadata_path.exists():
-        print("\nLoading training split metadata for exposure analysis...")
-        try:
-            with open(train_metadata_path, "r") as f:
-                train_data = json.load(f)
-            train_total_images = train_data.get("total_files", 0)
-            
-            # Extract per-class counts from training data
-            # New structure: files is a dict with image IDs as keys
-            for img_id, img_data in train_data.get("files", {}).items():
-                class_counts = img_data.get("class_counts", {})
-                for class_name, count in class_counts.items():
-                    cid = class_name_to_id.get(class_name)
-                    if cid is not None:
-                        train_class_counts[cid] = train_class_counts.get(cid, 0) + int(count)
-            
-            print(f"✓ Training metadata loaded: {train_total_images} images, {sum(train_class_counts.values())} objects")
-        except Exception as e:
-            print(f"⚠️  Warning: Could not load training metadata: {e}")
+    if include_training_exposure_analysis:
+        train_metadata_path = dataset_root / "representative_json" / "train_metadata.json"
+        
+        print(f"\n🔍 Attempting to load training metadata from: {train_metadata_path}")
+        print(f"  File exists: {train_metadata_path.exists()}")
+        
+        if train_metadata_path.exists():
+            print("\nLoading training split metadata for exposure analysis...")
+            try:
+                with open(train_metadata_path, "r") as f:
+                    train_data = json.load(f)
+                train_total_images = train_data.get("total_files", 0)
+                
+                # Extract per-class counts from training data
+                # New structure: files is a dict with image IDs as keys
+                print(f"  Processing {len(train_data.get('files', {}))} training images...")
+                unmatched_classes = set()  # Track unmatched class names
+                for img_id, img_data in train_data.get("files", {}).items():
+                    class_counts = img_data.get("class_counts", {})
+                    for class_name, count in class_counts.items():
+                        cid = class_name_to_id.get(class_name)
+                        if cid is not None:
+                            train_class_counts[cid] = train_class_counts.get(cid, 0) + int(count)
+                        else:
+                            unmatched_classes.add(class_name)
+                
+                if unmatched_classes:
+                    print(f"  ⚠️  Warning: {len(unmatched_classes)} class names not found in class_name_to_id mapping:")
+                    print(f"     Unmatched: {list(unmatched_classes)[:10]}")  # Show first 10
+                    print(f"     Available: {list(class_names.values())[:10]}")  # Show first 10 valid names
+                
+                print(f"✓ Training metadata loaded: {train_total_images} images, {sum(train_class_counts.values())} objects")
+                print(f"  - Classes found in training data: {len(train_class_counts)}")
+                if train_class_counts:
+                    print(f"  - Sample class counts: {dict(list(train_class_counts.items())[:3])}")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not load training metadata: {e}")
+                train_class_counts = {}
+        else:
+            print(f"⚠️  Training metadata not found: {train_metadata_path}")
             train_class_counts = {}
     else:
-        print(f"⚠️  Training metadata not found: {train_metadata_path}")
-        train_class_counts = {}
+        print("\n✓ Skipping training exposure analysis (include_training_exposure_analysis=False)")
 
     # Call detailed analysis module to compute accuracy by attributes
     # Prepare training metadata for analysis
@@ -1055,9 +1150,6 @@ def generate_failure_analysis(
     df_class_scene = analysis_dfs["class_scene"]
     df_class_time = analysis_dfs["class_time"]
     
-    # df_train_test will be created later after computing test_class_stats
-    df_train_test = pd.DataFrame()
-    
     print(f"\n✓ Attribute-based analysis complete")
     print(f"  Total images analyzed: {analysis_summary['total_images']}")
     print(f"  Overall accuracy: {analysis_summary['overall_accuracy']:.2%}")
@@ -1078,322 +1170,9 @@ def generate_failure_analysis(
         union = area_a + area_b - inter_area
         return inter_area / union if union > 0 else 0.0
 
-    # Create performance analysis subfolder for charts
-    analysis_dir = test_run_dir / "performance_analysis"
-    analysis_dir.mkdir(parents=True, exist_ok=True)
-    print(f"\n✓ Analysis charts will be saved to: {analysis_dir}")
-
-    # Generate charts
-    print("\nGenerating accuracy analysis charts...")
-    charts = {}
-    
-    sns.set_style("whitegrid")
-    
-    # Chart 1: Accuracy by Weather
-    if not attr_summary_dfs["weather"].empty:
-        df_weather = attr_summary_dfs["weather"].sort_values("accuracy")
-        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
-        bars = ax.barh(df_weather["weather"], df_weather["accuracy"], color="#5BC0EB")
-        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
-        ax.set_ylabel("Weather", fontweight="bold", fontsize=20)
-        ax.set_title("Prediction Accuracy by Weather Condition", fontweight="bold", fontsize=22)
-        ax.set_xlim(0, 1)
-        for i, (idx, row) in enumerate(df_weather.iterrows()):
-            ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
-                   va='center', fontsize=14)
-        plt.tight_layout()
-        chart_path = analysis_dir / "accuracy_by_weather.png"
-        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        charts["accuracy_by_weather"] = str(chart_path)
-
-    # Chart 2: Accuracy by Scene
-    if not attr_summary_dfs["scene"].empty:
-        df_scene = attr_summary_dfs["scene"].sort_values("accuracy")
-        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
-        bars = ax.barh(df_scene["scene"], df_scene["accuracy"], color="#F25F5C")
-        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
-        ax.set_ylabel("Scene", fontweight="bold", fontsize=20)
-        ax.set_title("Prediction Accuracy by Scene Type", fontweight="bold", fontsize=22)
-        ax.set_xlim(0, 1)
-        for i, (idx, row) in enumerate(df_scene.iterrows()):
-            ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
-                   va='center', fontsize=10)
-        plt.tight_layout()
-        chart_path = analysis_dir / "accuracy_by_scene.png"
-        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        charts["accuracy_by_scene"] = str(chart_path)
-
-    # Chart 3: Accuracy by Time of Day
-    if not attr_summary_dfs["timeofday"].empty:
-        df_time = attr_summary_dfs["timeofday"].sort_values("accuracy")
-        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
-        bars = ax.barh(df_time["timeofday"], df_time["accuracy"], color="#9BC53D")
-        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
-        ax.set_ylabel("Time of Day", fontweight="bold", fontsize=20)
-        ax.set_title("Prediction Accuracy by Time of Day", fontweight="bold", fontsize=22)
-        ax.set_xlim(0, 1)
-        for i, (idx, row) in enumerate(df_time.iterrows()):
-            ax.text(row["accuracy"] + 0.02, i, f'{row["accuracy"]:.2%} ({row["images"]} imgs)', 
-                   va='center', fontsize=14)
-        plt.tight_layout()
-        chart_path = analysis_dir / "accuracy_by_timeofday.png"
-        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        charts["accuracy_by_timeofday"] = str(chart_path)
-
-    # Chart 4: Accuracy by Object Count Range
-    if not df_count_buckets.empty:
-        # Filter out buckets with no data
-        df_count_valid = df_count_buckets[df_count_buckets["accuracy"].notna()].copy()
-        if not df_count_valid.empty:
-            fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
-            bars = ax.bar(df_count_valid["object_count_range"], df_count_valid["accuracy"], color="#FFA630")
-            ax.set_xlabel("Objects per Image", fontweight="bold", fontsize=20)
-            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=20)
-            ax.set_title("Prediction Accuracy by Object Count", fontweight="bold", fontsize=22)
-            ax.set_ylim(0, 1)
-            for i, row in df_count_valid.iterrows():
-                ax.text(i, row["accuracy"] + 0.02, f'{row["accuracy"]:.2%}\n({row["images"]} imgs)', 
-                       ha='center', fontsize=9)
-            plt.tight_layout()
-            chart_path = analysis_dir / "accuracy_by_object_count.png"
-            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-            plt.close(fig)
-            charts["accuracy_by_object_count"] = str(chart_path)
-    
-    # Chart 5: Accuracy by Object Size (Scale/Distance)
-    if not df_size_buckets.empty:
-        # Filter out buckets with no data (accuracy is None)
-        df_size_valid = df_size_buckets[df_size_buckets["accuracy"].notna()].copy()
-        if not df_size_valid.empty:
-            fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
-            bars = ax.bar(df_size_valid["size_bucket"], df_size_valid["accuracy"], 
-                         color=["#E63946", "#F4A261", "#2A9D8F"][:len(df_size_valid)])
-            ax.set_xlabel("Object Size (bbox area relative to image)", fontweight="bold", fontsize=20)
-            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=20)
-            ax.set_title("Prediction Accuracy by Object Size\n(small: <1%, medium: 1-5%, large: >5% of image)", 
-                        fontweight="bold", fontsize=18, pad=20)
-            ax.set_ylim(0, 1)
-            for i, row in df_size_valid.iterrows():
-                ax.text(i, row["accuracy"] + 0.02, 
-                       f'{row["accuracy"]:.2%}\n({row["expected"]} objs)', 
-                       ha='center', fontsize=14, fontweight='bold')
-            ax.grid(axis='y', alpha=0.3)
-            plt.tight_layout()
-            chart_path = analysis_dir / "accuracy_by_size.png"
-            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-            plt.close(fig)
-            charts["accuracy_by_size"] = str(chart_path)
-    
-    # Chart 6: Per-Class Accuracy by Size (Heatmap)
-    if not df_class_size.empty:
-        pivot_data = df_class_size.pivot(index="class_name", columns="size_bucket", values="accuracy")
-        pivot_data = pivot_data[["small", "medium", "large"]]  # Order columns
-        
-        fig, ax = plt.subplots(figsize=(10, 8), dpi=200)
-        sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
-                   vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-        ax.set_title("Per-Class Accuracy by Object Size", fontweight="bold", fontsize=22)
-        ax.set_xlabel("Object Size", fontweight="bold", fontsize=20)
-        ax.set_ylabel("Class", fontweight="bold", fontsize=20)
-        plt.tight_layout()
-        chart_path = analysis_dir / "accuracy_by_class_and_size.png"
-        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        charts["accuracy_by_class_and_size"] = str(chart_path)
-    
-    # Chart 7: Per-Class Accuracy by Weather (Top classes only for readability)
-    if not df_class_weather.empty:
-        # Get top 5 classes by total expected count
-        top_classes = df_class_weather.groupby("class_name")["expected"].sum().nlargest(5).index.tolist()
-        df_top = df_class_weather[df_class_weather["class_name"].isin(top_classes)]
-        
-        if not df_top.empty:
-            pivot_data = df_top.pivot(index="class_name", columns="weather", values="accuracy")
-            fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
-            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
-                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-            ax.set_title("Per-Class Accuracy by Weather (Top 5 Classes)", fontweight="bold", fontsize=22)
-            ax.set_xlabel("Weather Condition", fontweight="bold", fontsize=20)
-            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
-            plt.tight_layout()
-            chart_path = analysis_dir / "accuracy_by_class_and_weather.png"
-            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-            plt.close(fig)
-            charts["accuracy_by_class_and_weather"] = str(chart_path)
-    
-    # Chart 8: Per-Class Accuracy by Scene (Top classes only)
-    if not df_class_scene.empty:
-        top_classes = df_class_scene.groupby("class_name")["expected"].sum().nlargest(5).index.tolist()
-        df_top = df_class_scene[df_class_scene["class_name"].isin(top_classes)]
-        
-        if not df_top.empty:
-            pivot_data = df_top.pivot(index="class_name", columns="scene", values="accuracy")
-            fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
-            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
-                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-            ax.set_title("Per-Class Accuracy by Scene (Top 5 Classes)", fontweight="bold", fontsize=22)
-            ax.set_xlabel("Scene Type", fontweight="bold", fontsize=20)
-            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
-            plt.tight_layout()
-            chart_path = analysis_dir / "accuracy_by_class_and_scene.png"
-            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-            plt.close(fig)
-            charts["accuracy_by_class_and_scene"] = str(chart_path)
-    
-    # Chart 9: Per-Class Accuracy by Time of Day (Top classes only)
-    if not df_class_time.empty:
-        top_classes = df_class_time.groupby("class_name")["expected"].sum().nlargest(5).index.tolist()
-        df_top = df_class_time[df_class_time["class_name"].isin(top_classes)]
-        
-        if not df_top.empty:
-            pivot_data = df_top.pivot(index="class_name", columns="timeofday", values="accuracy")
-            fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
-            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap="RdYlGn", 
-                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, ax=ax)
-            ax.set_title("Per-Class Accuracy by Time of Day (Top 5 Classes)", fontweight="bold", fontsize=22)
-            ax.set_xlabel("Time of Day", fontweight="bold", fontsize=20)
-            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
-            plt.tight_layout()
-            chart_path = analysis_dir / "accuracy_by_class_and_timeofday.png"
-            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-            plt.close(fig)
-            charts["accuracy_by_class_and_timeofday"] = str(chart_path)
-    
-    # Chart 10: Train vs Test Class Distribution
-    if not df_train_test.empty and train_class_counts:
-        df_sorted = df_train_test.sort_values("train_count", ascending=False)
-        
-        fig, ax = plt.subplots(figsize=(12, 8), dpi=200)
-        x = np.arange(len(df_sorted))
-        width = 0.35
-        
-        bars1 = ax.bar(x - width/2, df_sorted["train_count"], width, label="Train Split", color="#3498db")
-        bars2 = ax.bar(x + width/2, df_sorted["test_count"], width, label="Test Split", color="#e74c3c")
-        
-        ax.set_xlabel("Class", fontweight="bold", fontsize=14)
-        ax.set_ylabel("Object Count", fontweight="bold", fontsize=14)
-        ax.set_title("Class Distribution: Training vs Testing Split", fontweight="bold", fontsize=16)
-        ax.set_xticks(x)
-        ax.set_xticklabels(df_sorted["class_name"], rotation=45, ha="right")
-        ax.legend(fontsize=12)
-        ax.grid(axis="y", alpha=0.3)
-        
-        plt.tight_layout()
-        chart_path = analysis_dir / "train_test_distribution.png"
-        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        charts["train_test_distribution"] = str(chart_path)
-    
-    # Chart 11: Test Accuracy vs Training Exposure (Scatter)
-    if not df_train_test.empty and train_class_counts:
-        df_valid = df_train_test[df_train_test["test_accuracy"].notna()].copy()
-        
-        if not df_valid.empty:
-            fig, ax = plt.subplots(figsize=(12, 8), dpi=200)
-            
-            # Scatter plot
-            scatter = ax.scatter(df_valid["train_count"], df_valid["test_accuracy"], 
-                               s=df_valid["test_count"]*3, alpha=0.6, c=df_valid["test_accuracy"],
-                               cmap="RdYlGn", vmin=0, vmax=1, edgecolors="black", linewidth=1)
-            
-            # Add class labels
-            for _, row in df_valid.iterrows():
-                ax.annotate(row["class_name"], 
-                          (row["train_count"], row["test_accuracy"]),
-                          xytext=(5, 5), textcoords="offset points", 
-                          fontsize=9, alpha=0.8)
-            
-            # Add trend line if enough data points
-            if len(df_valid) > 2:
-                z = np.polyfit(df_valid["train_count"], df_valid["test_accuracy"], 1)
-                p = np.poly1d(z)
-                x_line = np.linspace(df_valid["train_count"].min(), df_valid["train_count"].max(), 100)
-                ax.plot(x_line, p(x_line), "r--", alpha=0.5, linewidth=2, label="Trend Line")
-            
-            ax.set_xlabel("Training Exposure (Object Count in Train Split)", fontweight="bold", fontsize=14)
-            ax.set_ylabel("Test Accuracy", fontweight="bold", fontsize=14)
-            ax.set_title("Test Accuracy vs Training Exposure\n(bubble size = test object count)", 
-                        fontweight="bold", fontsize=16)
-            ax.set_ylim(0, 1.05)
-            ax.grid(alpha=0.3)
-            
-            # Colorbar
-            cbar = plt.colorbar(scatter, ax=ax)
-            cbar.set_label("Test Accuracy", fontweight="bold", fontsize=12)
-            
-            if len(df_valid) > 2:
-                ax.legend(fontsize=12)
-            
-            plt.tight_layout()
-            chart_path = analysis_dir / "accuracy_vs_training_exposure.png"
-            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-            plt.close(fig)
-            charts["accuracy_vs_training_exposure"] = str(chart_path)
-    
-    # Chart 12: Train/Test Ratio vs Accuracy
-    if not df_train_test.empty and train_class_counts:
-        df_valid = df_train_test[(df_train_test["test_accuracy"].notna()) & 
-                                (df_train_test["train_test_ratio"].notna())].copy()
-        
-        if not df_valid.empty:
-            df_sorted = df_valid.sort_values("test_accuracy")
-            
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), dpi=200)
-            
-            # Left: Accuracy by class with train/test ratio as color
-            bars = ax1.barh(df_sorted["class_name"], df_sorted["test_accuracy"])
-            
-            # Color bars by train/test ratio
-            norm = plt.Normalize(vmin=df_sorted["train_test_ratio"].min(), 
-                               vmax=df_sorted["train_test_ratio"].max())
-            cmap = plt.cm.coolwarm
-            for bar, ratio in zip(bars, df_sorted["train_test_ratio"]):
-                bar.set_color(cmap(norm(ratio)))
-            
-            ax1.set_xlabel("Test Accuracy", fontweight="bold", fontsize=14)
-            ax1.set_ylabel("Class", fontweight="bold", fontsize=14)
-            ax1.set_title("Test Accuracy by Class\n(colored by train/test ratio)", 
-                         fontweight="bold", fontsize=14)
-            ax1.set_xlim(0, 1)
-            ax1.grid(axis="x", alpha=0.3)
-            
-            # Colorbar for left plot
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-            sm.set_array([])
-            cbar1 = plt.colorbar(sm, ax=ax1)
-            cbar1.set_label("Train/Test Ratio", fontweight="bold", fontsize=12)
-            
-            # Right: Direct scatter of ratio vs accuracy
-            scatter = ax2.scatter(df_valid["train_test_ratio"], df_valid["test_accuracy"],
-                                s=100, alpha=0.6, c=df_valid["test_accuracy"],
-                                cmap="RdYlGn", vmin=0, vmax=1, edgecolors="black", linewidth=1)
-            
-            for _, row in df_valid.iterrows():
-                ax2.annotate(row["class_name"], 
-                           (row["train_test_ratio"], row["test_accuracy"]),
-                           xytext=(5, 5), textcoords="offset points", 
-                           fontsize=8, alpha=0.8)
-            
-            ax2.set_xlabel("Train/Test Object Ratio", fontweight="bold", fontsize=20)
-            ax2.set_ylabel("Test Accuracy", fontweight="bold", fontsize=20)
-            ax2.set_title("Accuracy vs Train/Test Ratio", fontweight="bold", fontsize=22)
-            ax2.set_ylim(0, 1.05)
-            ax2.grid(alpha=0.3)
-            
-            plt.tight_layout()
-            chart_path = analysis_dir / "accuracy_vs_train_test_ratio.png"
-            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
-            plt.close(fig)
-            charts["accuracy_vs_train_test_ratio"] = str(chart_path)
-
-    # Overall statistics
-    overall_expected = df_images["expected_total"].sum()
-    overall_matched = df_images["matched"].sum()
-    overall_accuracy = (overall_matched / overall_expected) if overall_expected > 0 else None
-    
+    # =========================================================================
+    # BUILD df_train_test BEFORE chart generation (so charts can use it)
+    # =========================================================================
     # Per-class test accuracy summary (for train-test comparison)
     test_class_stats = {}
     for cid in class_names.keys():
@@ -1442,6 +1221,379 @@ def generate_failure_analysis(
             })
     
     df_train_test = pd.DataFrame(train_test_rows)
+    
+    # Debug logging for training exposure analysis
+    print(f"\n📊 Training Exposure Analysis Status:")
+    print(f"  - train_class_counts populated: {len(train_class_counts) > 0} ({len(train_class_counts)} classes)")
+    print(f"  - df_train_test populated: {not df_train_test.empty} ({len(df_train_test)} rows)")
+    if not df_train_test.empty:
+        print(f"  - Sample df_train_test rows:")
+        print(df_train_test.head(3).to_string(index=False))
+    if train_class_counts and not df_train_test.empty:
+        print(f"  ✓ Training exposure charts will be generated")
+    else:
+        if not train_class_counts:
+            print(f"  ⚠️  No training class counts - check train_metadata.json exists and is valid")
+        if df_train_test.empty:
+            print(f"  ⚠️  df_train_test is empty - no classes with test data found")
+
+    # Create performance analysis subfolder for charts
+    analysis_dir = test_run_dir / "performance_analysis"
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    print(f"\n✓ Analysis charts will be saved to: {analysis_dir}")
+
+    # Generate charts
+    print("\n Generating accuracy analysis charts...")
+    charts = {}
+    
+    sns.set_style("whitegrid")
+    
+    # Chart 1: Accuracy by Weather
+    if not attr_summary_dfs["weather"].empty:
+        df_weather = attr_summary_dfs["weather"].sort_values("accuracy")
+        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+        bars = ax.barh(df_weather["weather"], df_weather["accuracy"], color="#5BC0EB")
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Weather", fontweight="bold", fontsize=20)
+        ax.set_title("Prediction Accuracy by Weather Condition", fontweight="bold", fontsize=22)
+        ax.set_xlim(0, 1)
+        ax.tick_params(axis='y', labelsize=18)
+        for label in ax.get_xticklabels():
+            label.set_fontweight('bold')
+        for label in ax.get_yticklabels():
+            label.set_fontweight('bold')
+        for i, (idx, row) in enumerate(df_weather.iterrows()):
+
+            acc = row["accuracy"]
+            if acc > 0.30:  # Place inside if bar is tall enough
+                x_pos = acc - 0.25
+            else:  # Place outside if bar is too short
+                x_pos = acc + 0.02
+            text_color = "black"
+            ax.text(x_pos, i, f'{acc:.2%} ({row["images"]} imgs)', 
+                   va='center', fontsize=16, fontweight='bold', color=text_color)
+        plt.tight_layout()
+        chart_path = analysis_dir / "accuracy_by_weather.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_weather"] = str(chart_path)
+
+    # Chart 2: Accuracy by Scene
+    if not attr_summary_dfs["scene"].empty:
+        df_scene = attr_summary_dfs["scene"].sort_values("accuracy")
+        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+        bars = ax.barh(df_scene["scene"], df_scene["accuracy"], color="#F25F5C")
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Scene", fontweight="bold", fontsize=20)
+        ax.set_title("Prediction Accuracy by Scene Type", fontweight="bold", fontsize=22)
+        ax.set_xlim(0, 1)
+        ax.tick_params(axis='y', labelsize=18)
+        for label in ax.get_xticklabels():
+            label.set_fontweight('bold')
+        for label in ax.get_yticklabels():
+            label.set_fontweight('bold')
+        for i, (idx, row) in enumerate(df_scene.iterrows()):
+            acc = row["accuracy"]
+            if acc > 0.30:  # Place inside if bar is tall enough
+                x_pos = acc - 0.25
+            else:  # Place outside if bar is too short
+                x_pos = acc + 0.02
+            text_color = "black"
+            ax.text(x_pos, i, f'{acc:.2%} ({row["images"]} imgs)', 
+                   va='center', fontsize=16, fontweight='bold', color=text_color)
+        plt.tight_layout()
+        chart_path = analysis_dir / "accuracy_by_scene.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_scene"] = str(chart_path)
+
+    # Chart 3: Accuracy by Time of Day
+    if not attr_summary_dfs["timeofday"].empty:
+        df_time = attr_summary_dfs["timeofday"].sort_values("accuracy")
+        fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+        bars = ax.barh(df_time["timeofday"], df_time["accuracy"], color="#9BC53D")
+        ax.set_xlabel("Accuracy", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Time of Day", fontweight="bold", fontsize=20)
+        ax.set_title("Prediction Accuracy by Time of Day", fontweight="bold", fontsize=22)
+        ax.set_xlim(0, 1)
+        ax.tick_params(axis='y', labelsize=18)
+        for label in ax.get_xticklabels():
+            label.set_fontweight('bold')
+        for label in ax.get_yticklabels():
+            label.set_fontweight('bold')
+        for i, (idx, row) in enumerate(df_time.iterrows()):
+            acc = row["accuracy"]
+            if acc > 0.30:  # Place inside if bar is tall enough
+                x_pos = acc - 0.25
+            else:  # Place outside if bar is too short
+                x_pos = acc + 0.02
+            text_color = "black"
+            ax.text(x_pos, i, f'{acc:.2%} ({row["images"]} imgs)', 
+                   va='center', fontsize=16, fontweight='bold', color=text_color)
+        plt.tight_layout()
+        chart_path = analysis_dir / "accuracy_by_timeofday.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_timeofday"] = str(chart_path)
+
+    # Chart 4: Accuracy by Object Count Range
+    if not df_count_buckets.empty:
+        # Filter out buckets with no data
+        df_count_valid = df_count_buckets[df_count_buckets["accuracy"].notna()].copy()
+        if not df_count_valid.empty:
+            fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+            bars = ax.bar(df_count_valid["object_count_range"], df_count_valid["accuracy"], color="#FFA630")
+            ax.set_xlabel("Objects per Image", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=20)
+            ax.set_title("Prediction Accuracy by Object Count", fontweight="bold", fontsize=22)
+            ax.set_ylim(0, 1)
+            for label in ax.get_xticklabels():
+                label.set_fontweight('bold')
+            for label in ax.get_yticklabels():
+                label.set_fontweight('bold')
+            for i, row in df_count_valid.iterrows():
+                acc = row["accuracy"]
+                if acc > 0.18:  # Place inside if bar is tall enough
+                    y_pos = acc - 0.12
+                else:  # Place outside if bar is too short
+                    y_pos = acc + 0.02
+                text_color = "black"
+                ax.text(i, y_pos, f'{acc:.2%}\n({row["images"]} imgs)', 
+                       ha='center', fontsize=16, fontweight='bold', color=text_color)
+            plt.tight_layout()
+            chart_path = analysis_dir / "accuracy_by_object_count.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_object_count"] = str(chart_path)
+    
+    # Chart 5: Accuracy by Object Size (Scale/Distance)
+    if not df_size_buckets.empty:
+        # Filter out buckets with no data (accuracy is None)
+        df_size_valid = df_size_buckets[df_size_buckets["accuracy"].notna()].copy()
+        if not df_size_valid.empty:
+            fig, ax = plt.subplots(figsize=(10, 6), dpi=200)
+            bars = ax.bar(df_size_valid["size_bucket"], df_size_valid["accuracy"], 
+                         color=["#E63946", "#F4A261", "#2A9D8F"][:len(df_size_valid)])
+            ax.set_xlabel("Object Size (bbox area relative to image)", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Accuracy", fontweight="bold", fontsize=20)
+            ax.set_title("Prediction Accuracy by Object Size", 
+                        fontweight="bold", fontsize=18, pad=20)
+            ax.set_ylim(0, 1)
+            for label in ax.get_xticklabels():
+                label.set_fontweight('bold')
+            for label in ax.get_yticklabels():
+                label.set_fontweight('bold')
+            for i, row in df_size_valid.iterrows():
+                acc = row["accuracy"]
+                if acc > 0.18:  # Place inside if bar is tall enough
+                    y_pos = acc - 0.12
+                else:  # Place outside if bar is too short
+                    y_pos = acc + 0.02
+                text_color = "black"
+                ax.text(i, y_pos, 
+                       f'{acc:.2%}\n({row["expected"]} objs)', 
+                       ha='center', fontsize=16, fontweight='bold', color=text_color)
+            ax.grid(axis='y', alpha=0.3)
+            plt.tight_layout()
+            chart_path = analysis_dir / "accuracy_by_size.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_size"] = str(chart_path)
+    
+    # Chart 6: Per-Class Accuracy by Size (Heatmap)
+    if not df_class_size.empty:
+        pivot_data = df_class_size.pivot(index="class_name", columns="size_bucket", values="accuracy")
+        pivot_data = pivot_data[["small", "medium", "large"]]  # Order columns
+        
+        fig, ax = plt.subplots(figsize=(10, 8), dpi=200)
+        # Use custom colormap with medium red and green for better text visibility and contrast
+        from matplotlib.colors import LinearSegmentedColormap
+        colors_list = ['#ff9999', '#ffff99', '#99ff99']  # Medium red -> Light yellow -> Medium green
+        custom_cmap = LinearSegmentedColormap.from_list('custom_RdYlGn', colors_list)
+        sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap=custom_cmap, 
+                   vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, 
+                   annot_kws={'size': 16, 'weight': 'bold', 'color': 'black'}, ax=ax)
+        ax.set_title("Per-Class Accuracy by Object Size", fontweight="bold", fontsize=22)
+        ax.set_xlabel("Object Size", fontweight="bold", fontsize=20)
+        ax.set_ylabel("Class", fontweight="bold", fontsize=20)
+        for label in ax.get_xticklabels():
+            label.set_fontweight('bold')
+        for label in ax.get_yticklabels():
+            label.set_fontweight('bold')
+        plt.tight_layout()
+        chart_path = analysis_dir / "accuracy_by_class_and_size.png"
+        plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        charts["accuracy_by_class_and_size"] = str(chart_path)
+    
+    # Chart 7: Per-Class Accuracy by Weather (All classes)
+    if not df_class_weather.empty:
+        pivot_data = df_class_weather.pivot(index="class_name", columns="weather", values="accuracy")
+        
+        if not pivot_data.empty:
+            # Dynamic figure height based on number of classes (minimum 8, 0.6 inches per class)
+            num_classes = len(pivot_data)
+            fig_height = max(8, num_classes * 0.6)
+            fig, ax = plt.subplots(figsize=(12, fig_height), dpi=200)
+            # Use custom colormap with medium red and green for better text visibility and contrast
+            from matplotlib.colors import LinearSegmentedColormap
+            colors_list = ['#ff9999', '#ffff99', '#99ff99']  # Medium red -> Light yellow -> Medium green
+            custom_cmap = LinearSegmentedColormap.from_list('custom_RdYlGn', colors_list)
+            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap=custom_cmap, 
+                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, 
+                       annot_kws={'size': 16, 'weight': 'bold', 'color': 'black'}, ax=ax)
+            ax.set_title("Per-Class Accuracy by Weather", fontweight="bold", fontsize=22)
+            ax.set_xlabel("Weather Condition", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
+            for label in ax.get_xticklabels():
+                label.set_fontweight('bold')
+            for label in ax.get_yticklabels():
+                label.set_fontweight('bold')
+            plt.tight_layout()
+            chart_path = analysis_dir / "accuracy_by_class_and_weather.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_class_and_weather"] = str(chart_path)
+    
+    # Chart 8: Per-Class Accuracy by Scene (All classes)
+    if not df_class_scene.empty:
+        pivot_data = df_class_scene.pivot(index="class_name", columns="scene", values="accuracy")
+        
+        if not pivot_data.empty:
+            # Dynamic figure height based on number of classes (minimum 8, 0.6 inches per class)
+            num_classes = len(pivot_data)
+            fig_height = max(8, num_classes * 0.6)
+            fig, ax = plt.subplots(figsize=(12, fig_height), dpi=200)
+            # Use custom colormap with medium red and green for better text visibility and contrast
+            from matplotlib.colors import LinearSegmentedColormap
+            colors_list = ['#ff9999', '#ffff99', '#99ff99']  # Medium red -> Light yellow -> Medium green
+            custom_cmap = LinearSegmentedColormap.from_list('custom_RdYlGn', colors_list)
+            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap=custom_cmap, 
+                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, 
+                       annot_kws={'size': 16, 'weight': 'bold', 'color': 'black'}, ax=ax)
+            ax.set_title("Per-Class Accuracy by Scene", fontweight="bold", fontsize=22)
+            ax.set_xlabel("Scene Type", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
+            for label in ax.get_xticklabels():
+                label.set_fontweight('bold')
+            for label in ax.get_yticklabels():
+                label.set_fontweight('bold')
+            plt.tight_layout()
+            chart_path = analysis_dir / "accuracy_by_class_and_scene.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_class_and_scene"] = str(chart_path)
+    
+    # Chart 9: Per-Class Accuracy by Time of Day (All classes)
+    if not df_class_time.empty:
+        pivot_data = df_class_time.pivot(index="class_name", columns="timeofday", values="accuracy")
+        
+        if not pivot_data.empty:
+            # Dynamic figure height based on number of classes (minimum 8, 0.6 inches per class)
+            num_classes = len(pivot_data)
+            fig_height = max(8, num_classes * 0.6)
+            fig, ax = plt.subplots(figsize=(12, fig_height), dpi=200)
+            # Use custom colormap with medium red and green for better text visibility and contrast
+            from matplotlib.colors import LinearSegmentedColormap
+            colors_list = ['#ff9999', '#ffff99', '#99ff99']  # Medium red -> Light yellow -> Medium green
+            custom_cmap = LinearSegmentedColormap.from_list('custom_RdYlGn', colors_list)
+            sns.heatmap(pivot_data, annot=True, fmt=".2%", cmap=custom_cmap, 
+                       vmin=0, vmax=1, cbar_kws={'label': 'Accuracy'}, 
+                       annot_kws={'size': 16, 'weight': 'bold', 'color': 'black'}, ax=ax)
+            ax.set_title("Per-Class Accuracy by Time of Day", fontweight="bold", fontsize=22)
+            ax.set_xlabel("Time of Day", fontweight="bold", fontsize=20)
+            ax.set_ylabel("Class", fontweight="bold", fontsize=20)
+            for label in ax.get_xticklabels():
+                label.set_fontweight('bold')
+            for label in ax.get_yticklabels():
+                label.set_fontweight('bold')
+            plt.tight_layout()
+            chart_path = analysis_dir / "accuracy_by_class_and_timeofday.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_by_class_and_timeofday"] = str(chart_path)
+    
+    # Debug: Check conditions for training exposure charts
+    if include_training_exposure_analysis:
+        print(f"\n🔍 Training Exposure Charts Generation Check:")
+        print(f"  - train_class_counts: {len(train_class_counts)} classes" if train_class_counts else "  - train_class_counts: EMPTY")
+        print(f"  - df_train_test: {len(df_train_test)} rows" if not df_train_test.empty else "  - df_train_test: EMPTY")
+        print(f"  - Condition (not df_train_test.empty and train_class_counts): {not df_train_test.empty and train_class_counts}")
+    
+    # Chart 10: Train vs Test Class Distribution - REMOVED per user request
+    # if not df_train_test.empty and train_class_counts:
+    #     df_sorted = df_train_test.sort_values("train_count", ascending=False)
+    #     ... (chart generation code removed)
+    #     print(f"  ✓ Generated: train_test_distribution.png")
+    # else:
+    #     print(f"  ✗ Skipped Chart 10: train_test_distribution (condition not met)")
+    
+    # Chart 11: Test Accuracy vs Training Exposure (Scatter) - Only if requested
+    if include_training_exposure_analysis and not df_train_test.empty and train_class_counts:
+        df_valid = df_train_test[df_train_test["test_accuracy"].notna()].copy()
+        
+        if not df_valid.empty:
+            fig, ax = plt.subplots(figsize=(12, 8), dpi=200)
+            
+            # Define marker styles for each class to make them distinguishable
+            markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h', 'H', '+', 'x', 'd', '|', '_']
+            
+            # Scatter plot with different markers for each class
+            for idx, (_, row) in enumerate(df_valid.iterrows()):
+                marker = markers[idx % len(markers)]
+                ax.scatter(row["train_count"], row["test_accuracy"],
+                          s=150, marker=marker, alpha=0.7,
+                          c=[row["test_accuracy"]], cmap="RdYlGn", vmin=0, vmax=1,
+                          edgecolors="black", linewidth=1.5)
+            
+            # Add class labels in bold
+            for _, row in df_valid.iterrows():
+                ax.annotate(row["class_name"], 
+                          (row["train_count"], row["test_accuracy"]),
+                          xytext=(5, 5), textcoords="offset points", 
+                          fontsize=14, fontweight='bold', alpha=0.9)
+            
+            # Add trend line if enough data points
+            if len(df_valid) > 2:
+                z = np.polyfit(df_valid["train_count"], df_valid["test_accuracy"], 1)
+                p = np.poly1d(z)
+                x_line = np.linspace(df_valid["train_count"].min(), df_valid["train_count"].max(), 100)
+                ax.plot(x_line, p(x_line), "r--", alpha=0.5, linewidth=2, label="Trend Line")
+            
+            ax.set_xlabel("Training Exposure (Object Count in Train Split)", fontweight="bold", fontsize=18)
+            ax.set_ylabel("Test Accuracy", fontweight="bold", fontsize=18)
+            ax.set_title("Test Accuracy vs Training Exposure", 
+                        fontweight="bold", fontsize=20)
+            ax.set_ylim(0, 1.05)
+            ax.grid(alpha=0.3)
+            for label in ax.get_xticklabels():
+                label.set_fontweight('bold')
+            for label in ax.get_yticklabels():
+                label.set_fontweight('bold')
+            
+            # Create a colorbar with a dummy scatter for reference
+            sm = plt.cm.ScalarMappable(cmap="RdYlGn", norm=plt.Normalize(vmin=0, vmax=1))
+            sm.set_array([])
+            cbar = plt.colorbar(sm, ax=ax)
+            cbar.set_label("Test Accuracy", fontweight="bold", fontsize=14)
+            
+            if len(df_valid) > 2:
+                ax.legend(fontsize=12)
+            
+            plt.tight_layout()
+            chart_path = analysis_dir / "accuracy_vs_training_exposure.png"
+            plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            charts["accuracy_vs_training_exposure"] = str(chart_path)
+            print(f"  ✓ Generated: accuracy_vs_training_exposure.png")
+        else:
+            print(f"  ✗ Skipped Chart 11: accuracy_vs_training_exposure (df_valid empty)")
+    
+
+    # Overall statistics
+    overall_expected = df_images["expected_total"].sum()
+    overall_matched = df_images["matched"].sum()
+    overall_accuracy = (overall_matched / overall_expected) if overall_expected > 0 else None
 
     # Summary output
     summary = {
@@ -1536,6 +1688,7 @@ def generate_pdf_and_json_report(
     total_time: float,
     comparison_data: List[Dict[str, Any]] | None = None,
     failure_analysis_summary: Dict[str, Any] | None = None,
+    include_training_exposure_analysis: bool = True,
 ) -> None:
     pdf_report_path = test_run_dir / "report.pdf"
     json_report_path = test_run_dir / "metrics_data.json"
@@ -1568,7 +1721,9 @@ def generate_pdf_and_json_report(
         spaceBefore=20,
     )
 
-    story.append(Paragraph("YOLO Model Analysis Report", title_style))
+    # Set title based on include_training_exposure_analysis
+    report_title = "YOLO Model Analysis Report" if include_training_exposure_analysis else "YOLO Model Testing Report"
+    story.append(Paragraph(report_title, title_style))
     story.append(Spacer(1, 12))
 
     info_data = [
@@ -1577,7 +1732,6 @@ def generate_pdf_and_json_report(
         ["Parameters:", f"{model_info.get('params', 0) / 1e6:.1f} M"],
         ["FLOPs (640x640):", f"{model_info.get('FLOPs(G)', 0.0):.2f} GFLOPs"],
         ["Run Name:", run_name],
-        ["W&B Run Name:", wb_run_name],
         ["Timestamp:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
         ["Dataset:", f"{used_dataset} - {used_split} split"],
         ["Images Processed:", str(metrics["num_images"])],
@@ -1585,7 +1739,7 @@ def generate_pdf_and_json_report(
         ["IoU Threshold:", str(iou_threshold)],
     ]
 
-    info_table = Table(info_data, colWidths=[2.2 * inch, 3.8 * inch])
+    info_table = Table(info_data, colWidths=[1.8 * inch, 3.2 * inch])
     info_table.setStyle(
         TableStyle(
             [
@@ -1593,9 +1747,9 @@ def generate_pdf_and_json_report(
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
                 ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                 ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 14),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("FONTSIZE", (0, 0), (-1, -1), 11),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
                 ("GRID", (0, 0), (-1, -1), 1, colors.white),
             ]
         )
@@ -1609,7 +1763,7 @@ def generate_pdf_and_json_report(
         ["Average Inference Time", f"{metrics['avg_inference_time']:.2f} ms per image"],
         ["FPS (Frames Per Second)", f"{metrics['fps']:.2f}"],
     ]
-    perf_table = Table(perf_data, colWidths=[3 * inch, 3 * inch])
+    perf_table = Table(perf_data, colWidths=[2.2 * inch, 2.8 * inch])
     perf_table.setStyle(
         TableStyle(
             [
@@ -1617,10 +1771,10 @@ def generate_pdf_and_json_report(
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 16),
-                ("FONTSIZE", (0, 1), (-1, -1), 14),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("FONTSIZE", (0, 0), (-1, 0), 13),
+                ("FONTSIZE", (0, 1), (-1, -1), 11),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
                 ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#d5f4e6")),
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]
@@ -1645,7 +1799,7 @@ def generate_pdf_and_json_report(
         ["False Positives", str(acc["fp"])],
         ["False Negatives", str(acc["fn"])],
     ]
-    acc_table = Table(acc_data, colWidths=[3 * inch, 3 * inch])
+    acc_table = Table(acc_data, colWidths=[2.2 * inch, 2.8 * inch])
     acc_table.setStyle(
         TableStyle(
             [
@@ -1653,10 +1807,10 @@ def generate_pdf_and_json_report(
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 16),
-                ("FONTSIZE", (0, 1), (-1, -1), 14),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("FONTSIZE", (0, 0), (-1, 0), 13),
+                ("FONTSIZE", (0, 1), (-1, -1), 11),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
                 ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]
@@ -1664,24 +1818,27 @@ def generate_pdf_and_json_report(
     )
     story.append(acc_table)
     
-    story.append(PageBreak())
-    story.append(Paragraph("Confusion Matrix", heading_style))
+    story.append(Spacer(1, 24))
+    story.append(Paragraph("Confusion Matrices", heading_style))
 
-    confusion_matrix_img_path = test_run_dir / "confusion_matrix.png"
+    # Display both confusion matrices from YOLO validation
+    # Regular confusion matrix (raw counts)
+    confusion_matrix_img_path = test_run_dir / "confusion_matrix_yolo.png"
     if confusion_matrix_img_path.exists():
+        story.append(Paragraph("Confusion Matrix (Counts)", styles["Heading2"]))
+        story.append(Spacer(1, 6))
         with PILImage.open(confusion_matrix_img_path) as img:
             w, h = img.size
             ratio = h / w
             pdf_w = 6.5 * inch
             pdf_h = pdf_w * ratio
             story.append(Image(str(confusion_matrix_img_path), width=pdf_w, height=pdf_h))
-
-    story.append(Paragraph(f"Correct Predictions (Diagonal Sum): {int(np.trace(confusion_matrix))}", styles["Normal"]))
-    story.append(Paragraph(f"Total Matched Predictions: {int(confusion_matrix.sum())}", styles["Normal"]))
+        story.append(Paragraph("Note: Shows raw prediction counts for each class combination.", styles["Normal"]))
+        story.append(Spacer(1, 16))
     
-    # Add normalized confusion matrix from YOLO validation
-    story.append(Spacer(1, 20))
-    story.append(Paragraph("Confusion Matrix (Normalized)", heading_style))
+    # Normalized confusion matrix
+    story.append(Paragraph("Confusion Matrix (Normalized)", styles["Heading2"]))
+    story.append(Spacer(1, 6))
     normalized_confusion_matrix_img_path = test_run_dir / "confusion_matrix_normalized.png"
     if normalized_confusion_matrix_img_path.exists():
         with PILImage.open(normalized_confusion_matrix_img_path) as img:
@@ -1690,12 +1847,11 @@ def generate_pdf_and_json_report(
             pdf_w = 6.5 * inch
             pdf_h = pdf_w * ratio
             story.append(Image(str(normalized_confusion_matrix_img_path), width=pdf_w, height=pdf_h))
-        story.append(Paragraph("Note: Values are normalized by the number of ground truth instances per class.", styles["Normal"]))
+        story.append(Paragraph("Note: Values are normalized by the number of ground truth instances per class. Shows the proportion of correct vs incorrect classifications.", styles["Normal"]))
     else:
-        story.append(Paragraph("Normalized confusion matrix not available.", styles["Normal"]))
-
-
-    story.append(PageBreak())
+        story.append(Paragraph("Confusion matrices not available from YOLO validation.", styles["Normal"]))
+    
+    story.append(Spacer(1, 10))
     story.append(Paragraph("Performance Visualizations", heading_style))
 
     # Add diagrams in pairs per page (two per page) for better layout
@@ -1721,9 +1877,9 @@ def generate_pdf_and_json_report(
 
         # After every two figures, move to a new page (except after the last)
         if idx % 2 == 0 and idx < len(core_and_map_figures):
-            story.append(PageBreak())
+            story.append(Spacer(1, 24))
 
-    story.append(PageBreak())
+    story.append(Spacer(1, 24))
     story.append(Paragraph("Per-Class Performance", heading_style))
 
     table_data = [["Class", "TP", "FP", "FN", "Precision", "Recall", "F1-Score", "mAP@0.5"]]
@@ -1755,10 +1911,10 @@ def generate_pdf_and_json_report(
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 8),
-                ("FONTSIZE", (0, 1), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("FONTSIZE", (0, 1), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]
@@ -1770,7 +1926,7 @@ def generate_pdf_and_json_report(
 
     # Add Failure Analysis Section
     if failure_analysis_summary and failure_analysis_summary.get("charts"):
-        story.append(PageBreak())
+        story.append(Spacer(1, 24))
         story.append(Paragraph("Comprehensive Failure Analysis", heading_style))
         story.append(Spacer(1, 12))
         
@@ -1791,8 +1947,8 @@ def generate_pdf_and_json_report(
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 16),
-                    ("FONTSIZE", (0, 1), (-1, -1), 14),
+                    ("FONTSIZE", (0, 0), (-1, 0), 12),
+                    ("FONTSIZE", (0, 1), (-1, -1), 10),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                     ("TOPPADDING", (0, 0), (-1, -1), 8),
                     ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#fdebd0")),
@@ -1820,7 +1976,7 @@ def generate_pdf_and_json_report(
                         story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
                         story.append(Spacer(1, 10))
         
-        story.append(PageBreak())
+        story.append(Spacer(1, 24))
         story.append(Paragraph("Accuracy by Object Characteristics", heading_style))
         story.append(Spacer(1, 8))
         
@@ -1835,11 +1991,23 @@ def generate_pdf_and_json_report(
                         pdf_w = 5.5 * inch
                         pdf_h = pdf_w * ratio
                         story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
+                        story.append(Spacer(1, 6))
+                        
+                        # Add detailed note for size chart
+                        if chart_key == "accuracy_by_size":
+                            size_note = (
+                                "<b>Note:</b> Object size categories are defined based on bounding box area as a percentage of total image area: "
+                                "<b>Small</b> objects occupy less than 1% of the image (typically distant or small objects), "
+                                "<b>Medium</b> objects occupy between 1% and 5% of the image (moderate-sized objects at medium distances), "
+                                "and <b>Large</b> objects occupy more than 5% of the image (close or large objects). "
+                                "These thresholds help identify how object scale affects detection accuracy."
+                            )
+                            story.append(Paragraph(size_note, styles["Normal"]))
                         story.append(Spacer(1, 10))
         
         # Train-Test Comparison Section
-        if "train_test_distribution" in charts or "accuracy_vs_training_exposure" in charts:
-            story.append(PageBreak())
+        if "train_test_distribution" in charts or "accuracy_vs_training_exposure" in charts or "accuracy_vs_train_test_ratio" in charts:
+            story.append(Spacer(1, 24))
             story.append(Paragraph("Training Exposure vs Test Performance", heading_style))
             story.append(Spacer(1, 8))
             
@@ -1852,35 +2020,7 @@ def generate_pdf_and_json_report(
                     ["Total Objects", str(train_info.get("train_total_objects", 0)),
                      str(failure_analysis_summary["overall"]["total_expected_objects"])],
                 ]
-                train_table = Table(train_summary_data, colWidths=[2.5 * inch, 1.75 * inch, 1.75 * inch])
-                train_table.setStyle(
-                    TableStyle([
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#8e44ad")),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                        ("FONTSIZE", (0, 0), (-1, 0), 16),
-                        ("FONTSIZE", (0, 1), (-1, -1), 14),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                        ("TOPPADDING", (0, 0), (-1, -1), 8),
-                        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#e8daef")),
-                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                    ])
-                )
-                story.append(train_table)
-                story.append(Spacer(1, 16))
-            
-            # Train-test distribution chart
-            if "train_test_distribution" in charts:
-                chart_path = Path(charts["train_test_distribution"])
-                if chart_path.exists():
-                    with PILImage.open(chart_path) as img:
-                        w, h = img.size
-                        ratio = h / w
-                        pdf_w = 6.5 * inch
-                        pdf_h = pdf_w * ratio
-                        story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
-                        story.append(Spacer(1, 12))
+            # Train-test distribution table and chart - REMOVED per user request
             
             # Accuracy vs training exposure
             if "accuracy_vs_training_exposure" in charts:
@@ -1893,6 +2033,8 @@ def generate_pdf_and_json_report(
                         pdf_h = pdf_w * ratio
                         story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
                         story.append(Spacer(1, 12))
+                else:
+                    print(f"  ⚠️  Accuracy vs training exposure chart file not found: {chart_path}")
             
             # Accuracy vs train/test ratio
             if "accuracy_vs_train_test_ratio" in charts:
@@ -1905,6 +2047,12 @@ def generate_pdf_and_json_report(
                     pdf_h = pdf_w * ratio
                     story.append(Image(str(chart_path), width=pdf_w, height=pdf_h))
                     story.append(Spacer(1, 12))
+                else:
+                    print(f"  ⚠️  Accuracy vs train/test ratio chart file not found: {chart_path}")
+        else:
+            print("  ⚠️  Training exposure charts not found in failure_analysis_summary")
+            if failure_analysis_summary:
+                print(f"  Available chart keys: {list(failure_analysis_summary.get('charts', {}).keys())}")
         
         # Per-class breakdown charts
         story.append(PageBreak())
@@ -1973,7 +2121,7 @@ def generate_pdf_and_json_report(
     story.append(Spacer(1, 30))
     story.append(
         Paragraph(
-            "Generated by YOLO Quick Test Script",
+            "Generated by YOLO Testing Pipeline",
             ParagraphStyle("Footer", parent=styles["Normal"], alignment=TA_CENTER, textColor=colors.grey),
         )
     )
@@ -2049,6 +2197,7 @@ def generate_pdf_and_json_report(
 
 def run_validation_pipeline(
     model_name: str,
+    dataset_path: Path | None = None,
     dataset_name: str = "bdd100k_yolo_limited",
     split: str = "test",
     iou_threshold: float = 0.5,
@@ -2056,40 +2205,57 @@ def run_validation_pipeline(
     use_wandb: bool = False,
     save_reports: bool = True,
     batch_size: int = 16,
+    include_training_exposure_analysis: bool = False,
 ) -> Dict[str, Any]:
     """
     Run YOLO validation pipeline and return results directly.
     
     Args:
         model_name: YOLO model name (e.g., yolov8n, yolov8s)
-        dataset_name: Dataset folder name under base directory
+        dataset_path: Absolute path to dataset directory (if provided, overrides dataset_name and base_dir)
+        dataset_name: Dataset folder name under base directory (ignored if dataset_path is provided)
         split: Dataset split (train, val, or test)
         iou_threshold: IoU threshold for validation
-        base_dir: Base project directory
+        base_dir: Base project directory (ignored if dataset_path is provided)
         use_wandb: Whether to use W&B logging
         save_reports: Whether to save PDF and JSON reports
+        batch_size: Batch size for inference
+        include_training_exposure_analysis: Whether to include training exposure vs test performance analysis
         
     Returns:
         Dictionary containing all metrics, figures, and paths
     """
-    if base_dir is None:
-        base_dir = Path.cwd().parent
+    # Determine dataset root from dataset_path or construct from base_dir + dataset_name
+    if dataset_path is not None:
+        yolo_dataset_root = Path(dataset_path).resolve()
+        used_dataset = yolo_dataset_root.name
+        # Use parent directory for storing results
+        base_dir = yolo_dataset_root.parent
     else:
-        base_dir = Path(base_dir).resolve()
+        if base_dir is None:
+            base_dir = Path.cwd().parent
+        else:
+            base_dir = Path(base_dir).resolve()
+        used_dataset = dataset_name
+        yolo_dataset_root = base_dir / used_dataset
     
-    used_dataset = dataset_name
     used_split = split
 
     device = setup_environment(use_wandb=use_wandb)
 
-    yolo_dataset_root = base_dir / used_dataset
     data_yaml_path = yolo_dataset_root / "data.yaml"
 
     data_config = load_data_config(data_yaml_path=data_yaml_path, yolo_dataset_root=yolo_dataset_root)
 
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_name = f"{model_name}_testing_{run_timestamp}"
-    runs_dir = base_dir / "yolo_test" / "analysis_runs"
+    
+    # Choose directory based on include_training_exposure_analysis
+    if include_training_exposure_analysis:
+        runs_dir = base_dir / "yolo_test" / "analysis_runs"
+    else:
+        runs_dir = base_dir / "yolo_test" / "runs"
+    
     test_run_dir = runs_dir / run_name
     test_run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2187,8 +2353,8 @@ def run_validation_pipeline(
         test_run_dir=test_run_dir,
     )
 
-    # Copy normalized confusion matrix from YOLO validation output
-    normalized_confusion_matrix_path = copy_normalized_confusion_matrix(
+    # Copy confusion matrices from YOLO validation output
+    confusion_matrix_yolo_path, normalized_confusion_matrix_path = copy_normalized_confusion_matrix(
         test_run_dir=test_run_dir,
     )
 
@@ -2208,6 +2374,10 @@ def run_validation_pipeline(
     )
 
     # Generate failure analysis using expected counts (class_counts & object_count)
+    # Always generate basic performance analysis; training exposure is optional
+    print("\n" + "=" * 80)
+    print("GENERATING DETAILED PERFORMANCE ANALYSIS")
+    print("=" * 80)
     failure_analysis_summary = generate_failure_analysis(
         per_image_records=validation_results.per_image_records,
         image_attributes=dataset_info.get("image_attributes", {}),
@@ -2215,6 +2385,7 @@ def run_validation_pipeline(
         test_run_dir=test_run_dir,
         dataset_root=yolo_dataset_root,
         iou_threshold=iou_threshold,
+        include_training_exposure_analysis=include_training_exposure_analysis,
     )
 
     if save_reports:
@@ -2234,6 +2405,7 @@ def run_validation_pipeline(
             total_time=total_time,
             comparison_data=comparison_data,
             failure_analysis_summary=failure_analysis_summary,
+            include_training_exposure_analysis=include_training_exposure_analysis,
         )
 
     if use_wandb:
@@ -2263,7 +2435,7 @@ def run_validation_pipeline(
         "df_metrics": df_metrics,
         "figures": {
             **figure_paths,
-            "confusion_matrix": confusion_matrix_path,
+            "confusion_matrix": confusion_matrix_yolo_path,
             "confusion_matrix_normalized": normalized_confusion_matrix_path,
         },
         "comparison_data": comparison_data,
@@ -2276,10 +2448,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run YOLO validation and generate report")
     parser.add_argument("--model-name", type=str, default="yolov8n", help="YOLO model name (e.g., yolov8n, yolov8s)")
     parser.add_argument(
+        "--dataset-path",
+        type=str,
+        default=None,
+        help="Absolute path to dataset directory (if provided, overrides --dataset-name and --base-dir)",
+    )
+    parser.add_argument(
         "--dataset-name",
         type=str,
         default="bdd100k_yolo_limited",
-        help="Dataset folder name under base directory",
+        help="Dataset folder name under base directory (ignored if --dataset-path is provided)",
     )
     parser.add_argument("--split", type=str, default="test", help="Dataset split: train, val, or test")
     parser.add_argument("--iou", type=float, default=0.5, help="IoU threshold for validation")
@@ -2287,18 +2465,27 @@ def main() -> None:
         "--base-dir",
         type=str,
         default=None,
-        help="Base project directory (defaults to parent of current working dir)",
+        help="Base project directory (defaults to parent of current working dir, ignored if --dataset-path is provided)",
+    )
+    parser.add_argument(
+        "--include-training-exposure",
+        dest="include_training_exposure_analysis",
+        action="store_true",
+        default=False,
+        help="Include training exposure vs test performance analysis",
     )
     args = parser.parse_args()
 
     run_validation_pipeline(
         model_name=args.model_name,
+        dataset_path=Path(args.dataset_path) if args.dataset_path else None,
         dataset_name=args.dataset_name,
         split=args.split,
         iou_threshold=args.iou,
         base_dir=Path(args.base_dir) if args.base_dir else None,
         use_wandb=True,
         save_reports=True,
+        include_training_exposure_analysis=args.include_training_exposure_analysis,
     )
 
 

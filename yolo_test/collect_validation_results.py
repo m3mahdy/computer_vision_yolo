@@ -86,15 +86,17 @@ def convert_to_result_format(
 
 def collect_validation_results(
     runs_dir: Path,
+    analysis_runs_dir: Path | None = None,
     dataset_name: str | None = None,
     split: str | None = None,
     verbose: bool = True
 ) -> tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
     """
-    Collect all validation results from runs directory.
+    Collect all validation results from runs and analysis_runs directories.
     
     Args:
         runs_dir: Path to the runs directory
+        analysis_runs_dir: Path to the analysis_runs directory (optional, will auto-detect if None)
         dataset_name: Optional filter by dataset name
         split: Optional filter by split (train, val, test)
         verbose: Whether to print progress messages (default: True)
@@ -105,18 +107,40 @@ def collect_validation_results(
     results_summary: List[Dict[str, Any]] = []
     validation_results: Dict[str, Dict[str, Any]] = {}
     
-    if not runs_dir.exists():
+    # Auto-detect analysis_runs_dir if not provided
+    if analysis_runs_dir is None:
+        analysis_runs_dir = runs_dir.parent / "analysis_runs"
+    
+    # Collect directories to scan
+    dirs_to_scan = []
+    
+    if runs_dir.exists():
+        run_dirs = [d for d in runs_dir.iterdir() if d.is_dir()]
+        dirs_to_scan.extend(run_dirs)
         if verbose:
-            print(f"❌ Runs directory not found: {runs_dir}")
+            print(f"📁 Found {len(run_dirs)} directories in runs/")
+    else:
+        if verbose:
+            print(f"⚠️  Runs directory not found: {runs_dir}")
+    
+    if analysis_runs_dir.exists():
+        analysis_dirs = [d for d in analysis_runs_dir.iterdir() if d.is_dir()]
+        dirs_to_scan.extend(analysis_dirs)
+        if verbose:
+            print(f"📁 Found {len(analysis_dirs)} directories in analysis_runs/")
+    else:
+        if verbose:
+            print(f"⚠️  Analysis runs directory not found: {analysis_runs_dir}")
+    
+    if not dirs_to_scan:
+        if verbose:
+            print(f"❌ No run directories found")
         return results_summary, validation_results
     
-    # Find all subdirectories in runs
-    run_dirs = [d for d in runs_dir.iterdir() if d.is_dir()]
-    
     if verbose:
-        print(f"📁 Scanning {len(run_dirs)} run directories...")
+        print(f"📁 Scanning {len(dirs_to_scan)} total run directories...")
     
-    for run_dir in sorted(run_dirs):
+    for run_dir in sorted(dirs_to_scan):
         json_data = load_json_from_run(run_dir)
         
         if json_data is None:
@@ -246,6 +270,12 @@ def main() -> None:
         help="Path to runs directory (default: ./runs)",
     )
     parser.add_argument(
+        "--analysis-runs-dir",
+        type=str,
+        default=None,
+        help="Path to analysis_runs directory (default: auto-detect from runs-dir parent)",
+    )
+    parser.add_argument(
         "--dataset",
         type=str,
         default=None,
@@ -277,6 +307,11 @@ def main() -> None:
     else:
         runs_dir = Path(__file__).parent / "runs"
     
+    if args.analysis_runs_dir:
+        analysis_runs_dir = Path(args.analysis_runs_dir).resolve()
+    else:
+        analysis_runs_dir = None  # Will auto-detect in collect_validation_results
+    
     if args.output_dir:
         output_dir = Path(args.output_dir).resolve()
     else:
@@ -286,6 +321,10 @@ def main() -> None:
     print("COLLECTING VALIDATION RESULTS")
     print("=" * 80)
     print(f"Runs directory: {runs_dir}")
+    if analysis_runs_dir:
+        print(f"Analysis runs directory: {analysis_runs_dir}")
+    else:
+        print(f"Analysis runs directory: {runs_dir.parent / 'analysis_runs'} (auto-detect)")
     if args.dataset:
         print(f"Filter by dataset: {args.dataset}")
     if args.split:
@@ -295,6 +334,7 @@ def main() -> None:
     # Collect results
     results_summary, validation_results = collect_validation_results(
         runs_dir=runs_dir,
+        analysis_runs_dir=analysis_runs_dir,
         dataset_name=args.dataset,
         split=args.split
     )
