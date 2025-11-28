@@ -1,0 +1,330 @@
+[
+  {
+    "trial_number": 0,
+    "timestamp": "2025-11-27 23:31:57",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 1,
+    "total_trials": 1
+  },
+  {
+    "trial_number": 1,
+    "timestamp": "2025-11-27 23:53:28",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 2,
+    "total_trials": 2
+  },
+  {
+    "trial_number": 2,
+    "timestamp": "2025-11-28 00:21:25",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 3,
+    "total_trials": 3
+  },
+  {
+    "trial_number": 3,
+    "timestamp": "2025-11-28 00:43:00",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 4,
+    "total_trials": 4
+  },
+  {
+    "trial_number": 4,
+    "timestamp": "2025-11-28 01:04:23",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 5,
+    "total_trials": 5
+  },
+  {
+    "trial_number": 5,
+    "timestamp": "2025-11-28 01:25:52",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 6,
+    "total_trials": 6
+  },
+  {
+    "trial_number": 6,
+    "timestamp": "2025-11-28 01:47:03",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 7,
+    "total_trials": 7
+  },
+  {
+    "trial_number": 7,
+    "timestamp": "2025-11-28 02:15:08",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 8,
+    "total_trials": 8
+  },
+  {
+    "trial_number": 8,
+    "timestamp": "2025-11-28 02:37:04",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 9,
+    "total_trials": 9
+  },
+  {
+    "trial_number": 9,
+    "timestamp": "2025-11-28 03:05:03",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 10,
+    "total_trials": 10
+  },
+  {
+    "trial_number": 10,
+    "timestamp": "2025-11-28 03:33:02",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 11,
+    "total_trials": 11
+  },
+  {
+    "trial_number": 11,
+    "timestamp": "2025-11-28 04:01:08",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 12,
+    "total_trials": 12
+  },
+  {
+    "trial_number": 12,
+    "timestamp": "2025-11-28 04:29:09",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 13,
+    "total_trials": 13
+  },
+  {
+    "trial_number": 13,
+    "timestamp": "2025-11-28 04:50:33",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 14,
+    "total_trials": 14
+  },
+  {
+    "trial_number": 14,
+    "timestamp": "2025-11-28 05:18:46",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 15,
+    "total_trials": 15
+  },
+  {
+    "trial_number": 15,
+    "timestamp": "2025-11-28 05:46:50",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 16,
+    "total_trials": 16
+  },
+  {
+    "trial_number": 16,
+    "timestamp": "2025-11-28 06:08:38",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 17,
+    "total_trials": 17
+  },
+  {
+    "trial_number": 17,
+    "timestamp": "2025-11-28 06:36:52",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 18,
+    "total_trials": 18
+  },
+  {
+    "trial_number": 18,
+    "timestamp": "2025-11-28 10:05:56",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 19,
+    "total_trials": 19
+  },
+  {
+    "trial_number": 19,
+    "timestamp": "2025-11-28 10:33:46",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 20,
+    "total_trials": 20
+  },
+  {
+    "trial_number": 20,
+    "timestamp": "2025-11-28 11:01:40",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 21,
+    "total_trials": 21
+  },
+  {
+    "trial_number": 21,
+    "timestamp": "2025-11-28 11:29:31",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 22,
+    "total_trials": 22
+  },
+  {
+    "trial_number": 22,
+    "timestamp": "2025-11-28 11:57:22",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 23,
+    "total_trials": 23
+  },
+  {
+    "trial_number": 23,
+    "timestamp": "2025-11-28 12:18:36",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 24,
+    "total_trials": 24
+  },
+  {
+    "trial_number": 24,
+    "timestamp": "2025-11-28 12:46:22",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 25,
+    "total_trials": 25
+  },
+  {
+    "trial_number": 25,
+    "timestamp": "2025-11-28 13:14:13",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 26,
+    "total_trials": 26
+  },
+  {
+    "trial_number": 26,
+    "timestamp": "2025-11-28 13:42:13",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 27,
+    "total_trials": 27
+  },
+  {
+    "trial_number": 27,
+    "timestamp": "2025-11-28 14:10:07",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 28,
+    "total_trials": 28
+  },
+  {
+    "trial_number": 28,
+    "timestamp": "2025-11-28 14:38:06",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 29,
+    "total_trials": 29
+  },
+  {
+    "trial_number": 29,
+    "timestamp": "2025-11-28 14:59:21",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 30,
+    "total_trials": 30
+  },
+  {
+    "trial_number": 30,
+    "timestamp": "2025-11-28 15:27:15",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 31,
+    "total_trials": 31
+  },
+  {
+    "trial_number": 31,
+    "timestamp": "2025-11-28 15:55:06",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 32,
+    "total_trials": 32
+  },
+  {
+    "trial_number": 32,
+    "timestamp": "2025-11-28 16:23:09",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 33,
+    "total_trials": 33
+  },
+  {
+    "trial_number": 33,
+    "timestamp": "2025-11-28 16:50:53",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 34,
+    "total_trials": 34
+  },
+  {
+    "trial_number": 34,
+    "timestamp": "2025-11-28 17:18:28",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5769275868120581,
+    "completed_trials": 35,
+    "total_trials": 35
+  },
+  {
+    "trial_number": 35,
+    "timestamp": "2025-11-28 18:09:12",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5770742349894156,
+    "completed_trials": 36,
+    "total_trials": 36
+  },
+  {
+    "trial_number": 36,
+    "timestamp": "2025-11-28 18:37:01",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5770742349894156,
+    "completed_trials": 37,
+    "total_trials": 37
+  },
+  {
+    "trial_number": 37,
+    "timestamp": "2025-11-28 19:04:53",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5770742349894156,
+    "completed_trials": 38,
+    "total_trials": 38
+  },
+  {
+    "trial_number": 38,
+    "timestamp": "2025-11-28 19:26:27",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5770742349894156,
+    "completed_trials": 39,
+    "total_trials": 39
+  },
+  {
+    "trial_number": 39,
+    "timestamp": "2025-11-28 19:47:36",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5770742349894156,
+    "completed_trials": 40,
+    "total_trials": 40
+  },
+  {
+    "trial_number": 40,
+    "timestamp": "2025-11-28 20:09:14",
+    "trial_state": "COMPLETE",
+    "best_map": 0.5770742349894156,
+    "completed_trials": 41,
+    "total_trials": 41
+  }
+]

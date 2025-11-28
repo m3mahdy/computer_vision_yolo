@@ -1,0 +1,200 @@
+{
+  "timestamp": "2025-11-29 01:56:52",
+  "dry_run": false,
+  "summary": {
+    "deleted_count": 19,
+    "failed_count": 0,
+    "total_size_freed": "1.70 GB",
+    "total_size_freed_bytes": 1820703670
+  },
+  "deleted_folders": [
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_032/yolov8m_finetuned_1_trial_032/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_034/yolov8m_finetuned_1_trial_034/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_033/yolov8m_finetuned_1_trial_033/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_020/yolov8m_finetuned_1_trial_020/weights",
+      "size": "49.61 MB",
+      "size_bytes": 52023634,
+      "file_count": 1,
+      "files": [
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_029/yolov8m_finetuned_1_trial_029/weights",
+      "size": "99.20 MB",
+      "size_bytes": 104022564,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_017/yolov8m_finetuned_1_trial_017/weights",
+      "size": "49.61 MB",
+      "size_bytes": 52023634,
+      "file_count": 1,
+      "files": [
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_026/yolov8m_finetuned_1_trial_026/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_019/yolov8m_finetuned_1_trial_019/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_007/yolov8m_finetuned_1_trial_007/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_000/yolov8m_finetuned_1_trial_000/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_009/yolov8m_finetuned_1_trial_009/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_036/yolov8m_finetuned_1_trial_036/weights",
+      "size": "49.61 MB",
+      "size_bytes": 52023634,
+      "file_count": 1,
+      "files": [
+        "last.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_031/yolov8m_finetuned_1_trial_031/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_008/yolov8m_finetuned_1_trial_008/weights",
+      "size": "99.20 MB",
+      "size_bytes": 104022564,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_023/yolov8m_finetuned_1_trial_023/weights",
+      "size": "99.20 MB",
+      "size_bytes": 104022564,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_012/yolov8m_finetuned_1_trial_012/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_040/yolov8m_finetuned_1_trial_040/weights",
+      "size": "99.20 MB",
+      "size_bytes": 104022564,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_013/yolov8m_finetuned_1_trial_013/weights",
+      "size": "99.20 MB",
+      "size_bytes": 104022564,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_014/yolov8m_finetuned_1_trial_014/weights",
+      "size": "99.23 MB",
+      "size_bytes": 104047268,
+      "file_count": 2,
+      "files": [
+        "last.pt",
+        "best.pt"
+      ]
+    }
+  ],
+  "failed_deletions": []
+}

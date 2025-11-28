@@ -1,0 +1,875 @@
+{
+  "timestamp": "2025-11-29 01:58:41",
+  "dry_run": false,
+  "summary": {
+    "deleted_count": 42,
+    "failed_count": 0,
+    "total_size_freed": "26.83 MB",
+    "total_size_freed_bytes": 28132124
+  },
+  "deleted_folders": [
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_003/wandb",
+      "type": "wandb",
+      "size": "575.80 KB",
+      "size_bytes": 589617,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_002125-7p0h4ag4/run-7p0h4ag4.wandb",
+        "run-20251128_002125-7p0h4ag4/logs/debug-internal.log",
+        "run-20251128_002125-7p0h4ag4/logs/debug.log",
+        "run-20251128_002125-7p0h4ag4/logs/debug-core.log",
+        "run-20251128_002125-7p0h4ag4/files/requirements.txt",
+        "run-20251128_002125-7p0h4ag4/files/output.log",
+        "run-20251128_002125-7p0h4ag4/files/config.yaml",
+        "run-20251128_002125-7p0h4ag4/files/wandb-summary.json",
+        "run-20251128_002125-7p0h4ag4/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_004/wandb",
+      "type": "wandb",
+      "size": "574.82 KB",
+      "size_bytes": 588613,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_004300-tvjz57lq/run-tvjz57lq.wandb",
+        "run-20251128_004300-tvjz57lq/logs/debug-internal.log",
+        "run-20251128_004300-tvjz57lq/logs/debug.log",
+        "run-20251128_004300-tvjz57lq/logs/debug-core.log",
+        "run-20251128_004300-tvjz57lq/files/requirements.txt",
+        "run-20251128_004300-tvjz57lq/files/output.log",
+        "run-20251128_004300-tvjz57lq/files/config.yaml",
+        "run-20251128_004300-tvjz57lq/files/wandb-summary.json",
+        "run-20251128_004300-tvjz57lq/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_032/wandb",
+      "type": "wandb",
+      "size": "803.27 KB",
+      "size_bytes": 822544,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_155506-he291c0c/run-he291c0c.wandb",
+        "run-20251128_155506-he291c0c/logs/debug-internal.log",
+        "run-20251128_155506-he291c0c/logs/debug.log",
+        "run-20251128_155506-he291c0c/logs/debug-core.log",
+        "run-20251128_155506-he291c0c/files/requirements.txt",
+        "run-20251128_155506-he291c0c/files/output.log",
+        "run-20251128_155506-he291c0c/files/config.yaml",
+        "run-20251128_155506-he291c0c/files/wandb-summary.json",
+        "run-20251128_155506-he291c0c/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_035/wandb",
+      "type": "wandb",
+      "size": "1.24 MB",
+      "size_bytes": 1300925,
+      "file_count": 18,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_174049-o3m7z13e/run-o3m7z13e.wandb",
+        "run-20251128_171828-wa9emddk/run-wa9emddk.wandb",
+        "run-20251128_174049-o3m7z13e/logs/debug-internal.log",
+        "run-20251128_174049-o3m7z13e/logs/debug.log",
+        "run-20251128_174049-o3m7z13e/logs/debug-core.log",
+        "run-20251128_174049-o3m7z13e/files/requirements.txt",
+        "run-20251128_174049-o3m7z13e/files/output.log",
+        "run-20251128_174049-o3m7z13e/files/config.yaml",
+        "run-20251128_174049-o3m7z13e/files/wandb-summary.json",
+        "run-20251128_174049-o3m7z13e/files/wandb-metadata.json",
+        "run-20251128_171828-wa9emddk/logs/debug.log",
+        "run-20251128_171828-wa9emddk/logs/debug-core.log",
+        "run-20251128_171828-wa9emddk/files/requirements.txt",
+        "run-20251128_171828-wa9emddk/files/output.log",
+        "run-20251128_171828-wa9emddk/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_034/wandb",
+      "type": "wandb",
+      "size": "804.16 KB",
+      "size_bytes": 823455,
+      "file_count": 9,
+      "files": [
+        "run-20251128_165053-gmemfz7o/run-gmemfz7o.wandb",
+        "run-20251128_165053-gmemfz7o/logs/debug-internal.log",
+        "run-20251128_165053-gmemfz7o/logs/debug.log",
+        "run-20251128_165053-gmemfz7o/logs/debug-core.log",
+        "run-20251128_165053-gmemfz7o/files/requirements.txt",
+        "run-20251128_165053-gmemfz7o/files/output.log",
+        "run-20251128_165053-gmemfz7o/files/config.yaml",
+        "run-20251128_165053-gmemfz7o/files/wandb-summary.json",
+        "run-20251128_165053-gmemfz7o/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_033/wandb",
+      "type": "wandb",
+      "size": "797.09 KB",
+      "size_bytes": 816218,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_162309-cuubzj6b/run-cuubzj6b.wandb",
+        "run-20251128_162309-cuubzj6b/logs/debug-internal.log",
+        "run-20251128_162309-cuubzj6b/logs/debug.log",
+        "run-20251128_162309-cuubzj6b/logs/debug-core.log",
+        "run-20251128_162309-cuubzj6b/files/requirements.txt",
+        "run-20251128_162309-cuubzj6b/files/output.log",
+        "run-20251128_162309-cuubzj6b/files/config.yaml",
+        "run-20251128_162309-cuubzj6b/files/wandb-summary.json",
+        "run-20251128_162309-cuubzj6b/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_005/wandb",
+      "type": "wandb",
+      "size": "575.51 KB",
+      "size_bytes": 589322,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_010423-l9eg8ooe/run-l9eg8ooe.wandb",
+        "run-20251128_010423-l9eg8ooe/logs/debug-internal.log",
+        "run-20251128_010423-l9eg8ooe/logs/debug.log",
+        "run-20251128_010423-l9eg8ooe/logs/debug-core.log",
+        "run-20251128_010423-l9eg8ooe/files/requirements.txt",
+        "run-20251128_010423-l9eg8ooe/files/output.log",
+        "run-20251128_010423-l9eg8ooe/files/config.yaml",
+        "run-20251128_010423-l9eg8ooe/files/wandb-summary.json",
+        "run-20251128_010423-l9eg8ooe/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_002/wandb",
+      "type": "wandb",
+      "size": "810.41 KB",
+      "size_bytes": 829855,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251127_235328-lzr0jamj/run-lzr0jamj.wandb",
+        "run-20251127_235328-lzr0jamj/logs/debug-internal.log",
+        "run-20251127_235328-lzr0jamj/logs/debug.log",
+        "run-20251127_235328-lzr0jamj/logs/debug-core.log",
+        "run-20251127_235328-lzr0jamj/files/requirements.txt",
+        "run-20251127_235328-lzr0jamj/files/output.log",
+        "run-20251127_235328-lzr0jamj/files/config.yaml",
+        "run-20251127_235328-lzr0jamj/files/wandb-summary.json",
+        "run-20251127_235328-lzr0jamj/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_020/wandb",
+      "type": "wandb",
+      "size": "801.67 KB",
+      "size_bytes": 820907,
+      "file_count": 9,
+      "files": [
+        "run-20251128_103346-5am4wpav/run-5am4wpav.wandb",
+        "run-20251128_103346-5am4wpav/logs/debug-internal.log",
+        "run-20251128_103346-5am4wpav/logs/debug.log",
+        "run-20251128_103346-5am4wpav/logs/debug-core.log",
+        "run-20251128_103346-5am4wpav/files/requirements.txt",
+        "run-20251128_103346-5am4wpav/files/output.log",
+        "run-20251128_103346-5am4wpav/files/config.yaml",
+        "run-20251128_103346-5am4wpav/files/wandb-summary.json",
+        "run-20251128_103346-5am4wpav/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_027/wandb",
+      "type": "wandb",
+      "size": "806.67 KB",
+      "size_bytes": 826029,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_134213-7c72dy5m/run-7c72dy5m.wandb",
+        "run-20251128_134213-7c72dy5m/logs/debug-internal.log",
+        "run-20251128_134213-7c72dy5m/logs/debug.log",
+        "run-20251128_134213-7c72dy5m/logs/debug-core.log",
+        "run-20251128_134213-7c72dy5m/files/requirements.txt",
+        "run-20251128_134213-7c72dy5m/files/output.log",
+        "run-20251128_134213-7c72dy5m/files/config.yaml",
+        "run-20251128_134213-7c72dy5m/files/wandb-summary.json",
+        "run-20251128_134213-7c72dy5m/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_018/wandb",
+      "type": "wandb",
+      "size": "1.15 MB",
+      "size_bytes": 1205541,
+      "file_count": 18,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_063653-n14jwjp2/run-n14jwjp2.wandb",
+        "run-20251128_093718-oc9615d7/run-oc9615d7.wandb",
+        "run-20251128_063653-n14jwjp2/logs/debug.log",
+        "run-20251128_063653-n14jwjp2/logs/debug-core.log",
+        "run-20251128_063653-n14jwjp2/files/requirements.txt",
+        "run-20251128_063653-n14jwjp2/files/output.log",
+        "run-20251128_063653-n14jwjp2/files/wandb-metadata.json",
+        "run-20251128_093718-oc9615d7/logs/debug-internal.log",
+        "run-20251128_093718-oc9615d7/logs/debug.log",
+        "run-20251128_093718-oc9615d7/logs/debug-core.log",
+        "run-20251128_093718-oc9615d7/files/requirements.txt",
+        "run-20251128_093718-oc9615d7/files/output.log",
+        "run-20251128_093718-oc9615d7/files/config.yaml",
+        "run-20251128_093718-oc9615d7/files/wandb-summary.json",
+        "run-20251128_093718-oc9615d7/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_011/wandb",
+      "type": "wandb",
+      "size": "821.93 KB",
+      "size_bytes": 841653,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_033303-068vvnms/run-068vvnms.wandb",
+        "run-20251128_033303-068vvnms/logs/debug-internal.log",
+        "run-20251128_033303-068vvnms/logs/debug.log",
+        "run-20251128_033303-068vvnms/logs/debug-core.log",
+        "run-20251128_033303-068vvnms/files/requirements.txt",
+        "run-20251128_033303-068vvnms/files/output.log",
+        "run-20251128_033303-068vvnms/files/config.yaml",
+        "run-20251128_033303-068vvnms/files/wandb-summary.json",
+        "run-20251128_033303-068vvnms/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_016/wandb",
+      "type": "wandb",
+      "size": "49.28 KB",
+      "size_bytes": 50462,
+      "file_count": 10,
+      "files": [
+        ".DS_Store",
+        "run-20251128_054651-ymx92laz/.DS_Store",
+        "run-20251128_054651-ymx92laz/logs/debug-internal.log",
+        "run-20251128_054651-ymx92laz/logs/debug.log",
+        "run-20251128_054651-ymx92laz/logs/debug-core.log",
+        "run-20251128_054651-ymx92laz/files/requirements.txt",
+        "run-20251128_054651-ymx92laz/files/output.log",
+        "run-20251128_054651-ymx92laz/files/config.yaml",
+        "run-20251128_054651-ymx92laz/files/wandb-summary.json",
+        "run-20251128_054651-ymx92laz/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_029/wandb",
+      "type": "wandb",
+      "size": "574.39 KB",
+      "size_bytes": 588178,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_143807-dpcasrx3/run-dpcasrx3.wandb",
+        "run-20251128_143807-dpcasrx3/logs/debug-internal.log",
+        "run-20251128_143807-dpcasrx3/logs/debug.log",
+        "run-20251128_143807-dpcasrx3/logs/debug-core.log",
+        "run-20251128_143807-dpcasrx3/files/requirements.txt",
+        "run-20251128_143807-dpcasrx3/files/output.log",
+        "run-20251128_143807-dpcasrx3/files/config.yaml",
+        "run-20251128_143807-dpcasrx3/files/wandb-summary.json",
+        "run-20251128_143807-dpcasrx3/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_017/wandb",
+      "type": "wandb",
+      "size": "816.65 KB",
+      "size_bytes": 836246,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_060838-ysc1119a/run-ysc1119a.wandb",
+        "run-20251128_060838-ysc1119a/logs/debug-internal.log",
+        "run-20251128_060838-ysc1119a/logs/debug.log",
+        "run-20251128_060838-ysc1119a/logs/debug-core.log",
+        "run-20251128_060838-ysc1119a/files/requirements.txt",
+        "run-20251128_060838-ysc1119a/files/output.log",
+        "run-20251128_060838-ysc1119a/files/config.yaml",
+        "run-20251128_060838-ysc1119a/files/wandb-summary.json",
+        "run-20251128_060838-ysc1119a/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_028/wandb",
+      "type": "wandb",
+      "size": "759.88 KB",
+      "size_bytes": 778118,
+      "file_count": 5,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_141008-2jw4jez5/run-2jw4jez5.wandb",
+        "run-20251128_141008-2jw4jez5/files/config.yaml"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_010/wandb",
+      "type": "wandb",
+      "size": "812.95 KB",
+      "size_bytes": 832465,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_030503-gps56jyh/run-gps56jyh.wandb",
+        "run-20251128_030503-gps56jyh/logs/debug-internal.log",
+        "run-20251128_030503-gps56jyh/logs/debug.log",
+        "run-20251128_030503-gps56jyh/logs/debug-core.log",
+        "run-20251128_030503-gps56jyh/files/requirements.txt",
+        "run-20251128_030503-gps56jyh/files/output.log",
+        "run-20251128_030503-gps56jyh/files/config.yaml",
+        "run-20251128_030503-gps56jyh/files/wandb-summary.json",
+        "run-20251128_030503-gps56jyh/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_026/wandb",
+      "type": "wandb",
+      "size": "807.12 KB",
+      "size_bytes": 826491,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_131414-eehru6w7/run-eehru6w7.wandb",
+        "run-20251128_131414-eehru6w7/logs/debug-internal.log",
+        "run-20251128_131414-eehru6w7/logs/debug.log",
+        "run-20251128_131414-eehru6w7/logs/debug-core.log",
+        "run-20251128_131414-eehru6w7/files/requirements.txt",
+        "run-20251128_131414-eehru6w7/files/output.log",
+        "run-20251128_131414-eehru6w7/files/config.yaml",
+        "run-20251128_131414-eehru6w7/files/wandb-summary.json",
+        "run-20251128_131414-eehru6w7/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_019/wandb",
+      "type": "wandb",
+      "size": "800.63 KB",
+      "size_bytes": 819845,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_100556-p5wbe0rp/run-p5wbe0rp.wandb",
+        "run-20251128_100556-p5wbe0rp/logs/debug-internal.log",
+        "run-20251128_100556-p5wbe0rp/logs/debug.log",
+        "run-20251128_100556-p5wbe0rp/logs/debug-core.log",
+        "run-20251128_100556-p5wbe0rp/files/requirements.txt",
+        "run-20251128_100556-p5wbe0rp/files/output.log",
+        "run-20251128_100556-p5wbe0rp/files/config.yaml",
+        "run-20251128_100556-p5wbe0rp/files/wandb-summary.json",
+        "run-20251128_100556-p5wbe0rp/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_021/wandb",
+      "type": "wandb",
+      "size": "36.98 KB",
+      "size_bytes": 37865,
+      "file_count": 11,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_110140-x0y0bzp8/logs/debug-internal.log",
+        "run-20251128_110140-x0y0bzp8/logs/debug.log",
+        "run-20251128_110140-x0y0bzp8/logs/debug-core.log",
+        "run-20251128_110140-x0y0bzp8/files/requirements.txt",
+        "run-20251128_110140-x0y0bzp8/files/output.log",
+        "run-20251128_110140-x0y0bzp8/files/config.yaml",
+        "run-20251128_110140-x0y0bzp8/files/wandb-summary.json",
+        "run-20251128_110140-x0y0bzp8/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_038/wandb",
+      "type": "wandb",
+      "size": "576.27 KB",
+      "size_bytes": 590103,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_190454-wr59xlhw/run-wr59xlhw.wandb",
+        "run-20251128_190454-wr59xlhw/logs/debug-internal.log",
+        "run-20251128_190454-wr59xlhw/logs/debug.log",
+        "run-20251128_190454-wr59xlhw/logs/debug-core.log",
+        "run-20251128_190454-wr59xlhw/files/requirements.txt",
+        "run-20251128_190454-wr59xlhw/files/output.log",
+        "run-20251128_190454-wr59xlhw/files/config.yaml",
+        "run-20251128_190454-wr59xlhw/files/wandb-summary.json",
+        "run-20251128_190454-wr59xlhw/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_007/wandb",
+      "type": "wandb",
+      "size": "815.55 KB",
+      "size_bytes": 835126,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_014703-wda2apxk/run-wda2apxk.wandb",
+        "run-20251128_014703-wda2apxk/logs/debug-internal.log",
+        "run-20251128_014703-wda2apxk/logs/debug.log",
+        "run-20251128_014703-wda2apxk/logs/debug-core.log",
+        "run-20251128_014703-wda2apxk/files/requirements.txt",
+        "run-20251128_014703-wda2apxk/files/output.log",
+        "run-20251128_014703-wda2apxk/files/config.yaml",
+        "run-20251128_014703-wda2apxk/files/wandb-summary.json",
+        "run-20251128_014703-wda2apxk/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_000/wandb",
+      "type": "wandb",
+      "size": "840.50 KB",
+      "size_bytes": 860673,
+      "file_count": 14,
+      "files": [
+        "debug-internal.log",
+        ".DS_Store",
+        "debug.log",
+        "latest-run",
+        "run-20251127_230343-u4ft0m5r/.DS_Store",
+        "run-20251127_230343-u4ft0m5r/run-u4ft0m5r.wandb",
+        "run-20251127_230343-u4ft0m5r/logs/debug-internal.log",
+        "run-20251127_230343-u4ft0m5r/logs/debug.log",
+        "run-20251127_230343-u4ft0m5r/logs/debug-core.log",
+        "run-20251127_230343-u4ft0m5r/files/requirements.txt",
+        "run-20251127_230343-u4ft0m5r/files/output.log",
+        "run-20251127_230343-u4ft0m5r/files/config.yaml",
+        "run-20251127_230343-u4ft0m5r/files/wandb-summary.json",
+        "run-20251127_230343-u4ft0m5r/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_009/wandb",
+      "type": "wandb",
+      "size": "810.28 KB",
+      "size_bytes": 829723,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_023704-5fwiy2y9/run-5fwiy2y9.wandb",
+        "run-20251128_023704-5fwiy2y9/logs/debug-internal.log",
+        "run-20251128_023704-5fwiy2y9/logs/debug.log",
+        "run-20251128_023704-5fwiy2y9/logs/debug-core.log",
+        "run-20251128_023704-5fwiy2y9/files/requirements.txt",
+        "run-20251128_023704-5fwiy2y9/files/output.log",
+        "run-20251128_023704-5fwiy2y9/files/config.yaml",
+        "run-20251128_023704-5fwiy2y9/files/wandb-summary.json",
+        "run-20251128_023704-5fwiy2y9/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_036/wandb",
+      "type": "wandb",
+      "size": "804.17 KB",
+      "size_bytes": 823470,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_180912-ar0y80uc/run-ar0y80uc.wandb",
+        "run-20251128_180912-ar0y80uc/logs/debug-internal.log",
+        "run-20251128_180912-ar0y80uc/logs/debug.log",
+        "run-20251128_180912-ar0y80uc/logs/debug-core.log",
+        "run-20251128_180912-ar0y80uc/files/requirements.txt",
+        "run-20251128_180912-ar0y80uc/files/output.log",
+        "run-20251128_180912-ar0y80uc/files/config.yaml",
+        "run-20251128_180912-ar0y80uc/files/wandb-summary.json",
+        "run-20251128_180912-ar0y80uc/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_031/wandb",
+      "type": "wandb",
+      "size": "804.35 KB",
+      "size_bytes": 823653,
+      "file_count": 11,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_152715-2mytcmjt/run-2mytcmjt.wandb",
+        "run-20251128_152715-2mytcmjt/logs/debug-internal.log",
+        "run-20251128_152715-2mytcmjt/logs/debug.log",
+        "run-20251128_152715-2mytcmjt/logs/debug-core.log",
+        "run-20251128_152715-2mytcmjt/files/requirements.txt",
+        "run-20251128_152715-2mytcmjt/files/output.log",
+        "run-20251128_152715-2mytcmjt/files/config.yaml",
+        "run-20251128_152715-2mytcmjt/files/wandb-summary.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_030/wandb",
+      "type": "wandb",
+      "size": "806.31 KB",
+      "size_bytes": 825665,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_145922-gh1sdn1a/run-gh1sdn1a.wandb",
+        "run-20251128_145922-gh1sdn1a/logs/debug-internal.log",
+        "run-20251128_145922-gh1sdn1a/logs/debug.log",
+        "run-20251128_145922-gh1sdn1a/logs/debug-core.log",
+        "run-20251128_145922-gh1sdn1a/files/requirements.txt",
+        "run-20251128_145922-gh1sdn1a/files/output.log",
+        "run-20251128_145922-gh1sdn1a/files/config.yaml",
+        "run-20251128_145922-gh1sdn1a/files/wandb-summary.json",
+        "run-20251128_145922-gh1sdn1a/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_008/wandb",
+      "type": "wandb",
+      "size": "577.96 KB",
+      "size_bytes": 591835,
+      "file_count": 10,
+      "files": [
+        "debug-internal.log",
+        "run-20251128_021508-ddenuxaj/run-ddenuxaj.wandb",
+        "run-20251128_021508-ddenuxaj/logs/debug-internal.log",
+        "run-20251128_021508-ddenuxaj/logs/debug.log",
+        "run-20251128_021508-ddenuxaj/logs/debug-core.log",
+        "run-20251128_021508-ddenuxaj/files/requirements.txt",
+        "run-20251128_021508-ddenuxaj/files/output.log",
+        "run-20251128_021508-ddenuxaj/files/config.yaml",
+        "run-20251128_021508-ddenuxaj/files/wandb-summary.json",
+        "run-20251128_021508-ddenuxaj/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_037/wandb",
+      "type": "wandb",
+      "size": "798.12 KB",
+      "size_bytes": 817276,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_183701-fs7bwx12/run-fs7bwx12.wandb",
+        "run-20251128_183701-fs7bwx12/logs/debug-internal.log",
+        "run-20251128_183701-fs7bwx12/logs/debug.log",
+        "run-20251128_183701-fs7bwx12/logs/debug-core.log",
+        "run-20251128_183701-fs7bwx12/files/requirements.txt",
+        "run-20251128_183701-fs7bwx12/files/output.log",
+        "run-20251128_183701-fs7bwx12/files/config.yaml",
+        "run-20251128_183701-fs7bwx12/files/wandb-summary.json",
+        "run-20251128_183701-fs7bwx12/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_001/wandb",
+      "type": "wandb",
+      "size": "581.26 KB",
+      "size_bytes": 595212,
+      "file_count": 13,
+      "files": [
+        "debug-internal.log",
+        ".DS_Store",
+        "debug.log",
+        "latest-run",
+        "run-20251127_233157-vo74wubl/run-vo74wubl.wandb",
+        "run-20251127_233157-vo74wubl/logs/debug-internal.log",
+        "run-20251127_233157-vo74wubl/logs/debug.log",
+        "run-20251127_233157-vo74wubl/logs/debug-core.log",
+        "run-20251127_233157-vo74wubl/files/requirements.txt",
+        "run-20251127_233157-vo74wubl/files/output.log",
+        "run-20251127_233157-vo74wubl/files/config.yaml",
+        "run-20251127_233157-vo74wubl/files/wandb-summary.json",
+        "run-20251127_233157-vo74wubl/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_039/wandb",
+      "type": "wandb",
+      "size": "585.94 KB",
+      "size_bytes": 599998,
+      "file_count": 14,
+      "files": [
+        "debug-internal.log",
+        ".DS_Store",
+        "debug.log",
+        "latest-run",
+        "run-20251128_192628-wu0uprb9/.DS_Store",
+        "run-20251128_192628-wu0uprb9/run-wu0uprb9.wandb",
+        "run-20251128_192628-wu0uprb9/logs/debug-internal.log",
+        "run-20251128_192628-wu0uprb9/logs/debug.log",
+        "run-20251128_192628-wu0uprb9/logs/debug-core.log",
+        "run-20251128_192628-wu0uprb9/files/requirements.txt",
+        "run-20251128_192628-wu0uprb9/files/output.log",
+        "run-20251128_192628-wu0uprb9/files/config.yaml",
+        "run-20251128_192628-wu0uprb9/files/wandb-summary.json",
+        "run-20251128_192628-wu0uprb9/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_006/wandb",
+      "type": "wandb",
+      "size": "33.20 KB",
+      "size_bytes": 33999,
+      "file_count": 10,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_012553-1d11mmho/logs/debug-internal.log",
+        "run-20251128_012553-1d11mmho/logs/debug-core.log",
+        "run-20251128_012553-1d11mmho/files/requirements.txt",
+        "run-20251128_012553-1d11mmho/files/output.log",
+        "run-20251128_012553-1d11mmho/files/config.yaml",
+        "run-20251128_012553-1d11mmho/files/wandb-summary.json",
+        "run-20251128_012553-1d11mmho/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_041/wandb",
+      "type": "wandb",
+      "size": "264.05 KB",
+      "size_bytes": 270386,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_200914-tmza9m3l/run-tmza9m3l.wandb",
+        "run-20251128_200914-tmza9m3l/logs/debug-internal.log",
+        "run-20251128_200914-tmza9m3l/logs/debug.log",
+        "run-20251128_200914-tmza9m3l/logs/debug-core.log",
+        "run-20251128_200914-tmza9m3l/files/requirements.txt",
+        "run-20251128_200914-tmza9m3l/files/output.log",
+        "run-20251128_200914-tmza9m3l/files/config.yaml",
+        "run-20251128_200914-tmza9m3l/files/wandb-summary.json",
+        "run-20251128_200914-tmza9m3l/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_024/wandb",
+      "type": "wandb",
+      "size": "802.48 KB",
+      "size_bytes": 821737,
+      "file_count": 9,
+      "files": [
+        "run-20251128_121837-vox3tuti/run-vox3tuti.wandb",
+        "run-20251128_121837-vox3tuti/logs/debug-internal.log",
+        "run-20251128_121837-vox3tuti/logs/debug.log",
+        "run-20251128_121837-vox3tuti/logs/debug-core.log",
+        "run-20251128_121837-vox3tuti/files/requirements.txt",
+        "run-20251128_121837-vox3tuti/files/output.log",
+        "run-20251128_121837-vox3tuti/files/config.yaml",
+        "run-20251128_121837-vox3tuti/files/wandb-summary.json",
+        "run-20251128_121837-vox3tuti/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_023/wandb",
+      "type": "wandb",
+      "size": "36.97 KB",
+      "size_bytes": 37861,
+      "file_count": 11,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_115722-q58ttu3t/logs/debug-internal.log",
+        "run-20251128_115722-q58ttu3t/logs/debug.log",
+        "run-20251128_115722-q58ttu3t/logs/debug-core.log",
+        "run-20251128_115722-q58ttu3t/files/requirements.txt",
+        "run-20251128_115722-q58ttu3t/files/output.log",
+        "run-20251128_115722-q58ttu3t/files/config.yaml",
+        "run-20251128_115722-q58ttu3t/files/wandb-summary.json",
+        "run-20251128_115722-q58ttu3t/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_015/wandb",
+      "type": "wandb",
+      "size": "812.64 KB",
+      "size_bytes": 832142,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_051846-ea8mynod/run-ea8mynod.wandb",
+        "run-20251128_051846-ea8mynod/logs/debug-internal.log",
+        "run-20251128_051846-ea8mynod/logs/debug.log",
+        "run-20251128_051846-ea8mynod/logs/debug-core.log",
+        "run-20251128_051846-ea8mynod/files/requirements.txt",
+        "run-20251128_051846-ea8mynod/files/output.log",
+        "run-20251128_051846-ea8mynod/files/config.yaml",
+        "run-20251128_051846-ea8mynod/files/wandb-summary.json",
+        "run-20251128_051846-ea8mynod/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_012/wandb",
+      "type": "wandb",
+      "size": "818.95 KB",
+      "size_bytes": 838606,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_040109-qe4fhr8t/run-qe4fhr8t.wandb",
+        "run-20251128_040109-qe4fhr8t/logs/debug-internal.log",
+        "run-20251128_040109-qe4fhr8t/logs/debug.log",
+        "run-20251128_040109-qe4fhr8t/logs/debug-core.log",
+        "run-20251128_040109-qe4fhr8t/files/requirements.txt",
+        "run-20251128_040109-qe4fhr8t/files/output.log",
+        "run-20251128_040109-qe4fhr8t/files/config.yaml",
+        "run-20251128_040109-qe4fhr8t/files/wandb-summary.json",
+        "run-20251128_040109-qe4fhr8t/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_040/wandb",
+      "type": "wandb",
+      "size": "576.44 KB",
+      "size_bytes": 590274,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_194736-xyw137vb/run-xyw137vb.wandb",
+        "run-20251128_194736-xyw137vb/logs/debug-internal.log",
+        "run-20251128_194736-xyw137vb/logs/debug.log",
+        "run-20251128_194736-xyw137vb/logs/debug-core.log",
+        "run-20251128_194736-xyw137vb/files/requirements.txt",
+        "run-20251128_194736-xyw137vb/files/output.log",
+        "run-20251128_194736-xyw137vb/files/config.yaml",
+        "run-20251128_194736-xyw137vb/files/wandb-summary.json",
+        "run-20251128_194736-xyw137vb/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_013/wandb",
+      "type": "wandb",
+      "size": "34.01 KB",
+      "size_bytes": 34830,
+      "file_count": 10,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_042909-49fywzxi/logs/debug-internal.log",
+        "run-20251128_042909-49fywzxi/logs/debug.log",
+        "run-20251128_042909-49fywzxi/logs/debug-core.log",
+        "run-20251128_042909-49fywzxi/files/requirements.txt",
+        "run-20251128_042909-49fywzxi/files/output.log",
+        "run-20251128_042909-49fywzxi/files/wandb-summary.json",
+        "run-20251128_042909-49fywzxi/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_014/wandb",
+      "type": "wandb",
+      "size": "803.54 KB",
+      "size_bytes": 822822,
+      "file_count": 10,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_045034-uf3bgnim/run-uf3bgnim.wandb",
+        "run-20251128_045034-uf3bgnim/logs/debug-internal.log",
+        "run-20251128_045034-uf3bgnim/logs/debug-core.log",
+        "run-20251128_045034-uf3bgnim/files/requirements.txt",
+        "run-20251128_045034-uf3bgnim/files/output.log",
+        "run-20251128_045034-uf3bgnim/files/wandb-summary.json",
+        "run-20251128_045034-uf3bgnim/files/wandb-metadata.json"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_022/wandb",
+      "type": "wandb",
+      "size": "14.33 KB",
+      "size_bytes": 14674,
+      "file_count": 4,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_112932-xzr6swft/files/requirements.txt"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_025/wandb",
+      "type": "wandb",
+      "size": "798.54 KB",
+      "size_bytes": 817710,
+      "file_count": 12,
+      "files": [
+        "debug-internal.log",
+        "debug.log",
+        "latest-run",
+        "run-20251128_124623-0cmx2kbi/run-0cmx2kbi.wandb",
+        "run-20251128_124623-0cmx2kbi/logs/debug-internal.log",
+        "run-20251128_124623-0cmx2kbi/logs/debug.log",
+        "run-20251128_124623-0cmx2kbi/logs/debug-core.log",
+        "run-20251128_124623-0cmx2kbi/files/requirements.txt",
+        "run-20251128_124623-0cmx2kbi/files/output.log",
+        "run-20251128_124623-0cmx2kbi/files/config.yaml",
+        "run-20251128_124623-0cmx2kbi/files/wandb-summary.json",
+        "run-20251128_124623-0cmx2kbi/files/wandb-metadata.json"
+      ]
+    }
+  ],
+  "failed_deletions": []
+}

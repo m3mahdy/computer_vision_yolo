@@ -56,6 +56,6 @@ __pychache__/
 
 
 #temp must be removed latet to save the data
-tune_train/tune/
+# tune_train/tune/
 # yolo_test/analysis_runs/
 # yolo_test/runs/

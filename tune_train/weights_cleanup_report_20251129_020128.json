@@ -1,0 +1,752 @@
+{
+  "timestamp": "2025-11-29 02:01:28",
+  "dry_run": false,
+  "summary": {
+    "deleted_count": 38,
+    "failed_count": 0,
+    "total_size_freed": "142.79 MB",
+    "total_size_freed_bytes": 149723936
+  },
+  "deleted_folders": [
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_003/val",
+      "type": "val",
+      "size": "4.34 MB",
+      "size_bytes": 4555708,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_004/val",
+      "type": "val",
+      "size": "4.38 MB",
+      "size_bytes": 4597742,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_032/val",
+      "type": "val",
+      "size": "4.32 MB",
+      "size_bytes": 4533999,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_035/val",
+      "type": "val",
+      "size": "4.33 MB",
+      "size_bytes": 4535936,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_034/val",
+      "type": "val",
+      "size": "655.59 KB",
+      "size_bytes": 671324,
+      "file_count": 2,
+      "files": [
+        "val_batch1_labels.jpg",
+        "confusion_matrix_normalized.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_033/val",
+      "type": "val",
+      "size": "4.32 MB",
+      "size_bytes": 4526407,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_005/val",
+      "type": "val",
+      "size": "4.34 MB",
+      "size_bytes": 4549625,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_002/val",
+      "type": "val",
+      "size": "4.33 MB",
+      "size_bytes": 4540343,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_020/val",
+      "type": "val",
+      "size": "3.75 MB",
+      "size_bytes": 3935745,
+      "file_count": 10,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_018/val",
+      "type": "val",
+      "size": "4.33 MB",
+      "size_bytes": 4536297,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_011/val",
+      "type": "val",
+      "size": "4.30 MB",
+      "size_bytes": 4509977,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_016/val",
+      "type": "val",
+      "size": "3.54 MB",
+      "size_bytes": 3716639,
+      "file_count": 10,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_029/val",
+      "type": "val",
+      "size": "4.38 MB",
+      "size_bytes": 4587906,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_017/val",
+      "type": "val",
+      "size": "4.31 MB",
+      "size_bytes": 4524547,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_028/val",
+      "type": "val",
+      "size": "831.34 KB",
+      "size_bytes": 851288,
+      "file_count": 2,
+      "files": [
+        "val_batch1_labels.jpg",
+        "val_batch1_pred.jpg"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_010/val",
+      "type": "val",
+      "size": "4.31 MB",
+      "size_bytes": 4518136,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_026/val",
+      "type": "val",
+      "size": "4.30 MB",
+      "size_bytes": 4506548,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_021/val",
+      "type": "val",
+      "size": "4.29 MB",
+      "size_bytes": 4498775,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_038/val",
+      "type": "val",
+      "size": "4.36 MB",
+      "size_bytes": 4573599,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_007/val",
+      "type": "val",
+      "size": "4.31 MB",
+      "size_bytes": 4522661,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_000/val",
+      "type": "val",
+      "size": "4.29 MB",
+      "size_bytes": 4502904,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_009/val",
+      "type": "val",
+      "size": "3.52 MB",
+      "size_bytes": 3686999,
+      "file_count": 10,
+      "files": [
+        "confusion_matrix.png",
+        "BoxR_curve.png",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_036/val",
+      "type": "val",
+      "size": "4.34 MB",
+      "size_bytes": 4553142,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_031/val",
+      "type": "val",
+      "size": "4.30 MB",
+      "size_bytes": 4511732,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_030/val",
+      "type": "val",
+      "size": "4.31 MB",
+      "size_bytes": 4521260,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_008/val",
+      "type": "val",
+      "size": "1.24 MB",
+      "size_bytes": 1303832,
+      "file_count": 4,
+      "files": [
+        "BoxR_curve.png",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "BoxP_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_037/val",
+      "type": "val",
+      "size": "4.34 MB",
+      "size_bytes": 4553590,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_001/val",
+      "type": "val",
+      "size": "4.35 MB",
+      "size_bytes": 4560930,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_006/val",
+      "type": "val",
+      "size": "4.38 MB",
+      "size_bytes": 4595127,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_024/val",
+      "type": "val",
+      "size": "525.35 KB",
+      "size_bytes": 537959,
+      "file_count": 2,
+      "files": [
+        "confusion_matrix.png",
+        "confusion_matrix_normalized.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_023/val",
+      "type": "val",
+      "size": "4.37 MB",
+      "size_bytes": 4578687,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_015/val",
+      "type": "val",
+      "size": "4.34 MB",
+      "size_bytes": 4549488,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_012/val",
+      "type": "val",
+      "size": "4.32 MB",
+      "size_bytes": 4529998,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_040/val",
+      "type": "val",
+      "size": "931.03 KB",
+      "size_bytes": 953378,
+      "file_count": 3,
+      "files": [
+        "BoxR_curve.png",
+        "confusion_matrix_normalized.png",
+        "BoxP_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_013/val",
+      "type": "val",
+      "size": "2.30 MB",
+      "size_bytes": 2416789,
+      "file_count": 6,
+      "files": [
+        "val_batch1_labels.jpg",
+        "val_batch2_pred.jpg",
+        "confusion_matrix_normalized.png",
+        "val_batch1_pred.jpg",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_014/val",
+      "type": "val",
+      "size": "4.33 MB",
+      "size_bytes": 4544049,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_022/val",
+      "type": "val",
+      "size": "4.30 MB",
+      "size_bytes": 4509880,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    },
+    {
+      "path": "yolov8m_finetuned_1_tune_20251127_230340/trial_025/val",
+      "type": "val",
+      "size": "4.31 MB",
+      "size_bytes": 4520990,
+      "file_count": 12,
+      "files": [
+        "confusion_matrix.png",
+        "val_batch1_labels.jpg",
+        "BoxR_curve.png",
+        "val_batch2_pred.jpg",
+        "val_batch0_labels.jpg",
+        "confusion_matrix_normalized.png",
+        "BoxF1_curve.png",
+        "val_batch1_pred.jpg",
+        "val_batch0_pred.jpg",
+        "BoxP_curve.png",
+        "val_batch2_labels.jpg",
+        "BoxPR_curve.png"
+      ]
+    }
+  ],
+  "failed_deletions": []
+}
