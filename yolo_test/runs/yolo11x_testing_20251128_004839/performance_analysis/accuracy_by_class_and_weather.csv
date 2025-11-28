@@ -1,0 +1,70 @@
+weather,class_id,class_name,expected,matched,accuracy
+clear,9,traffic sign,36254,10811,0.2982015777569372
+clear,2,car,106935,79814,0.7463786412306541
+clear,0,person,8808,6277,0.7126475930971844
+clear,3,truck,3830,0,0.0
+clear,6,motor,434,0,0.0
+clear,1,rider,569,24,0.0421792618629174
+clear,8,traffic light,28189,0,0.0
+clear,4,bus,1343,0,0.0
+clear,7,bike,774,2,0.002583979328165375
+clear,5,train,12,3,0.25
+rainy,8,traffic light,3904,0,0.0
+rainy,9,traffic sign,4128,1349,0.32679263565891475
+rainy,2,car,12277,9518,0.7752708316363932
+rainy,0,person,1193,846,0.7091366303436715
+rainy,3,truck,502,0,0.0
+rainy,7,bike,70,0,0.0
+rainy,4,bus,194,0,0.0
+rainy,6,motor,30,0,0.0
+rainy,1,rider,47,1,0.02127659574468085
+rainy,5,train,3,0,0.0
+snowy,9,traffic sign,5225,1469,0.28114832535885165
+snowy,2,car,14704,11507,0.782576169749728
+snowy,3,truck,707,0,0.0
+snowy,4,bus,277,1,0.0036101083032490976
+snowy,8,traffic light,4900,0,0.0
+snowy,0,person,2195,1640,0.7471526195899773
+snowy,1,rider,51,4,0.0784313725490196
+snowy,6,motor,22,0,0.0
+snowy,7,bike,156,0,0.0
+snowy,5,train,1,0,0.0
+partly cloudy,8,traffic light,3101,0,0.0
+partly cloudy,9,traffic sign,5324,1316,0.24718256949661907
+partly cloudy,0,person,1652,1255,0.7596852300242131
+partly cloudy,2,car,16494,12611,0.7645810597793137
+partly cloudy,4,bus,319,0,0.0
+partly cloudy,1,rider,139,5,0.03597122302158273
+partly cloudy,7,bike,183,0,0.0
+partly cloudy,3,truck,833,0,0.0
+partly cloudy,6,motor,65,0,0.0
+partly cloudy,5,train,2,1,0.5
+undefined,9,traffic sign,8103,2011,0.24817968653585093
+undefined,8,traffic light,5923,0,0.0
+undefined,2,car,23799,18773,0.7888146560779865
+undefined,0,person,6574,5112,0.7776087617888652
+undefined,6,motor,149,0,0.0
+undefined,1,rider,233,21,0.09012875536480687
+undefined,4,bus,515,0,0.0
+undefined,7,bike,482,2,0.004149377593360996
+undefined,3,truck,1214,0,0.0
+undefined,5,train,1,0,0.0
+overcast,9,traffic sign,9870,2527,0.2560283687943262
+overcast,0,person,4176,3118,0.7466475095785441
+overcast,2,car,30641,23195,0.7569922652654939
+overcast,3,truck,1605,1,0.0006230529595015577
+overcast,4,bus,566,0,0.0
+overcast,8,traffic light,6752,0,0.0
+overcast,1,rider,253,12,0.04743083003952569
+overcast,6,motor,140,0,0.0
+overcast,7,bike,332,0,0.0
+overcast,5,train,9,3,0.3333333333333333
+foggy,8,traffic light,71,0,0.0
+foggy,2,car,300,238,0.7933333333333333
+foggy,0,person,52,34,0.6538461538461539
+foggy,3,truck,13,0,0.0
+foggy,9,traffic sign,102,32,0.3137254901960784
+foggy,4,bus,3,0,0.0
+foggy,7,bike,1,0,0.0
+foggy,1,rider,2,0,0.0
+foggy,6,motor,1,0,0.0

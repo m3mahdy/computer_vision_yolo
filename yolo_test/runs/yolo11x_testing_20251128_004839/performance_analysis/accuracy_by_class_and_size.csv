@@ -1,0 +1,31 @@
+class_id,class_name,size_bucket,expected,matched,accuracy
+0,person,small,23271,16976,0.7294916419578016
+0,person,medium,1250,1186,0.9488
+0,person,large,129,120,0.9302325581395349
+1,rider,small,1109,49,0.04418394950405771
+1,rider,medium,160,14,0.0875
+1,rider,large,25,4,0.16
+2,car,small,167001,119435,0.7151753582313878
+2,car,medium,27324,26082,0.9545454545454546
+2,car,large,10825,10139,0.9366281755196305
+3,truck,small,5226,0,0.0
+3,truck,medium,2145,1,0.0004662004662004662
+3,truck,large,1333,0,0.0
+4,bus,small,1898,1,0.0005268703898840885
+4,bus,medium,759,0,0.0
+4,bus,large,560,0,0.0
+5,train,small,12,4,0.3333333333333333
+5,train,medium,10,2,0.2
+5,train,large,6,1,0.16666666666666666
+6,motor,small,669,0,0.0
+6,motor,medium,151,0,0.0
+6,motor,large,21,0,0.0
+7,bike,small,1719,1,0.0005817335660267597
+7,bike,medium,251,1,0.00398406374501992
+7,bike,large,28,2,0.07142857142857142
+8,traffic light,small,52806,0,0.0
+8,traffic light,medium,31,0,0.0
+8,traffic light,large,3,0,0.0
+9,traffic sign,small,67791,19418,0.28643920284403535
+9,traffic sign,medium,1161,96,0.082687338501292
+9,traffic sign,large,54,1,0.018518518518518517

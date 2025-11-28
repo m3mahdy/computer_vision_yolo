@@ -1,0 +1,39 @@
+timeofday,class_id,class_name,expected,matched,accuracy
+dawn/dusk,9,traffic sign,5227,1423,0.2722402907977807
+dawn/dusk,2,car,16421,10757,0.6550758175506973
+dawn/dusk,0,person,1945,1162,0.5974293059125964
+dawn/dusk,3,truck,718,0,0.0
+dawn/dusk,6,motor,64,0,0.0
+dawn/dusk,1,rider,105,5,0.047619047619047616
+dawn/dusk,8,traffic light,3939,0,0.0
+dawn/dusk,4,bus,335,0,0.0
+dawn/dusk,7,bike,126,0,0.0
+dawn/dusk,5,train,4,3,0.75
+daytime,2,car,115367,76205,0.6605441764109321
+daytime,3,truck,6304,5,0.0007931472081218274
+daytime,9,traffic sign,37705,10031,0.2660389868717677
+daytime,8,traffic light,24617,1,4.06223341593208e-05
+daytime,0,person,17544,10835,0.6175900592795258
+daytime,4,bus,2281,4,0.0017536168347216134
+daytime,7,bike,1464,8,0.00546448087431694
+daytime,1,rider,939,50,0.05324813631522897
+daytime,6,motor,596,2,0.003355704697986577
+daytime,5,train,18,2,0.1111111111111111
+night,2,car,73145,46864,0.6406999794927883
+night,8,traffic light,24258,0,0.0
+night,9,traffic sign,26042,9026,0.34659396359726596
+night,3,truck,1670,2,0.0011976047904191617
+night,4,bus,599,0,0.0
+night,0,person,5158,2947,0.5713454827452501
+night,7,bike,408,1,0.0024509803921568627
+night,1,rider,248,8,0.03225806451612903
+night,6,motor,173,1,0.005780346820809248
+night,5,train,6,0,0.0
+undefined,2,car,217,140,0.6451612903225806
+undefined,3,truck,12,0,0.0
+undefined,9,traffic sign,32,4,0.125
+undefined,8,traffic light,26,0,0.0
+undefined,4,bus,2,0,0.0
+undefined,1,rider,2,0,0.0
+undefined,6,motor,8,0,0.0
+undefined,0,person,3,2,0.6666666666666666

@@ -1,0 +1,60 @@
+scene,class_id,class_name,expected,matched,accuracy
+city street,9,traffic sign,45310,14334,0.3163540057382476
+city street,2,car,128256,96789,0.754654752994012
+city street,0,person,22559,16870,0.747816835852653
+city street,3,truck,5860,1,0.00017064846416382253
+city street,6,motor,627,0,0.0
+city street,1,rider,1090,45,0.04128440366972477
+city street,8,traffic light,44316,0,0.0
+city street,4,bus,2405,1,0.0004158004158004158
+city street,7,bike,1770,4,0.0022598870056497176
+city street,5,train,19,5,0.2631578947368421
+highway,2,car,45877,31833,0.6938771061752076
+highway,3,truck,2190,0,0.0
+highway,9,traffic sign,18145,4941,0.27230642050151554
+highway,8,traffic light,5518,0,0.0
+highway,0,person,906,562,0.6203090507726269
+highway,4,bus,621,1,0.001610305958132045
+highway,1,rider,118,2,0.01694915254237288
+highway,6,motor,85,0,0.0
+highway,7,bike,80,0,0.0
+highway,5,train,9,2,0.2222222222222222
+residential,2,car,28682,22158,0.7725402691583572
+residential,9,traffic sign,5237,1428,0.272675195722742
+residential,8,traffic light,2829,0,0.0
+residential,3,truck,593,0,0.0
+residential,0,person,1117,831,0.7439570277529096
+residential,4,bus,177,0,0.0
+residential,1,rider,85,7,0.08235294117647059
+residential,6,motor,114,0,0.0
+residential,7,bike,146,1,0.00684931506849315
+undefined,2,car,773,589,0.7619663648124192
+undefined,9,traffic sign,134,45,0.3358208955223881
+undefined,3,truck,21,0,0.0
+undefined,4,bus,2,0,0.0
+undefined,8,traffic light,121,0,0.0
+undefined,0,person,18,16,0.8888888888888888
+undefined,6,motor,6,0,0.0
+undefined,7,bike,1,0,0.0
+parking lot,2,car,1269,1036,0.8163908589440504
+parking lot,8,traffic light,31,0,0.0
+parking lot,9,traffic sign,137,27,0.19708029197080293
+parking lot,0,person,37,28,0.7567567567567568
+parking lot,4,bus,9,0,0.0
+parking lot,3,truck,26,0,0.0
+parking lot,6,motor,8,0,0.0
+parking lot,7,bike,1,0,0.0
+tunnel,2,car,247,189,0.7651821862348178
+tunnel,3,truck,12,0,0.0
+tunnel,9,traffic sign,40,10,0.25
+tunnel,8,traffic light,21,0,0.0
+tunnel,4,bus,2,0,0.0
+tunnel,1,rider,1,0,0.0
+tunnel,6,motor,1,0,0.0
+tunnel,0,person,1,0,0.0
+gas stations,0,person,12,10,0.8333333333333334
+gas stations,2,car,46,42,0.9130434782608695
+gas stations,9,traffic sign,3,2,0.6666666666666666
+gas stations,4,bus,1,0,0.0
+gas stations,8,traffic light,4,0,0.0
+gas stations,3,truck,2,0,0.0
