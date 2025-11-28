@@ -1,0 +1,34 @@
+{
+  "start_time": "2025-11-28 22:10:48",
+  "model": "yolov8m_finetuned_1",
+  "dataset": "bdd100k_yolo_limited",
+  "config_mode": "tuned",
+  "tuning_run": "yolov8m_finetuned_1_tune_20251127_230340",
+  "best_hyperparameters": {
+    "imgsz": 768,
+    "optimizer": "SGD",
+    "lr0": 0.0001614596240725037,
+    "momentum": 0.9098500376932075,
+    "weight_decay": 0.00042786651935909105,
+    "warmup_epochs": 1,
+    "warmup_momentum": 0.5149307497845836,
+    "warmup_bias_lr": 0.018938388657529233,
+    "mosaic": 0.8205379408033115,
+    "mixup": 0.023789168654792303
+  },
+  "epochs": 100,
+  "batch_size": 64,
+  "image_size": 768,
+  "wandb_run_id": "uxr3c2ja",
+  "end_time": "2025-11-28 23:08:37",
+  "status": "completed",
+  "duration": "0:57:45.228751",
+  "final_metrics": {
+    "map50": 0.576854458990084,
+    "map50_95": 0.33474067532145474,
+    "precision": 0.6529897874305556,
+    "recall": 0.5310183693100615
+  },
+  "best_model_path": "/content/Drive/MyDrive/ksu_yolo_tuning_2025/computer_vision_yolo/tune_train/training/yolov8m_finetuned_1_train_20251128_221046/weights/best.pt",
+  "last_model_path": "/content/Drive/MyDrive/ksu_yolo_tuning_2025/computer_vision_yolo/tune_train/training/yolov8m_finetuned_1_train_20251128_221046/weights/last.pt"
+}
